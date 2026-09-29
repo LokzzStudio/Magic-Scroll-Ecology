@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herd Tuner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<style>
+  .formula {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 12px;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .formula .r, .formula .k { color: var(--herd); }
+  .formula .a { color: var(--allee); }
+  .formula .l { color: var(--crash); }
+  #A-range { accent-color: var(--allee); }
+  #L-range { accent-color: var(--crash); }
+
+  pre.snippet {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 0;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 360px;
+  }
+  .copy-note { font-size: 12.5px; color: var(--herd); margin: 0; }
+</style>
+</head>
+<body>
+<nav class="topbar" aria-label="Pages">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
+    <div class="tabs">
+      <a href="index.html" aria-current="page">Herd tuner<small>Set the parameters</small></a>
+      <a href="humans.html">Humans<small>Couples &amp; children</small></a>
+      <a href="farm.html">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
+    </div>
+    <span class="param-chip" title="These parameters are shared with the Full Simulation page"><b>Shared</b><span id="param-chip-text"></span></span>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Herd tuner</h1>
+    <p class="lede">Tune how a herd grows and dies. Every animal is tracked on its own: it dies when it reaches its lifespan, and a herd below the Allee threshold is too small to breed well. The parameters and starting herd you set here also drive the Full Simulation page.</p>
+    <div class="formula" aria-label="Daily rules">
+      each day: animals reaching their lifespan <span class="l">L</span> die<br>
+      then born = <span class="r">r</span>·N·(N/<span class="a">A</span> − 1)·(1 − N/<span class="k">K</span>)
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="shared">
+        <div class="section-head">
+          <h2>Shared parameters</h2>
+          <p class="scope">Also used by <b><a href="farm.html">Full Simulation</a></b></p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="r-num"><span class="sym r">r</span>Intrinsic growth rate</label>
+            <span class="num-wrap"><input id="r-num" type="number" step="0.01"><span class="unit">/day</span></span>
+          </div>
+          <input id="r-range" type="range" aria-label="Intrinsic growth rate">
+          <p class="hint">How fast the herd changes. Higher values speed up both growth and collapse.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="K-num"><span class="sym k">K</span>Carrying capacity</label>
+            <span class="num-wrap"><input id="K-num" type="number" step="1"><span class="unit">head</span></span>
+          </div>
+          <input id="K-range" type="range" aria-label="Carrying capacity">
+          <p class="hint">The largest herd the pasture can feed.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="A-num"><span class="sym a">A</span>Allee threshold</label>
+            <span class="num-wrap"><input id="A-num" type="number" step="1"><span class="unit">head</span></span>
+          </div>
+          <input id="A-range" type="range" aria-label="Allee threshold">
+          <p class="hint">Below this size the herd is too small to breed well and shrinks.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="L-num"><span class="sym l">L</span>Average lifespan</label>
+            <span class="num-wrap"><input id="L-num" type="number" step="1"><span class="unit">days</span></span>
+          </div>
+          <input id="L-range" type="range" aria-label="Average lifespan">
+          <p class="hint" id="L-hint">How long an animal lives.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="M-num"><span class="sym">M</span>Adult at age</label>
+            <span class="num-wrap"><input id="M-num" type="number" step="1"><span class="unit">days</span></span>
+          </div>
+          <input id="M-range" type="range" aria-label="Adult at age">
+          <p class="hint" id="M-hint">Younger animals are calves or lambs.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="S-num"><span class="sym">±</span>Lifespan spread</label>
+            <span class="num-wrap"><input id="S-num" type="number" step="5"><span class="unit">%</span></span>
+          </div>
+          <input id="S-range" type="range" aria-label="Lifespan spread">
+          <p class="hint">How much lifespans vary. At 0%, animals born together die together, so the herd rises and falls in waves.</p>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head">
+          <h2>This test run</h2>
+          <p class="scope">Starting herd also used by <b><a href="farm.html">Full Simulation</a></b>; days only here</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="N0-num">Starting herd</label>
+            <span class="num-wrap"><input id="N0-num" type="number" step="1"><span class="unit">head</span></span>
+          </div>
+          <input id="N0-range" type="range" aria-label="Starting herd">
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="T-num">Days to simulate</label>
+            <span class="num-wrap"><input id="T-num" type="number" step="1"><span class="unit">days</span></span>
+          </div>
+          <input id="T-range" type="range" aria-label="Days to simulate">
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn" id="reroll">Roll new runs</button>
+          <button type="button" class="btn" id="reset">Reset all to defaults</button>
+        </div>
+      </section>
+    </aside>
+
+    <main>
+      <div class="status">
+        <span class="pill ok" id="pill">—</span>
+        <span class="status-note" id="equilibria"></span>
+      </div>
+
+      <section class="card" aria-label="Pasture">
+        <div class="card-head">
+          <h2>Pasture</h2>
+          <p>Press Play or drag the slider. Calves are drawn smaller and grow to full size at the adult age.</p>
+        </div>
+        <div class="pasture">
+          <canvas id="pasture"></canvas>
+          <div class="tag-box readout" id="readout">Day 0</div>
+          <div class="tag-box scale" id="scale"></div>
+        </div>
+        <div class="playbar">
+          <button type="button" class="btn primary play" id="play">Play</button>
+          <input type="range" id="day" aria-label="Day" min="0" step="1">
+          <span class="day" id="day-label">day 0</span>
+        </div>
+        <p class="events" id="events"></p>
+      </section>
+
+      <section class="card" aria-label="Herd size over time">
+        <div class="card-head">
+          <h2>Herd size over time</h2>
+          <p>Faint lines are 19 more runs with the same settings and different luck.</p>
+        </div>
+        <svg class="chart" id="time-chart" height="300" role="img" aria-label="Herd size over time"></svg>
+        <div class="legend">
+          <span><i class="swatch"></i>This run</span>
+          <span><i class="swatch up"></i>Runs that survive</span>
+          <span><i class="swatch down"></i>Runs that die out</span>
+          <span><i class="swatch zone"></i>Below the tipping point</span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Average growth by herd size">
+        <div class="card-head">
+          <h2>Average growth by herd size</h2>
+          <p>Births minus old-age deaths (about N ÷ L a day). Above zero the herd grows; below zero it shrinks.</p>
+        </div>
+        <svg class="chart" id="phase-chart" height="260" role="img" aria-label="Growth rate against herd size"></svg>
+      </section>
+
+      <section class="card" aria-label="Game code">
+        <div class="card-head">
+          <h2>Use in the game</h2>
+          <p>The same daily rules as code, filled in with the shared parameters.</p>
+        </div>
+        <pre class="snippet" id="snippet"></pre>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="copy">Copy code</button>
+          <p class="copy-note" id="copy-note" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script>
+(() => {
+  const DEFAULTS = { ...HerdModel.DEFAULTS, ...HerdModel.START, T: 1000, seed: 1 };
+  const STORE_KEY = HerdModel.STORE_KEY;
+  const RUNS = 20;
+  const MAX_ICONS = 150;
+  const $ = (id) => document.getElementById(id);
+
+  let P = { ...DEFAULTS };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved && typeof saved === "object") P = { ...DEFAULTS, ...saved };
+  } catch (e) {}
+
+  const SPECS = {
+    r:  { min: () => 0.01, max: () => 2, step: 0.01 },
+    K:  { min: () => 10, max: () => 1000, step: 1 },
+    A:  { min: () => 1, max: () => P.K, step: 1 },
+    L:  { min: () => 2, max: () => 365, step: 1 },
+    M:  { min: () => 1, max: () => P.L, step: 1 },
+    S:  { min: () => 0, max: () => 90, step: 5 },
+    N0: { min: () => 0, max: () => Math.round(P.K * 1.5), step: 1 },
+    T:  { min: () => 10, max: () => 1000, step: 1 },
+  };
+
+  let main = null;         // detailed run: { series, snaps, events, survived }
+  let runs = [];           // all runs, main first
+  let EQ = { exists: false, lo: NaN, hi: NaN, Lmin: Infinity };
+  let perIcon = 1;
+  let cursor = null;       // day shown; null = last day
+  let playing = false;
+  let rafId = 0;
+
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) {}
+  }
+
+  function clampAll() {
+    for (const k of Object.keys(SPECS)) {
+      const s = SPECS[k];
+      let v = Number(P[k]);
+      if (!isFinite(v)) v = DEFAULTS[k];
+      P[k] = clamp(v, s.min(), s.max());
+    }
+    P.N0 = Math.round(P.N0);
+    P.T = Math.round(P.T);
+  }
+
+  function syncInputs() {
+    for (const k of Object.keys(SPECS)) {
+      const s = SPECS[k];
+      const range = $(k + "-range"), num = $(k + "-num");
+      range.min = num.min = s.min();
+      range.max = num.max = s.max();
+      range.step = num.step = s.step;
+      range.value = P[k];
+      if (document.activeElement !== num) num.value = P[k];
+    }
+  }
+
+  // ---------- Model (shared with other pages, see herd-model.js) ----------
+  const avgGrowth = (N) => HerdModel.avgGrowth(N, P);
+
+  function simulateHerd(seed, detailed) {
+    const rand = HerdModel.rng(seed);
+    const calfAge = P.M;
+    const state = HerdModel.startHerd(P.N0, P, rand);
+    const snap = () => state.herd.filter((c) => c.id % perIcon === 0).slice(0, MAX_ICONS).map((c) => ({ id: c.id, age: c.age }));
+    const calves = () => state.herd.reduce((n, c) => n + (c.age < calfAge ? 1 : 0), 0);
+
+    const series = [[0, state.herd.length]];
+    const snaps = detailed ? [snap()] : null;
+    const events = detailed ? [{ born: 0, old: 0, size: 0, calves: calves() }] : null;
+
+    for (let d = 1; d <= P.T; d++) {
+      const day = HerdModel.stepHerd(state, P, rand);
+      series.push([d, state.herd.length]);
+      if (detailed) {
+        snaps.push(snap());
+        events.push({ ...day, calves: calves() });
+      }
+    }
+    return { series, snaps, events, survived: state.herd.length > 0 };
+  }
+
+  const valueAt = (series, t) => series[clamp(Math.floor(t), 0, series.length - 1)][1];
+
+  function outcome(series) {
+    for (const [d, N] of series) {
+      if (N === 0) return { kind: "crash", text: d === 0 ? "No cows to start with" : `Herd dies out on day ${fmt(d)}` };
+    }
+    const tail = series.slice(-Math.max(5, Math.floor(series.length / 4))).map((p) => p[1]);
+    const mean = tail.reduce((a, b) => a + b, 0) / tail.length;
+    const swing = Math.max(...tail) - Math.min(...tail);
+    if (EQ.exists && Math.abs(mean - EQ.hi) <= 0.1 * EQ.hi && swing <= 0.35 * mean) {
+      return { kind: "ok", text: `Herd settles around ${fmt(mean)} cows` };
+    }
+    if (swing > 0.35 * mean) return { kind: "warn", text: "Herd rises and falls in waves" };
+    const last = tail[tail.length - 1];
+    return { kind: "warn", text: `${last > tail[0] ? "Still growing" : "Still shrinking"}: ${fmt(last)} cows on day ${fmt(P.T)}` };
+  }
+
+  // ---------- Chart helpers ----------
+  function niceTicks(min, max, count) {
+    const span = max - min || 1;
+    const raw = span / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const e = raw / mag;
+    const step = (e < 1.5 ? 1 : e < 3 ? 2 : e < 7 ? 5 : 10) * mag;
+    const ticks = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-6; v += step) ticks.push(+v.toFixed(10));
+    return ticks;
+  }
+  const pathOf = (pts, x, y) => pts.map((p, i) => (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1)).join("");
+  const stepPathOf = (pts, x, y) => {
+    let d = "M" + x(pts[0][0]).toFixed(1) + " " + y(pts[0][1]).toFixed(1);
+    for (let i = 1; i < pts.length; i++) d += "H" + x(pts[i][0]).toFixed(1) + "V" + y(pts[i][1]).toFixed(1);
+    return d;
+  };
+
+  function drawTimeChart() {
+    const svg = $("time-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 300;
+    const m = { l: 50, r: 16, t: 14, b: 38 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    let yMax = Math.max(P.K * 1.1, P.N0 * 1.05, 5);
+    for (const run of runs) for (const p of run.series) if (p[1] > yMax) yMax = p[1];
+    yMax = Math.min(yMax * 1.02, P.K * 3);
+    const x = (t) => m.l + (t / P.T) * (W - m.l - m.r);
+    const y = (n) => m.t + (1 - Math.min(n, yMax) / yMax) * (H - m.t - m.b);
+
+    let s = "";
+    const tip = EQ.exists ? EQ.lo : yMax;
+    s += `<rect class="collapse-zone" x="${m.l}" y="${y(Math.min(tip, yMax))}" width="${W - m.l - m.r}" height="${y(0) - y(Math.min(tip, yMax))}"/>`;
+    for (const v of niceTicks(0, yMax, 5)) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    for (const v of niceTicks(0, P.T, Math.max(3, Math.floor(W / 90)))) {
+      s += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(v)}</text>`;
+    }
+    s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Day</text>`;
+    s += `<text class="axis-title" transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">Cows</text>`;
+
+    if (EQ.exists) {
+      if (EQ.hi <= yMax) {
+        s += `<line class="kline" x1="${m.l}" x2="${W - m.r}" y1="${y(EQ.hi)}" y2="${y(EQ.hi)}"/>`;
+        s += `<text class="klabel" x="${W - m.r - 4}" y="${y(EQ.hi) - 6}" text-anchor="end">settles ≈ ${fmt(EQ.hi)}</text>`;
+      }
+      s += `<line class="aline" x1="${m.l}" x2="${W - m.r}" y1="${y(EQ.lo)}" y2="${y(EQ.lo)}"/>`;
+      const below = y(EQ.lo) + 15 < y(0) - 2;
+      s += `<text class="alabel" x="${W - m.r - 4}" y="${below ? y(EQ.lo) + 15 : y(EQ.lo) - 6}" text-anchor="end">tipping point ≈ ${fmt(EQ.lo)}</text>`;
+    }
+
+    for (const run of runs.slice(1)) s += `<path class="ghost ${run.survived ? "up" : "down"}" d="${stepPathOf(run.series, x, y)}"/>`;
+    s += `<path class="main" d="${stepPathOf(main.series, x, y)}"/>`;
+
+    const t = cursor === null ? P.T : cursor;
+    const n = valueAt(main.series, t);
+    s += `<line class="cursor" x1="${x(t)}" x2="${x(t)}" y1="${m.t}" y2="${y(0)}"/>`;
+    s += `<circle class="dot" cx="${x(t)}" cy="${y(n)}" r="5"/>`;
+    svg.innerHTML = s;
+  }
+
+  function drawPhaseChart() {
+    const svg = $("phase-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 260;
+    const m = { l: 56, r: 16, t: 16, b: 38 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const xMax = Math.max(P.K * 1.3, P.N0 * 1.05, P.A * 1.2);
+    const pts = [];
+    for (let i = 0; i <= 300; i++) { const N = (xMax * i) / 300; pts.push([N, avgGrowth(N)]); }
+    // Scale y to where the herd lives (0..K) so the steep tail beyond K doesn't flatten the hump
+    let yHi = 0, yLo = 0;
+    for (const [N, g] of pts) if (N <= Math.max(P.K, P.A) * 1.02) { yHi = Math.max(yHi, g); yLo = Math.min(yLo, g); }
+    const pad = Math.max(yHi - yLo, 1e-6) * 0.15;
+    yHi += pad; yLo -= pad;
+    if (yHi < pad) yHi = pad;
+    const x = (N) => m.l + (N / xMax) * (W - m.l - m.r);
+    const y = (g) => m.t + ((yHi - clamp(g, yLo, yHi)) / (yHi - yLo)) * (H - m.t - m.b);
+
+    let s = `<defs><clipPath id="phase-clip"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></clipPath></defs>`;
+    const yTicks = niceTicks(yLo, yHi, 4);
+    const yStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 1;
+    const yDec = clamp(Math.ceil(-Math.log10(yStep)), 0, 4);   // enough decimals to tell ticks apart
+    for (const v of yTicks) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v, yDec)}</text>`;
+    }
+    for (const v of niceTicks(0, xMax, Math.max(3, Math.floor(W / 90)))) {
+      s += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(v)}</text>`;
+    }
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Herd size (cows)</text>`;
+    s += `<text class="axis-title" transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">Cows gained per day</text>`;
+
+    const area = pathOf(pts, x, y) + `L${x(xMax)} ${y(0)}L${x(0)} ${y(0)}Z`;
+    s += `<g clip-path="url(#phase-clip)">`;
+    s += `<clipPath id="above"><rect x="0" y="0" width="${W}" height="${y(0)}"/></clipPath>`;
+    s += `<clipPath id="below"><rect x="0" y="${y(0)}" width="${W}" height="${H}"/></clipPath>`;
+    s += `<path class="pos-fill" d="${area}" clip-path="url(#above)"/>`;
+    s += `<path class="neg-fill" d="${area}" clip-path="url(#below)"/>`;
+    s += `<line class="zero" x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<path class="curve" d="${pathOf(pts, x, y)}"/>`;
+    s += `</g>`;
+
+    const arrowAt = (N) => {
+      const g = avgGrowth(N);
+      if (Math.abs(g) < 1e-9) return "";
+      const cx = x(N), cy = y(0), d = g > 0 ? 1 : -1;
+      return `<path class="arrow" d="M${cx + 6 * d} ${cy} L${cx - 4 * d} ${cy - 5} L${cx - 4 * d} ${cy + 5}Z"/>`;
+    };
+    if (EQ.exists) s += arrowAt(EQ.lo / 2) + arrowAt((EQ.lo + EQ.hi) / 2) + arrowAt((EQ.hi + xMax) / 2);
+    else s += arrowAt(xMax * 0.3) + arrowAt(xMax * 0.7);
+
+    s += `<circle class="eq-stable" cx="${x(0)}" cy="${y(0)}" r="5"/>`;
+    s += `<text class="tag z" x="${x(0) + 8}" y="${y(0) - 9}">extinct</text>`;
+    if (EQ.exists) {
+      s += `<circle class="eq-unstable" cx="${x(EQ.lo)}" cy="${y(0)}" r="5.5"/>`;
+      s += `<text class="tag a" x="${x(EQ.lo)}" y="${y(0) + 20}" text-anchor="middle">tipping point</text>`;
+      s += `<circle class="eq-stable k" cx="${x(EQ.hi)}" cy="${y(0)}" r="5.5"/>`;
+      s += `<text class="tag k" x="${x(EQ.hi)}" y="${y(0) - 10}" text-anchor="middle">settles here</text>`;
+    }
+
+    const t = cursor === null ? P.T : cursor;
+    const n = valueAt(main.series, t);
+    if (n <= xMax) s += `<circle class="dot" cx="${x(n)}" cy="${y(avgGrowth(n))}" r="5"/>`;
+    svg.innerHTML = s;
+  }
+
+  // ---------- Pasture ----------
+  // Each cow keeps the same spot on the pasture for its whole life
+  function hash01(n) {
+    let t = Math.imul((n + 1) | 0, 0x9e3779b1);
+    t = Math.imul(t ^ (t >>> 16), 0x85ebca6b);
+    t = Math.imul(t ^ (t >>> 13), 0xc2b2ae35);
+    return ((t ^ (t >>> 16)) >>> 0) / 4294967296;
+  }
+
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function drawCow(ctx, cx, cy, s, face, spot, c) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(face * s, s);
+    ctx.lineWidth = 1.3 / s;
+    ctx.strokeStyle = c.spot;
+    ctx.beginPath();
+    for (const lx of [-7, -3, 4, 8]) { ctx.moveTo(lx, 3); ctx.lineTo(lx, 11); }
+    ctx.stroke();
+    ctx.fillStyle = c.body;
+    ctx.beginPath(); ctx.ellipse(0, 0, 12, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c.spot;
+    ctx.beginPath(); ctx.ellipse(-4 + spot * 4, -2, 3.2, 2.4, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5 - spot * 3, 2, 2.2, 1.8, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = c.body;
+    ctx.beginPath(); ctx.ellipse(14, -4, 4.6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c.muzzle;
+    ctx.beginPath(); ctx.ellipse(17, -2.5, 2.2, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11, -7); ctx.lineTo(9, -10); ctx.moveTo(-12, -1); ctx.quadraticCurveTo(-15, 3, -14, 7); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPasture() {
+    const canvas = $("pasture");
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const day = clamp(Math.floor(cursor === null ? P.T : cursor), 0, main.snaps.length - 1);
+    const n = valueAt(main.series, day);
+    const c = { body: cssVar("--cow-body"), spot: cssVar("--cow-spot"), muzzle: cssVar("--cow-muzzle") };
+    const base = clamp(w / 700, 0.75, 1.15);
+    const grownAt = P.M;
+    const cows = main.snaps[day].map((cow) => ({
+      ...cow,
+      x: 0.03 + hash01(cow.id * 4) * 0.94,
+      y: 0.3 + hash01(cow.id * 4 + 1) * 0.62,
+    })).sort((a, b) => a.y - b.y);
+    for (const cow of cows) {
+      const grown = 0.55 + 0.45 * Math.min(1, cow.age / grownAt);   // calves are smaller
+      const s = base * (0.7 + cow.y * 0.45) * grown;
+      drawCow(ctx, cow.x * w, cow.y * h, s, hash01(cow.id * 4 + 2) < 0.5 ? 1 : -1, hash01(cow.id * 4 + 3), c);
+    }
+
+    const ev = main.events[day];
+    $("readout").textContent = `Day ${fmt(day)} · ${fmt(n)} cows · ${fmt(ev.calves)} calves`;
+    $("scale").textContent = (perIcon === 1 ? "" : `1 icon ≈ ${perIcon} cows · `) + `Calves: under ${fmt(P.M)} days`;
+    $("events").innerHTML = day === 0
+      ? "Day 0: starting herd of mixed ages"
+      : `Day ${fmt(day)}: <span class="born">${fmt(ev.born)} born</span> · <span class="died">${fmt(ev.old)} died of old age</span>` +
+        (ev.size ? ` · <span class="died">${fmt(ev.size)} lost to herd size</span>` : "");
+  }
+
+  // ---------- Readouts ----------
+  function drawVerdict() {
+    const o = outcome(main.series);
+    const pill = $("pill");
+    pill.className = "pill " + o.kind;
+    pill.textContent = o.text;
+    const alive = runs.filter((r) => r.survived).length;
+    $("equilibria").textContent = `Survives in ${alive} of ${RUNS} runs · ` + (EQ.exists
+      ? `tipping point ≈ ${fmt(EQ.lo)} · settles ≈ ${fmt(EQ.hi)}`
+      : P.A >= P.K
+        ? "Allee threshold is at or above capacity"
+        : "cows die faster than they're born at every herd size");
+    $("L-hint").innerHTML = isFinite(EQ.Lmin)
+      ? `How long an animal lives. Below about <b>${fmt(Math.ceil(EQ.Lmin))} days</b>, every herd dies out.`
+      : "How long an animal lives.";
+    const dieLo = Math.round(P.L * (1 - P.S / 100)), dieHi = Math.round(P.L * (1 + P.S / 100));
+    $("M-hint").innerHTML = `Calf from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b> until it dies at ${dieLo === dieHi ? fmt(dieLo) : `${fmt(dieLo)}–${fmt(dieHi)}`} days. A label only: calves still count toward births and crowding.`;
+  }
+
+  function drawSnippet() {
+    $("snippet").textContent =
+`// Cow herd: individual cows with lifespans,
+// births from the Allee effect + carrying capacity
+const COW_GROWTH_RATE = ${P.r};      // r, per day
+const COW_CAPACITY = ${P.K};         // K, cows
+const COW_ALLEE = ${P.A};            // A, cows
+const COW_LIFESPAN = ${P.L};         // L, days on average
+const COW_LIFESPAN_SPREAD = ${P.S / 100}; // ± share of L
+const COW_ADULT_AGE = ${P.M};        // M, days; younger cows are calves
+
+function newCow() {
+  const spread = COW_LIFESPAN_SPREAD * (2 * Math.random() - 1);
+  return { age: 0, lifespan: COW_LIFESPAN * (1 + spread) };
+}
+
+// Label only: calves still count toward births and crowding
+const isCalf = (cow) => cow.age < COW_ADULT_AGE;
+
+// Call once per game day. Returns the new herd array.
+function stepCows(herd) {
+  // 1. Every cow ages; those reaching their lifespan die
+  for (const cow of herd) cow.age += 1;
+  herd = herd.filter((cow) => cow.age < cow.lifespan);
+
+  // 2. Births, or losses when too small or too crowded
+  const N = herd.length;
+  const change = COW_GROWTH_RATE * N
+    * (N / COW_ALLEE - 1)
+    * (1 - N / COW_CAPACITY);
+  const size = Math.abs(change);
+  const count = Math.floor(size)
+    + (Math.random() < size % 1 ? 1 : 0);
+  for (let i = 0; i < count; i++) {
+    if (change > 0) herd.push(newCow());
+    else if (herd.length) {
+      herd.splice(Math.floor(Math.random() * herd.length), 1);
+    }
+  }
+  return herd;
+}`;
+  }
+
+  function drawDay() {
+    const day = $("day");
+    day.max = P.T;
+    const t = cursor === null ? P.T : cursor;
+    day.value = t;
+    $("day-label").textContent = "day " + fmt(t);
+  }
+
+  function drawFrame() {
+    drawTimeChart();
+    drawPhaseChart();
+    drawPasture();
+    drawDay();
+  }
+
+  function recompute() {
+    clampAll();
+    syncInputs();
+    EQ = HerdModel.equilibria(P);
+    $("param-chip-text").textContent = HerdModel.describe(P);
+    perIcon = Math.max(1, Math.ceil((P.K * 1.5) / MAX_ICONS));
+    main = simulateHerd(P.seed * 7919, true);
+    runs = [main];
+    for (let i = 1; i < RUNS; i++) runs.push(simulateHerd(P.seed * 7919 + i, false));
+    if (cursor !== null && cursor > P.T) cursor = P.T;
+    drawVerdict();
+    drawSnippet();
+    drawFrame();
+    save();
+  }
+
+  // ---------- Wiring ----------
+  for (const k of Object.keys(SPECS)) {
+    $(k + "-range").addEventListener("input", (e) => { P[k] = Number(e.target.value); recompute(); });
+    $(k + "-num").addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      if (e.target.value === "" || !isFinite(v)) return;
+      P[k] = v; recompute();
+    });
+    $(k + "-num").addEventListener("change", () => { syncInputs(); $(k + "-num").value = P[k]; });
+  }
+  $("reroll").addEventListener("click", () => { P.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
+  $("reset").addEventListener("click", () => { stop(); P = { ...DEFAULTS }; cursor = null; recompute(); });
+
+  $("day").addEventListener("input", (e) => { stop(); const v = Number(e.target.value); cursor = v >= P.T ? null : v; drawFrame(); });
+
+  function stop() {
+    playing = false;
+    cancelAnimationFrame(rafId);
+    $("play").textContent = "Play";
+  }
+  $("play").addEventListener("click", () => {
+    if (playing) { stop(); return; }
+    playing = true;
+    $("play").textContent = "Pause";
+    const from = cursor === null || cursor >= P.T ? 0 : cursor;
+    const duration = Math.max(7000, P.T * 20) * (1 - from / P.T);   // at least 20 ms per day
+    let start = null;
+    const tick = (now) => {
+      if (!playing) return;
+      // Time from the first frame, not the click: a frame's timestamp can predate the click
+      if (start === null) start = now;
+      const f = clamp((now - start) / Math.max(duration, 1), 0, 1);
+      cursor = f >= 1 ? null : Math.floor(from + (P.T - from) * f);
+      drawFrame();
+      if (f < 1) rafId = requestAnimationFrame(tick); else stop();
+    };
+    rafId = requestAnimationFrame(tick);
+  });
+
+  $("copy").addEventListener("click", () => {
+    const text = $("snippet").textContent;
+    const note = $("copy-note");
+    const fallback = () => {
+      const range = document.createRange();
+      range.selectNodeContents($("snippet"));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      note.textContent = "Code selected. Press Ctrl+C to copy.";
+    };
+    try {
+      navigator.clipboard.writeText(text).then(() => { note.textContent = "Copied."; }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawFrame, 60); }).observe(document.querySelector("main"));
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", drawPasture);
+  new MutationObserver(drawPasture).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  recompute();
+})();
+</script>
+</body>
+</html>

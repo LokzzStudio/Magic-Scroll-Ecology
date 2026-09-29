@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Humans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<style>
+  /* The daily rules, one cell per step, in a single strip */
+  .rules {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  @media (min-width: 900px) {
+    .rules { grid-template-columns: 1.85fr 1fr 1.45fr 1.3fr 0.8fr; }
+  }
+  .rules li {
+    background: var(--surface);
+    padding: 8px 12px 9px;
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .rules .step {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rules b { font-weight: 600; }
+  .rules .f { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  #men-range { accent-color: var(--men); }
+  #women-range { accent-color: var(--women); }
+  #L-range { accent-color: var(--crash); }
+
+  .village {
+    position: relative;
+    height: 210px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(to bottom, var(--pasture-far) 0%, var(--pasture) 38%);
+  }
+  .village canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .chart .main.men { stroke: var(--men); stroke-width: 1.8; }
+  .chart .main.women { stroke: var(--women); stroke-width: 1.8; }
+  .chart .main.kids { stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 4 3; }
+  .chart .ghost.total { stroke: var(--muted); stroke-width: 1; opacity: 0.3; }
+  .chart .capline { stroke: var(--crash); stroke-width: 1; stroke-dasharray: 2 3; }
+  .chart .caplabel { fill: var(--crash); }
+  .swatch.men { border-color: var(--men); }
+  .swatch.women { border-color: var(--women); }
+  .swatch.kids { border-color: var(--muted); border-top-style: dashed; }
+  .swatch.fed { border-color: var(--herd); border-top-style: dashed; border-top-width: 1.5px; }
+
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
+  .stats h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; }
+  .rows { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+  .rows dt { color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+  .rows dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .rows .total { border-top: 1px solid var(--line); padding-top: 4px; font-weight: 600; color: var(--ink); }
+  .rows .total:first-child, .rows .total:first-child + dd { border-top: 0; padding-top: 0; }
+
+  pre.snippet {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.55;
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 0;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 360px;
+  }
+  .copy-note { font-size: 12.5px; color: var(--herd); margin: 0; }
+
+  .mini-curve { margin-top: 2px; }
+  .param-head label.one-line { white-space: nowrap; }
+  .loss-table {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1px 12px;
+    margin: 6px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .loss-table b { text-align: right; font-weight: 500; }
+</style>
+</head>
+<body>
+<nav class="topbar" aria-label="Pages">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
+    <div class="tabs">
+      <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+      <a href="humans.html" aria-current="page">Humans<small>Couples &amp; children</small></a>
+      <a href="farm.html">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Humans</h1>
+    <p class="lede">Every person is tracked on their own, as a man or a woman. Couples have children, and food limits how many people can live. Each day runs these five steps in order:</p>
+    <ol class="rules" aria-label="Daily rules, in order">
+      <li><span class="step">1 · Food</span><span><b>F</b> is split equally. Anyone short of their need <b>c</b> loses <span class="f">K × shortfall<sup>n</sup></span> days of life.</span></li>
+      <li><span class="step">2 · Ageing</span><span>Anyone who reaches their lifespan dies.</span></li>
+      <li><span class="step">3 · Couples</span><span><span class="f">min(adult men,</span> <span class="f">adult women)</span></span></li>
+      <li><span class="step">4 · Births</span><span>Each couple: chance <b>p</b> of a child. Boy or girl, 50/50.</span></li>
+      <li><span class="step">5 · Adults</span><span>Children grow up at <b id="rule-adult">360</b> days.</span></li>
+    </ol>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="params">
+        <div class="section-head">
+          <h2>Human parameters</h2>
+          <p class="scope">Also used by <b><a href="farm.html">Full Simulation</a></b></p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="p-num"><span class="sym r">p</span>Birth chance</label>
+            <span class="num-wrap"><input id="p-num" type="number" step="0.0001"><span class="unit">/day</span></span>
+          </div>
+          <input id="p-range" type="range" aria-label="Birth chance per couple per day">
+          <p class="hint" id="p-hint">Chance a couple has a child each day.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="L-num"><span class="sym l">L</span>Average lifespan</label>
+            <span class="num-wrap"><input id="L-num" type="number" step="30"><span class="unit">days</span></span>
+          </div>
+          <input id="L-range" type="range" aria-label="Average lifespan">
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="M-num"><span class="sym">M</span>Adult at age</label>
+            <span class="num-wrap"><input id="M-num" type="number" step="1"><span class="unit">days</span></span>
+          </div>
+          <input id="M-range" type="range" aria-label="Adult at age">
+          <p class="hint" id="M-hint">Children become adults, and can pair up, at this age.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="S-num"><span class="sym">±</span>Lifespan spread</label>
+            <span class="num-wrap"><input id="S-num" type="number" step="5"><span class="unit">%</span></span>
+          </div>
+          <input id="S-range" type="range" aria-label="Lifespan spread">
+          <p class="hint">How much lifespans vary from person to person.</p>
+        </div>
+      </section>
+
+      <section class="panel-section" id="food">
+        <div class="section-head">
+          <h2>Food</h2>
+          <p class="scope">Shared equally; nothing is stored</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="F-num"><span class="sym k">F</span>Food production</label>
+            <span class="num-wrap"><input id="F-num" type="number" step="1"><span class="unit">/day</span></span>
+          </div>
+          <input id="F-range" type="range" aria-label="Food produced per day">
+          <p class="hint" id="F-hint">Food made each day.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="c-num"><span class="sym">c</span>Food need</label>
+            <span class="num-wrap"><input id="c-num" type="number" step="0.1"><span class="unit">/person</span></span>
+          </div>
+          <input id="c-range" type="range" aria-label="Food one person needs per day">
+          <p class="hint" id="c-hint">Food one person needs each day.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="K-num"><span class="sym l">K</span>Hunger toll</label>
+            <span class="num-wrap"><input id="K-num" type="number" step="1"><span class="unit">days</span></span>
+          </div>
+          <input id="K-range" type="range" aria-label="Hunger toll">
+          <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life lost per day against share of food"></svg>
+          <p class="hint" id="K-hint">Days of life lost for each day with no food.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="n-num" class="one-line"><span class="sym l">n</span>Hunger curve power</label>
+            <span class="num-wrap"><input id="n-num" type="number" step="0.1"></span>
+          </div>
+          <input id="n-range" type="range" aria-label="Hunger curve power">
+          <p class="hint" id="n-hint">The shape of the curve above.</p>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head">
+          <h2>This test run</h2>
+          <p class="scope">Starting men and women also used by <b><a href="farm.html">Full Simulation</a></b>; days only here</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="men-num"><span class="dot-key men"></span>Starting men</label>
+            <span class="num-wrap"><input id="men-num" type="number" step="1"><span class="unit">people</span></span>
+          </div>
+          <input id="men-range" type="range" aria-label="Starting men">
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="women-num"><span class="dot-key women"></span>Starting women</label>
+            <span class="num-wrap"><input id="women-num" type="number" step="1"><span class="unit">people</span></span>
+          </div>
+          <input id="women-range" type="range" aria-label="Starting women">
+          <p class="hint">Everyone starts as an adult of a random age.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="T-num">Days to simulate</label>
+            <span class="num-wrap"><input id="T-num" type="number" step="10"><span class="unit">days</span></span>
+          </div>
+          <input id="T-range" type="range" aria-label="Days to simulate">
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn" id="reroll">Roll new runs</button>
+          <button type="button" class="btn" id="reset">Reset all to defaults</button>
+        </div>
+      </section>
+    </aside>
+
+    <main>
+      <div class="status">
+        <span class="pill ok" id="pill">—</span>
+        <span class="status-note" id="status-note"></span>
+      </div>
+
+      <section class="card" aria-label="Village">
+        <div class="card-head">
+          <h2>Village</h2>
+          <p>Press Play or drag the slider. Children are drawn smaller.</p>
+        </div>
+        <div class="village">
+          <canvas id="village"></canvas>
+          <div class="tag-box readout" id="readout">Day 0</div>
+          <div class="tag-box scale" id="scale"></div>
+        </div>
+        <div class="playbar">
+          <button type="button" class="btn primary play" id="play">Play</button>
+          <input type="range" id="day" aria-label="Day" min="0" step="1">
+          <span class="day" id="day-label">day 0</span>
+          <div class="speed">
+            <span>Speed</span>
+            <div class="seg" role="group" aria-label="Playback speed">
+              <button type="button" data-speed="360" aria-pressed="false">1 yr/s</button>
+              <button type="button" data-speed="1800" aria-pressed="true">5 yr/s</button>
+              <button type="button" data-speed="7200" aria-pressed="false">20 yr/s</button>
+            </div>
+          </div>
+        </div>
+        <p class="events" id="events"></p>
+      </section>
+
+      <section class="card" aria-label="Population over time">
+        <div class="card-head">
+          <h2>Population over time</h2>
+          <p>Faint lines are the total population in 19 more runs with different luck.</p>
+        </div>
+        <svg class="chart" id="time-chart" height="320" role="img" aria-label="Population over time"></svg>
+        <div class="legend">
+          <span><i class="swatch"></i>Everyone</span>
+          <span><i class="swatch men"></i>Adult men</span>
+          <span><i class="swatch women"></i>Adult women</span>
+          <span><i class="swatch kids"></i>Children</span>
+          <span><i class="swatch faint"></i>Other runs</span>
+          <span><i class="swatch fed"></i>Most people the food can fully feed</span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Food share over time">
+        <div class="card-head">
+          <h2>Food share</h2>
+          <p>How much of their daily need each person gets. Below 100%, lives get shorter.</p>
+        </div>
+        <svg class="chart" id="food-chart" height="180" role="img" aria-label="Each person's share of their food need over time"></svg>
+      </section>
+
+      <div class="stats">
+        <section class="card" aria-label="Selected day" id="stats-day"></section>
+        <section class="card" aria-label="Whole run" id="stats-run"></section>
+      </div>
+
+      <section class="card" aria-label="Game code">
+        <div class="card-head">
+          <h2>Use in the game</h2>
+          <p>The same daily rules as code, filled in with the parameters above.</p>
+        </div>
+        <pre class="snippet" id="snippet"></pre>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="copy">Copy code</button>
+          <p class="copy-note" id="copy-note" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script>
+(() => {
+  const { MALE } = HumanModel;
+  const DEFAULTS = { ...HumanModel.DEFAULTS, ...HumanModel.START, T: 10000, seed: 1, speed: 1800 };
+  const STORE_KEY = HumanModel.STORE_KEY;
+  const RUNS = 20;
+  const MAX_POP = 2000;       // a run stops once it grows past this, to keep the page fast
+  const MAX_ICONS = 150;
+  const MAX_SNAPS = 3000;     // village pictures kept per run
+  const YEAR = 360;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+
+  let P = { ...DEFAULTS };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved && typeof saved === "object") P = { ...DEFAULTS, ...saved };
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) {} };
+
+  // L comes before M so M's limit uses the current lifespan
+  const SPECS = {
+    p:     { min: () => 0, max: () => 0.01, step: 0.0001 },
+    L:     { min: () => 360, max: () => 10800, step: 30 },
+    M:     { min: () => 1, max: () => P.L, step: 1 },
+    S:     { min: () => 0, max: () => 90, step: 5 },
+    F:     { min: () => 0, max: () => 1000, step: 1 },
+    c:     { min: () => 0.1, max: () => 10, step: 0.1 },
+    K:     { min: () => 0, max: () => 10000, step: 1 },
+    n:     { min: () => 0.1, max: () => 10, step: 0.1 },
+    men:   { min: () => 0, max: () => 100, step: 1 },
+    women: { min: () => 0, max: () => 100, step: 1 },
+    T:     { min: () => 360, max: () => 10000, step: 10 },
+  };
+
+  let main = null, runs = [], alive = 0;
+  let cursor = null, playing = false, rafId = 0;
+
+  function clampAll() {
+    for (const k of Object.keys(SPECS)) {
+      const s = SPECS[k];
+      let v = Number(P[k]);
+      if (!isFinite(v)) v = DEFAULTS[k];
+      P[k] = clamp(v, s.min(), s.max());
+    }
+    for (const k of ["men", "women", "T", "M"]) P[k] = Math.round(P[k]);
+  }
+
+  function syncInputs() {
+    for (const k of Object.keys(SPECS)) {
+      const s = SPECS[k];
+      const range = $(k + "-range"), num = $(k + "-num");
+      range.min = num.min = s.min();
+      range.max = num.max = s.max();
+      range.step = num.step = s.step;
+      range.value = P[k];
+      if (document.activeElement !== num) num.value = P[k];
+    }
+    for (const b of document.querySelectorAll("[data-speed]")) b.setAttribute("aria-pressed", Number(b.dataset.speed) === P.speed);
+  }
+
+  // ---------- Simulation ----------
+  function simulate(seed, detailed) {
+    const rand = HerdModel.rng(seed);
+    const st = HumanModel.startPeople(P.men, P.women, P, rand);
+    const T = P.T;
+    const total = new Int32Array(T + 1);
+    const stride = Math.max(1, Math.ceil((T + 1) / MAX_SNAPS));
+    const d = detailed ? {
+      men: new Int32Array(T + 1), women: new Int32Array(T + 1),
+      boys: new Int32Array(T + 1), girls: new Int32Array(T + 1),
+      couples: new Int32Array(T + 1), born: new Int32Array(T + 1), died: new Int32Array(T + 1),
+      hungry: new Int32Array(T + 1), ration: new Float32Array(T + 1), lost: new Float32Array(T + 1),
+      snaps: [], stride,
+    } : null;
+
+    // Keep a sample of people to draw, as [id, age, sex] triples
+    const snap = (people) => {
+      const every = Math.max(1, Math.ceil(people.length / MAX_ICONS));
+      const out = [];
+      for (const h of people) if (h.id % every === 0) out.push(h.id, h.age, h.sex);
+      return { every, data: Int32Array.from(out.slice(0, MAX_ICONS * 3)) };
+    };
+    const record = (day, ev) => {
+      total[day] = st.people.length;
+      if (!d) return;
+      const c = HumanModel.census(st.people, P);
+      d.men[day] = c.men; d.women[day] = c.women; d.boys[day] = c.boys; d.girls[day] = c.girls;
+      d.couples[day] = c.couples;
+      if (ev) {
+        d.born[day] = ev.born; d.died[day] = ev.died; d.hungry[day] = ev.hungry;
+        d.ration[day] = ev.ration; d.lost[day] = ev.lost;
+      } else {
+        d.ration[day] = HumanModel.rationFor(st.people.length, P);
+      }
+      if (day % stride === 0) d.snaps[day / stride] = snap(st.people);
+    };
+
+    record(0, null);
+    let last = T, capped = false, extinctDay = st.people.length ? null : 0;
+    for (let day = 1; day <= T; day++) {
+      if (extinctDay !== null) {
+        if (d && day % stride === 0) d.snaps[day / stride] = { every: 1, data: new Int32Array(0) };
+        continue;   // arrays are already zero
+      }
+      const ev = HumanModel.stepPeople(st, P, rand);
+      record(day, ev);
+      if (st.people.length === 0) extinctDay = day;
+      if (st.people.length > MAX_POP) { capped = true; last = day; break; }
+    }
+    return { total, last, capped, extinctDay, survived: capped || total[T] > 0, ...d };
+  }
+
+  function recompute() {
+    clampAll();
+    syncInputs();
+    stop();
+    main = simulate(P.seed * 7919, true);
+    runs = [main];
+    for (let i = 1; i < RUNS; i++) runs.push(simulate(P.seed * 7919 + i, false));
+    alive = runs.filter((r) => r.survived).length;
+    if (cursor !== null && cursor > P.T) cursor = null;
+    save();
+    drawTexts();
+    drawChartStatic();
+    drawFoodStatic();
+    drawFrame();
+  }
+
+  // ---------- Text ----------
+  function drawTexts() {
+    const perCouple = HumanModel.childrenPerCouple(P);
+    $("p-hint").innerHTML = P.p > 0
+      ? `About one child every <b>${fmt(1 / P.p)}</b> days per couple, so <b>${fmt(perCouple, 1)}</b> children over a couple's adult years. About 2 replace the parents.`
+      : "No children are born.";
+    const dieLo = Math.round(P.L * (1 - P.S / 100)), dieHi = Math.round(P.L * (1 + P.S / 100));
+    $("M-hint").innerHTML = `Child from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b> until death at ${dieLo === dieHi ? fmt(dieLo) : `${fmt(dieLo)}–${fmt(dieHi)}`} days.`;
+    $("rule-adult").textContent = fmt(P.M);
+
+    const fed = HumanModel.fedCapacity(P);
+    $("F-hint").innerHTML = `Feeds up to <b>${fmt(fed, fed < 10 ? 1 : 0)}</b> people fully. More people than that go hungry.`;
+    $("c-hint").textContent = "Children eat as much as adults.";
+    const days = (v) => fmt(v, v < 10 && !Number.isInteger(v) ? 1 : 0);
+    const loss = (food) => HumanModel.hungerLoss(1 - food, P);
+    const halfFedLife = P.L / (1 + loss(0.5));   // lifespan if someone only ever got half their food
+    $("K-hint").innerHTML = P.K > 0
+      ? `Days of life lost in one day, by how much of their food people get:
+         <span class="loss-table">${[0.9, 0.75, 0.5, 0].map((f) =>
+           `<span>${f ? fmt(f * 100) + "% food" : "No food"}</span><b>${days(loss(f))} days</b>`).join("")}</span>
+         Someone on half food all their life would live about <b>${fmt(halfFedLife)}</b> days instead of ${fmt(P.L)}.`
+      : "Hunger doesn't shorten lives.";
+    $("n-hint").textContent = P.n > 1.05
+      ? "Above 1: small shortfalls cost little, and the cost climbs steeply as food runs out. Higher = gentler until food is really short."
+      : P.n < 0.95
+        ? "Below 1: even small shortfalls are costly, and the cost levels off as food runs out."
+        : "1: a straight line. Each bit of missing food costs the same.";
+    drawHungerCurve();
+
+    const pill = $("pill");
+    const start = P.men + P.women;
+    let kind, text;
+    if (P.men === 0 || P.women === 0) {
+      kind = "crash"; text = "No couples possible: start with at least one man and one woman";
+    } else if (main.extinctDay !== null) {
+      kind = "crash"; text = `Population dies out on day ${fmt(main.extinctDay)}`;
+    } else if (main.capped) {
+      kind = "ok"; text = `Grows past ${fmt(MAX_POP)} people by day ${fmt(main.last)}; run stopped there`;
+    } else {
+      const end = main.total[P.T];
+      kind = end >= start ? "ok" : "warn";
+      text = `${fmt(end)} people on day ${fmt(P.T)} (started with ${fmt(start)})`;
+    }
+    pill.className = "pill " + kind;
+    pill.textContent = text;
+    $("status-note").textContent = `Survives in ${alive} of ${RUNS} runs · food feeds ${fmt(fed, fed < 10 ? 1 : 0)} · ${fmt(perCouple, 1)} children per couple`;
+
+    $("snippet").textContent =
+`// Humans: men and women, adult couples have children,
+// food is shared equally and hunger shortens lives
+const HUMAN_BIRTH_CHANCE = ${P.p};  // p, per couple per day
+const HUMAN_LIFESPAN = ${P.L};       // L, days on average
+const HUMAN_LIFESPAN_SPREAD = ${P.S / 100}; // ± share of L
+const HUMAN_ADULT_AGE = ${P.M};      // M, days
+const FOOD_PER_DAY = ${P.F};         // F, produced each day
+const FOOD_NEED = ${P.c};            // c, per person per day
+const HUNGER_TOLL = ${P.K};          // K, days of life lost on a day with no food
+const HUNGER_POWER = ${P.n};         // n, 1 = straight line, higher = small shortfalls hurt less
+
+function newPerson(sex) {
+  const spread = HUMAN_LIFESPAN_SPREAD * (2 * Math.random() - 1);
+  return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread) };
+}
+
+const isAdult = (h) => h.age >= HUMAN_ADULT_AGE;
+
+// Call once per game day. Returns the new list of people.
+function stepHumans(people) {
+  // 1. Share the food. A shortfall shortens everyone's life,
+  //    0 days when fed, HUNGER_TOLL days with no food, a power curve between.
+  const ration = FOOD_PER_DAY / (people.length * FOOD_NEED);
+  const gap = Math.min(1, Math.max(0, 1 - ration));   // 0 = fully fed, 1 = no food
+  const lost = HUNGER_TOLL * Math.pow(gap, HUNGER_POWER);
+  for (const h of people) h.lifespan -= lost;
+
+  // 2. Everyone ages; those reaching their lifespan die
+  for (const h of people) h.age += 1;
+  people = people.filter((h) => h.age < h.lifespan);
+
+  // 3. Each adult man-woman couple may have a child
+  const men = people.filter((h) => isAdult(h) && h.sex === "male").length;
+  const women = people.filter((h) => isAdult(h) && h.sex === "female").length;
+  const couples = Math.min(men, women);
+  for (let i = 0; i < couples; i++) {
+    if (Math.random() < HUMAN_BIRTH_CHANCE) {
+      people.push(newPerson(Math.random() < 0.5 ? "male" : "female"));
+    }
+  }
+  return people;
+}`;
+  }
+
+  // Small curve under the hunger toll slider: days lost against share of food
+  function drawHungerCurve() {
+    const svg = $("hunger-curve");
+    const W = Math.max(200, svg.clientWidth || 260), H = 112;
+    const m = { l: 40, r: 8, t: 8, b: 20 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const top = Math.max(P.K, 1);
+    const x = (food) => m.l + food * (W - m.l - m.r);
+    const y = (d) => m.t + (1 - d / top) * (H - m.t - m.b);
+    let path = "";
+    for (let i = 0; i <= 100; i++) {
+      const food = i / 100;
+      path += (i ? "L" : "M") + x(food).toFixed(1) + " " + y(HumanModel.hungerLoss(1 - food, P)).toFixed(1);
+    }
+    let s = "";
+    for (const v of [0, top]) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    s += `<text x="${x(0)}" y="${H - 5}" text-anchor="start">no food</text>`;
+    s += `<text x="${x(0.5)}" y="${H - 5}" text-anchor="middle">half</text>`;
+    s += `<text x="${x(1)}" y="${H - 5}" text-anchor="end">enough</text>`;
+    s += `<path class="curve" d="${path}"/>`;
+    for (const f of [0.9, 0.75, 0.5, 0]) s += `<circle class="dot" cx="${x(f)}" cy="${y(HumanModel.hungerLoss(1 - f, P))}" r="3"/>`;
+    svg.innerHTML = s;
+  }
+
+  // ---------- Chart ----------
+  let chartScale = null;
+
+  function niceTicks(min, max, count) {
+    const span = max - min || 1;
+    const raw = span / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const e = raw / mag;
+    const step = (e < 1.5 ? 1 : e < 3 ? 2 : e < 7 ? 5 : 10) * mag;
+    const ticks = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-6; v += step) ticks.push(+v.toFixed(10));
+    return ticks;
+  }
+
+  // Line through the series, thinned to about one point per pixel
+  function linePath(values, last, x, y, every) {
+    let d = "";
+    for (let i = 0; i <= last; i += every) d += (d ? "L" : "M") + x(i).toFixed(1) + " " + y(values[i]).toFixed(1);
+    if ((last % every) !== 0) d += "L" + x(last).toFixed(1) + " " + y(values[last]).toFixed(1);
+    return d;
+  }
+
+  function drawChartStatic() {
+    const svg = $("time-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 320;
+    const m = { l: 48, r: 16, t: 14, b: 38 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const T = P.T;
+    // Scale to this run; other runs that grow bigger are clipped at the top
+    let yMax = Math.max(P.men + P.women, 5);
+    for (let i = 0; i <= main.last; i++) if (main.total[i] > yMax) yMax = main.total[i];
+    const fed = HumanModel.fedCapacity(P);
+    const showFed = isFinite(fed) && fed <= yMax * 3;   // keep the food line in view unless it's far above
+    if (showFed) yMax = Math.max(yMax, fed);
+    yMax *= 1.08;
+    const x = (t) => m.l + (t / T) * (W - m.l - m.r);
+    const y = (n) => m.t + (1 - Math.min(n, yMax) / yMax) * (H - m.t - m.b);
+    const every = Math.max(1, Math.floor(T / (W - m.l - m.r)));
+    chartScale = { x, y };
+
+    let s = `<defs><clipPath id="plot"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></clipPath></defs>`;
+    for (const v of niceTicks(0, yMax, 5)) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    for (const v of niceTicks(0, T, Math.max(3, Math.floor(W / 100)))) {
+      s += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(v)}</text>`;
+    }
+    s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Day</text>`;
+    s += `<text class="axis-title" transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">People</text>`;
+
+    if (showFed) {
+      s += `<line class="kline" x1="${m.l}" x2="${W - m.r}" y1="${y(fed)}" y2="${y(fed)}"/>`;
+      s += `<text class="klabel" x="${W - m.r - 4}" y="${y(fed) - 6}" text-anchor="end">food feeds ${fmt(fed, fed < 10 ? 1 : 0)}</text>`;
+    }
+    s += `<g clip-path="url(#plot)">`;
+    for (const r of runs.slice(1)) s += `<path class="ghost total" d="${linePath(r.total, r.last, x, y, every)}"/>`;
+    const kids = new Int32Array(main.last + 1);
+    for (let i = 0; i <= main.last; i++) kids[i] = main.boys[i] + main.girls[i];
+    s += `<path class="main kids" d="${linePath(kids, main.last, x, y, every)}"/>`;
+    s += `<path class="main men" d="${linePath(main.men, main.last, x, y, every)}"/>`;
+    s += `<path class="main women" d="${linePath(main.women, main.last, x, y, every)}"/>`;
+    s += `<path class="main" d="${linePath(main.total, main.last, x, y, every)}"/>`;
+    s += `</g>`;
+    if (main.capped) {
+      s += `<line class="capline" x1="${x(main.last)}" x2="${x(main.last)}" y1="${m.t}" y2="${y(0)}"/>`;
+      s += `<text class="caplabel" x="${x(main.last) - 6}" y="${m.t + 12}" text-anchor="end">run stopped at ${fmt(MAX_POP)} people</text>`;
+    }
+    s += `<line class="cursor" id="cur-line" y1="${m.t}" y2="${y(0)}"/>`;
+    s += `<circle class="dot" id="cur-dot" r="4.5"/>`;
+    svg.innerHTML = s;
+  }
+
+  function drawChartCursor() {
+    if (!chartScale) return;
+    const { x, y } = chartScale;
+    const day = currentDay();
+    const cx = x(day).toFixed(1);
+    $("cur-line").setAttribute("x1", cx);
+    $("cur-line").setAttribute("x2", cx);
+    $("cur-dot").setAttribute("cx", cx);
+    $("cur-dot").setAttribute("cy", y(main.total[day]).toFixed(1));
+    drawFoodCursor();
+  }
+
+  // ---------- Food share chart ----------
+  // Share of each person's daily need they get, 100% = fully fed. Shown up to 200%.
+  const FOOD_TOP = 2;
+  let foodScale = null;
+
+  function drawFoodStatic() {
+    const svg = $("food-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 180;
+    const m = { l: 48, r: 16, t: 12, b: 34 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const T = P.T;
+    const x = (t) => m.l + (t / T) * (W - m.l - m.r);
+    const y = (r) => m.t + (1 - clamp(r, 0, FOOD_TOP) / FOOD_TOP) * (H - m.t - m.b);
+    const every = Math.max(1, Math.floor(T / (W - m.l - m.r)));
+    foodScale = { x, y };
+
+    let s = `<rect class="collapse-zone" x="${m.l}" y="${y(1)}" width="${W - m.l - m.r}" height="${y(0) - y(1)}"/>`;
+    for (const v of [0, 0.5, 1, 1.5, 2]) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v === 2 ? "200%+" : fmt(v * 100) + "%"}</text>`;
+    }
+    for (const v of niceTicks(0, T, Math.max(3, Math.floor(W / 100)))) {
+      s += `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(v)}</text>`;
+    }
+    s += `<line class="kline" x1="${m.l}" x2="${W - m.r}" y1="${y(1)}" y2="${y(1)}"/>`;
+    s += `<text class="klabel" x="${W - m.r - 4}" y="${y(1) - 6}" text-anchor="end">fully fed</text>`;
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Day</text>`;
+
+    // Draw only while people are alive; an empty village has no share
+    let d = "", open = false;
+    for (let i = 0; i <= main.last; i += every) {
+      if (main.total[i] > 0 && isFinite(main.ration[i])) {
+        d += (open ? "L" : "M") + x(i).toFixed(1) + " " + y(main.ration[i]).toFixed(1);
+        open = true;
+      } else {
+        open = false;
+      }
+    }
+    s += `<path class="main" d="${d}"/>`;
+    s += `<line class="cursor" id="food-line" y1="${m.t}" y2="${y(0)}"/>`;
+    s += `<circle class="dot" id="food-dot" r="4.5"/>`;
+    svg.innerHTML = s;
+  }
+
+  function drawFoodCursor() {
+    if (!foodScale) return;
+    const { x, y } = foodScale;
+    const day = currentDay();
+    const cx = x(day).toFixed(1);
+    $("food-line").setAttribute("x1", cx);
+    $("food-line").setAttribute("x2", cx);
+    const r = main.ration[day];
+    const dot = $("food-dot");
+    const show = main.total[day] > 0 && isFinite(r);
+    dot.setAttribute("visibility", show ? "visible" : "hidden");
+    if (show) { dot.setAttribute("cx", cx); dot.setAttribute("cy", y(r).toFixed(1)); }
+  }
+
+  // ---------- Village ----------
+  function hash01(n) {
+    let t = Math.imul((n + 1) | 0, 0x9e3779b1);
+    t = Math.imul(t ^ (t >>> 16), 0x85ebca6b);
+    t = Math.imul(t ^ (t >>> 13), 0xc2b2ae35);
+    return ((t ^ (t >>> 16)) >>> 0) / 4294967296;
+  }
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  // Men wear a straight tunic, women a flared dress
+  function drawPerson(ctx, cx, cy, s, male, c) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(s, s);
+    ctx.lineWidth = 1.4 / s;
+    ctx.strokeStyle = c.ink;
+    ctx.beginPath();
+    ctx.moveTo(-2, 5); ctx.lineTo(-2.4, 11);
+    ctx.moveTo(2, 5); ctx.lineTo(2.4, 11);
+    ctx.stroke();
+    ctx.fillStyle = male ? c.men : c.women;
+    ctx.beginPath();
+    if (male) {
+      ctx.roundRect ? ctx.roundRect(-4, -6, 8, 12, 2) : ctx.rect(-4, -6, 8, 12);
+    } else {
+      ctx.moveTo(-3, -6); ctx.lineTo(3, -6); ctx.lineTo(6, 7); ctx.lineTo(-6, 7); ctx.closePath();
+    }
+    ctx.fill();
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(0, -10, 3.6, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 1 / s;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawVillage() {
+    const canvas = $("village");
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const day = currentDay();
+    const snap = main.snaps[Math.floor(day / main.stride)] || main.snaps[main.snaps.length - 1] || { every: 1, data: new Int32Array(0) };
+    const c = { ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), skin: cssVar("--skin") };
+    const base = clamp(w / 700, 0.8, 1.2);
+    const people = [];
+    for (let i = 0; i < snap.data.length; i += 3) {
+      const id = snap.data[i];
+      people.push({ age: snap.data[i + 1], male: snap.data[i + 2] === MALE, x: 0.03 + hash01(id * 4) * 0.94, y: 0.3 + hash01(id * 4 + 1) * 0.6 });
+    }
+    people.sort((a, b) => a.y - b.y);
+    for (const p of people) {
+      const grown = 0.5 + 0.5 * Math.min(1, p.age / P.M);   // children are smaller
+      drawPerson(ctx, p.x * w, p.y * h, base * (0.75 + p.y * 0.4) * grown, p.male, c);
+    }
+
+    const kids = main.boys[day] + main.girls[day];
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(main.total[day])} people · fed ${shareText(day)}`;
+    $("scale").textContent = (snap.every > 1 ? `1 icon ≈ ${snap.every} people · ` : "") + `Children: under ${fmt(P.M)} days`;
+    const hungry = main.hungry[day] ? ` (${fmt(main.hungry[day])} cut short by hunger)` : "";
+    $("events").innerHTML = day === 0
+      ? "Day 0: everyone starts as an adult"
+      : `Day ${fmt(day)}: <span class="born">${fmt(main.born[day])} born</span> · <span class="died">${fmt(main.died[day])} died${hungry}</span> · ${fmt(kids)} children · ${fmt(main.couples[day])} couples`;
+  }
+
+  // Each person's share of their daily need, e.g. "85%"
+  function shareText(day) {
+    const r = main.ration[day];
+    if (!(main.total[day] > 0) || !isFinite(r)) return "—";
+    return r >= 10 ? "999%+" : `${fmt(r * 100)}%`;
+  }
+
+  // ---------- Stats ----------
+  function drawStats() {
+    const day = currentDay(), m = main;
+    const row = (label, v, key) => `<dt>${key ? `<span class="dot-key ${key}"></span>` : ""}${label}</dt><dd>${v}</dd>`;
+    $("stats-day").innerHTML = `
+      <h3>Day ${fmt(day)}</h3>
+      <dl class="rows">
+        ${row("Adult men", fmt(m.men[day]), "men")}
+        ${row("Adult women", fmt(m.women[day]), "women")}
+        ${row("Boys", fmt(m.boys[day]))}
+        ${row("Girls", fmt(m.girls[day]))}
+        <dt class="total">Everyone</dt><dd class="total">${fmt(m.total[day])}</dd>
+        ${row("Fertile couples", fmt(m.couples[day]))}
+        ${row("Food per person", m.total[day] > 0 ? `${fmt(P.F / m.total[day], 2)} of ${fmt(P.c, 1)} needed` : "—")}
+        ${row("Share of need", shareText(day))}
+        ${row("Life lost to hunger", `${fmt(m.lost[day], 1)} days each`)}
+        ${row("Born this day", fmt(m.born[day]))}
+        ${row("Died this day", fmt(m.died[day]))}
+      </dl>`;
+
+    let born = 0, died = 0, hungry = 0, hungryDays = 0, peak = 0, peakDay = 0;
+    for (let i = 0; i <= m.last; i++) {
+      born += m.born[i]; died += m.died[i]; hungry += m.hungry[i];
+      if (m.total[i] > 0 && m.ration[i] < 1) hungryDays++;
+      if (m.total[i] > peak) { peak = m.total[i]; peakDay = i; }
+    }
+    const outcome = m.extinctDay === 0 ? "nobody to start with"
+      : m.extinctDay !== null ? `died out on day ${fmt(m.extinctDay)}`
+      : m.capped ? `passed ${fmt(MAX_POP)} on day ${fmt(m.last)}`
+      : `alive on day ${fmt(P.T)}`;
+    // Highest point reached by any of the runs, for comparison
+    let peakAll = 0;
+    for (const r of runs) for (let i = 0; i <= r.last; i++) if (r.total[i] > peakAll) peakAll = r.total[i];
+    $("stats-run").innerHTML = `
+      <h3>Whole run</h3>
+      <dl class="rows">
+        <dt class="total">Max population</dt><dd class="total">${fmt(peak)} on day ${fmt(peakDay)}</dd>
+        ${row(`Max in any of the ${RUNS} runs`, fmt(peakAll))}
+        ${row("Started with", `${fmt(m.total[0])} adults`)}
+        ${row("Born", fmt(born))}
+        ${row("Died", fmt(died))}
+        ${row("Deaths cut short by hunger", fmt(hungry))}
+        ${row("Days with too little food", fmt(hungryDays))}
+        ${row("Outcome", outcome)}
+        ${row("Survive in", `${alive} of ${RUNS} runs`)}
+      </dl>`;
+  }
+
+  // ---------- Playback ----------
+  const currentDay = () => clamp(Math.floor(cursor === null ? P.T : cursor), 0, main.last);
+
+  function drawDay() {
+    const day = currentDay();
+    $("day").max = P.T;
+    $("day").value = cursor === null ? P.T : day;
+    $("day-label").textContent = "day " + fmt(day);
+  }
+
+  function drawFrame() {
+    drawChartCursor();
+    drawVillage();
+    drawStats();
+    drawDay();
+  }
+
+  function stop() {
+    playing = false;
+    cancelAnimationFrame(rafId);
+    $("play").textContent = "Play";
+  }
+
+  $("play").addEventListener("click", () => {
+    if (playing) { stop(); return; }
+    playing = true;
+    $("play").textContent = "Pause";
+    const from = cursor === null || cursor >= P.T ? 0 : cursor;
+    let start = null;
+    const tick = (now) => {
+      if (!playing) return;
+      // Time from the first frame, not the click: a frame's timestamp can predate the click
+      if (start === null) start = now;
+      const day = from + ((now - start) / 1000) * P.speed;
+      cursor = day >= P.T ? null : Math.floor(Math.max(0, day));
+      drawFrame();
+      if (cursor === null) stop(); else rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+  });
+
+  $("day").addEventListener("input", (e) => {
+    stop();
+    const v = Number(e.target.value);
+    cursor = v >= P.T ? null : v;
+    drawFrame();
+  });
+
+  for (const b of document.querySelectorAll("[data-speed]")) {
+    b.addEventListener("click", () => { P.speed = Number(b.dataset.speed); save(); syncInputs(); });
+  }
+
+  // ---------- Inputs ----------
+  let debounce = 0;
+  const schedule = () => { clearTimeout(debounce); debounce = setTimeout(recompute, 80); };
+  for (const k of Object.keys(SPECS)) {
+    $(k + "-range").addEventListener("input", (e) => {
+      P[k] = Number(e.target.value);
+      $(k + "-num").value = P[k];
+      schedule();
+    });
+    $(k + "-num").addEventListener("input", (e) => {
+      if (e.target.value === "" || !isFinite(Number(e.target.value))) return;
+      P[k] = Number(e.target.value);
+      schedule();
+    });
+    $(k + "-num").addEventListener("change", () => { syncInputs(); $(k + "-num").value = P[k]; });
+  }
+  $("reroll").addEventListener("click", () => { P.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
+  $("reset").addEventListener("click", () => { P = { ...DEFAULTS }; cursor = null; recompute(); });
+
+  $("copy").addEventListener("click", () => {
+    const text = $("snippet").textContent;
+    const note = $("copy-note");
+    const fallback = () => {
+      const range = document.createRange();
+      range.selectNodeContents($("snippet"));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      note.textContent = "Code selected. Press Ctrl+C to copy.";
+    };
+    try {
+      navigator.clipboard.writeText(text).then(() => { note.textContent = "Copied."; }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawChartStatic(); drawFoodStatic(); drawHungerCurve(); drawFrame(); }, 60);
+  }).observe(document.querySelector("main"));
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", drawVillage);
+  new MutationObserver(drawVillage).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  recompute();
+})();
+</script>
+</body>
+</html>

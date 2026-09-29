@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<style>
+  .params {
+    display: grid;
+    grid-template-columns: 1.4em 1fr auto;
+    gap: 4px 8px;
+    margin: 0;
+    font-size: 13.5px;
+    align-items: baseline;
+  }
+  .params dt { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .params dd { margin: 0; }
+  .params .v { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .params .sep { padding-top: 6px; border-top: 1px dashed var(--line); }
+  .start-line { margin: 0; font-size: 13.5px; padding: 6px 10px; background: var(--ground); border: 1px solid var(--line); border-radius: 6px; }
+  .start-line b { font-weight: 600; }
+  .source { font-size: 12px; color: var(--allee); margin: 0; }
+
+  .chart .main.people { stroke: var(--ink); stroke-width: 2.2; }
+  .chart .band { stroke: none; opacity: 0.1; }
+  .chart .band.cows { fill: var(--cows); }
+  .chart .band.people { fill: var(--ink); opacity: 0.08; }
+  .chart .reflabel { font-size: 10.5px; }
+  .chart .dot.people { fill: var(--ink); }
+  .chart .fedline { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.6; }
+  .chart .fedlabel { fill: var(--ink); opacity: 0.8; }
+  .swatch.people { border-color: var(--ink); }
+  .swatch.band { height: 10px; border: 0; background: var(--muted); opacity: 0.35; }
+  .swatch.dash-herd { border-color: var(--herd); border-top-style: dashed; border-top-width: 1.5px; }
+  .swatch.dash-people { border-color: var(--ink); border-top-style: dashed; border-top-width: 1.5px; opacity: 0.7; }
+  .dot-key.people { background: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
+  .stat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .stat-head h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; display: inline-flex; align-items: center; gap: 8px; }
+  .big { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .big small { font-family: var(--body); font-weight: 400; font-size: 12.5px; color: var(--muted); margin-left: 4px; }
+  .rows { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+  .rows dt { color: var(--muted); }
+  .rows dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .rows .sub {
+    grid-column: 1 / -1;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+  }
+  .rows .sub:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  #rice-range { accent-color: var(--allee); }
+  #iq-range { accent-color: var(--men); }
+  .param-head .lbl { font-weight: 600; font-size: 14px; }
+  .advisor-off #iq-block { opacity: 0.55; }
+  .foods .best { color: var(--herd); font-weight: 600; }
+  .foods {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 4px 10px;
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    align-items: baseline;
+  }
+  .foods dt { font-weight: 600; }
+  .foods dd { margin: 0; }
+  .foods .v { font-family: var(--mono); font-size: 12.5px; text-align: right; white-space: nowrap; }
+  .foods .h { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--body); }
+  .harvest-tag { color: var(--allee); font-weight: 500; }
+  .chart .harvest { fill: var(--allee); opacity: 0.1; }
+  .chart .rice-area { fill: var(--allee); opacity: 0.35; }
+  .chart .rice-line { fill: none; stroke: var(--allee); stroke-width: 1.6; }
+  .chart .milk-line { fill: none; stroke: var(--cows); stroke-width: 1.4; }
+  .chart .dot.rice { fill: var(--allee); }
+  .swatch.rice { border-color: var(--allee); }
+  .swatch.milk { border-color: var(--cows); }
+  .swatch.harvest { height: 10px; border: 0; background: var(--allee); opacity: 0.25; }
+  .food-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+  @media (max-width: 620px) { .food-rows { grid-template-columns: 1fr; } }
+  .pill .dot-key { margin-right: -2px; }
+  .pill::before { display: none; }
+</style>
+</head>
+<body>
+<nav class="topbar" aria-label="Pages">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
+    <div class="tabs">
+      <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+      <a href="humans.html">Humans<small>Couples &amp; children</small></a>
+      <a href="farm.html" aria-current="page">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Full Simulation</h1>
+    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). The cows follow the Herd tuner and the people follow the Humans page, including how many of each you start with; only rice farming and the food advisor are set here. People eat two foods: milk from adult cows every day, and rice they harvest in early autumn.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="farming">
+        <div class="section-head">
+          <h2>Food</h2>
+          <p class="scope">Rice is set here; milk comes from the cows</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="rice-num">Rice harvest</label>
+            <span class="num-wrap"><input id="rice-num" type="number" min="0" step="10"><span class="unit">/year</span></span>
+          </div>
+          <input id="rice-range" type="range" min="0" max="5000" step="10" aria-label="Total rice harvested each year">
+          <p class="hint" id="rice-hint">Total rice harvested each year.</p>
+        </div>
+        <dl class="foods">
+          <dt></dt><dd class="h">Comes from</dd><dd class="h v">Keeps</dd>
+          <dt>Milk</dt><dd>1 a day per adult cow</dd><dd class="v">10 days</dd>
+          <dt>Rice</dt><dd>harvest, days 181–210</dd><dd class="v">360 days</dd>
+        </dl>
+        <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored.</p>
+
+        <div class="param">
+          <div class="param-head">
+            <span class="lbl">Food advisor</span>
+            <div class="seg" role="group" aria-label="Food advisor">
+              <button type="button" id="adv-off" aria-pressed="false">Off</button>
+              <button type="button" id="adv-on" aria-pressed="true">On</button>
+            </div>
+          </div>
+          <p class="hint">Each day the advisor sets a ration: the food in store plus what's still to come, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.</p>
+        </div>
+
+        <div class="param" id="iq-block">
+          <div class="param-head">
+            <label for="iq-num">Advisor IQ</label>
+            <span class="num-wrap"><input id="iq-num" type="number" min="40" max="200" step="1"></span>
+          </div>
+          <input id="iq-range" type="range" min="40" max="200" step="1" aria-label="Advisor IQ">
+          <p class="hint" id="iq-hint"></p>
+        </div>
+
+        <dl class="foods" id="advisor-compare"></dl>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head">
+          <h2>Cows</h2>
+          <p class="scope">From the <b><a href="index.html#shared">Herd tuner</a></b></p>
+        </div>
+        <p class="start-line" id="herd-start"></p>
+        <dl class="params" id="herd-params"></dl>
+        <p class="source" id="herd-source" hidden></p>
+        <div class="btn-row"><a class="btn" href="index.html#shared">Change on Herd tuner →</a></div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head">
+          <h2>Humans</h2>
+          <p class="scope">From the <b><a href="humans.html#params">Humans page</a></b></p>
+        </div>
+        <p class="start-line" id="human-start"></p>
+        <dl class="params" id="human-params"></dl>
+        <p class="source" id="human-source" hidden></p>
+        <div class="btn-row"><a class="btn" href="humans.html#params">Change on Humans →</a></div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head">
+          <h2>Runs</h2>
+          <p class="scope">Each group runs 20 times with different luck</p>
+        </div>
+        <div class="btn-row"><button type="button" class="btn" id="reroll">Roll new runs</button></div>
+        <p class="hint">Bold lines are one run. Shading shows the lowest to highest count across all 20.</p>
+      </section>
+    </aside>
+
+    <main>
+      <div class="status">
+        <span class="pill" id="pill-cows">—</span>
+        <span class="pill" id="pill-people">—</span>
+      </div>
+
+      <section class="card" aria-label="Farm">
+        <div class="card-head">
+          <h2>Farm</h2>
+          <p>Press Play or drag the slider. Young animals and children are drawn smaller.</p>
+        </div>
+        <div class="pasture">
+          <canvas id="pasture"></canvas>
+          <div class="tag-box readout" id="readout">Day 0</div>
+        </div>
+        <div class="playbar">
+          <button type="button" class="btn primary play" id="play">Play</button>
+          <input type="range" id="day" aria-label="Day" min="0" step="1">
+          <span class="day" id="day-label">day 0</span>
+          <div class="speed">
+            <span>Speed</span>
+            <div class="seg" role="group" aria-label="Playback speed">
+              <button type="button" data-speed="36" aria-pressed="false">1 yr / 10 s</button>
+              <button type="button" data-speed="180" aria-pressed="true">1 yr / 2 s</button>
+              <button type="button" data-speed="720" aria-pressed="false">1 yr / ½ s</button>
+            </div>
+          </div>
+        </div>
+        <p class="events" id="events"></p>
+      </section>
+
+      <section class="card" aria-label="Numbers over time">
+        <div class="card-head">
+          <h2>Numbers over time</h2>
+          <p>Gridlines mark each 360-day year.</p>
+        </div>
+        <svg class="chart" id="time-chart" height="320" role="img" aria-label="Cows and people over 3600 days"></svg>
+        <div class="legend">
+          <span><i class="swatch cows"></i>Cows</span>
+          <span><i class="swatch people"></i>People</span>
+          <span><i class="swatch band"></i>Range across 20 runs</span>
+          <span><i class="swatch dash-herd"></i>Where cows settle</span>
+          <span><i class="swatch dash-people"></i>People the milk feeds</span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Food">
+        <div class="card-head">
+          <h2>Food in store</h2>
+          <p>Rice arrives in one burst each autumn and is eaten through the year. Shaded bands are harvests.</p>
+        </div>
+        <svg class="chart" id="food-chart" height="190" role="img" aria-label="Milk and rice in store over 3600 days"></svg>
+        <div class="legend">
+          <span><i class="swatch rice"></i>Rice in store</span>
+          <span><i class="swatch milk"></i>Milk in store</span>
+          <span><i class="swatch harvest"></i>Harvest (days 181–210)</span>
+        </div>
+        <div class="food-rows">
+          <dl class="rows" id="food-day"></dl>
+          <dl class="rows" id="food-run"></dl>
+        </div>
+      </section>
+
+      <div class="stats">
+        <section class="card" aria-label="Cow stats" id="stats-cows"></section>
+        <section class="card" aria-label="People stats" id="stats-people"></section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script>
+(() => {
+  const T = 3600;
+  const YEAR = 360;
+  const RUNS = 20;
+  const MAX_ICONS = 90;           // per group
+  const MAX_PEOPLE = 2000;        // a human run stops once it grows past this, to keep the page fast
+  const STORE_KEY = "farm-v3";
+  const HERDS = [
+    { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
+  ];
+  const HUMAN_SALT = 200000;
+  const MILK_PER_COW = 1;         // milk each adult cow gives per day; people's only food
+  const MILK_SHELF_LIFE = 10;     // days stored milk stays good, counting the day it's made
+  const RICE_SHELF_LIFE = 360;    // days stored rice stays good
+  const HARVEST_FIRST = 181, HARVEST_LAST = 210;   // harvest days within each 360-day year
+  const HARVEST_DAYS = HARVEST_LAST - HARVEST_FIRST + 1;
+  const PERFECT_IQ = 160;
+  // How far off an advisor's food estimates typically are, as a fraction: 0 at IQ 160+, 15% at IQ 100
+  const iqError = (iq) => Math.max(0, (PERFECT_IQ - iq) / 400);
+  const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
+  const isHarvest = (day) => day >= 1 && dayOfYear(day) >= HARVEST_FIRST && dayOfYear(day) <= HARVEST_LAST;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+
+  // Rice production, the dice and playback speed belong to this page
+  let S = { seed: 1, speed: 180, riceYear: 3000, advisor: true, iq: 100 };   // riceYear: total rice harvested each year
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved && typeof saved === "object") S = { ...S, ...saved };
+  } catch (e) {}
+  const saveS = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} };
+
+  // Inherited settings
+  let HP = null, HS = null, herdSaved = false, EQ = null;     // herds
+  let UP = null, US = null, humanSaved = false;               // humans
+  let perIcon = 1;
+  const result = {};       // cows / people: { main, runs, alive }
+  let cursor = null, playing = false, rafId = 0;
+
+  function loadSettings() {
+    const hp = HerdModel.savedParams(), hs = HerdModel.savedStart();
+    herdSaved = !!hp;
+    HP = hp || { ...HerdModel.DEFAULTS };
+    HS = hs || { ...HerdModel.START };
+    EQ = HerdModel.equilibria(HP);
+    perIcon = Math.max(1, Math.ceil((Math.max(HP.K * 1.5, HS.N0)) / MAX_ICONS));
+
+    const up = HumanModel.savedParams(), us = HumanModel.savedStart();
+    humanSaved = !!up;
+    UP = up || { ...HumanModel.DEFAULTS };
+    US = us || { ...HumanModel.START };
+  }
+
+  // ---------- Simulation ----------
+  function runHerd(start, seed, detailed) {
+    const rand = HerdModel.rng(seed);
+    const state = HerdModel.startHerd(start, HP, rand);
+    const counts = new Int32Array(T + 1);
+    const adults = new Int32Array(T + 1);
+    counts[0] = state.herd.length;
+    const d = detailed ? {
+      snaps: new Array(T + 1), young: new Int32Array(T + 1),
+      born: new Int32Array(T + 1), old: new Int32Array(T + 1), size: new Int32Array(T + 1),
+    } : null;
+    // Only the animals drawn on the farm are kept per day, as [id, age] pairs
+    const snap = () => {
+      const out = [];
+      for (const a of state.herd) {
+        if (a.id % perIcon === 0) { out.push(a.id, a.age); if (out.length >= MAX_ICONS * 2) break; }
+      }
+      return Int32Array.from(out);
+    };
+    const young = () => { let n = 0; for (const a of state.herd) if (a.age < HP.M) n++; return n; };
+    let yc = young();
+    adults[0] = counts[0] - yc;
+    if (d) { d.snaps[0] = snap(); d.young[0] = yc; }
+
+    let extinctDay = start > 0 ? null : 0;
+    for (let day = 1; day <= T; day++) {
+      const ev = HerdModel.stepHerd(state, HP, rand);
+      counts[day] = state.herd.length;
+      yc = young();
+      adults[day] = counts[day] - yc;
+      if (extinctDay === null && counts[day] === 0) extinctDay = day;
+      if (d) {
+        d.snaps[day] = snap(); d.young[day] = yc;
+        d.born[day] = ev.born; d.old[day] = ev.old; d.size[day] = ev.size;
+      }
+    }
+    return { counts, adults, last: T, extinctDay, survived: counts[T] > 0, ...d };
+  }
+
+  // iq: the advisor's IQ, or null for no advisor
+  function runPeople(seed, detailed, cowAdults, iq) {
+    const rand = HerdModel.rng(seed);
+    // The advisor has its own dice, so every policy faces the same births, deaths and herd
+    const arand = HerdModel.rng((seed ^ 0x5bd1e995) >>> 0);
+    const gauss = () => Math.sqrt(-2 * Math.log(1 - arand())) * Math.cos(2 * Math.PI * arand());
+    const sigma = iq == null ? 0 : iqError(iq);
+    const bias = sigma * gauss();   // this advisor's lasting lean: over- or underestimating food
+    // Same human parameters, but the food shared out each day is what's eaten from the stores
+    const p = { ...UP, F: 0 };
+    const st = HumanModel.startPeople(US.men, US.women, p, rand);
+    const counts = new Int32Array(T + 1);
+    const f32 = () => new Float32Array(T + 1);
+    const d = detailed ? {
+      men: new Int32Array(T + 1), women: new Int32Array(T + 1),
+      boys: new Int32Array(T + 1), girls: new Int32Array(T + 1), couples: new Int32Array(T + 1),
+      born: new Int32Array(T + 1), died: new Int32Array(T + 1), hungry: new Int32Array(T + 1),
+      ration: f32(), snaps: new Array(T + 1),
+      made: f32(), drank: f32(), stored: f32(), spoiled: f32(),                    // milk
+      riceMade: f32(), riceEaten: f32(), riceStored: f32(), riceSpoiled: f32(),    // rice
+      share: new Float32Array(T + 1).fill(NaN),                                     // advisor's ration
+    } : null;
+    // milk[a] / rice[a] = food made a days ago that is still good
+    const milk = new Float64Array(MILK_SHELF_LIFE);
+    const rice = new Float64Array(RICE_SHELF_LIFE);
+    const sum = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
+
+    // A sample of people to draw, as [id, age, sex] triples
+    const snap = () => {
+      const every = Math.max(1, Math.ceil(st.people.length / MAX_ICONS));
+      const out = [];
+      for (const h of st.people) if (h.id % every === 0) out.push(h.id, h.age, h.sex);
+      return Int32Array.from(out.slice(0, MAX_ICONS * 3));
+    };
+    const record = (day, ev, food) => {
+      counts[day] = st.people.length;
+      if (!d) return;
+      const c = HumanModel.census(st.people, p);
+      d.men[day] = c.men; d.women[day] = c.women; d.boys[day] = c.boys; d.girls[day] = c.girls;
+      d.couples[day] = c.couples;
+      const need = st.people.length * p.c;
+      d.ration[day] = ev ? ev.ration : need > 0 ? Math.min(1, food.milkMade / need) : Infinity;
+      d.made[day] = food.milkMade; d.drank[day] = food.milkEaten; d.spoiled[day] = food.milkSpoiled;
+      d.riceMade[day] = food.riceMade; d.riceEaten[day] = food.riceEaten; d.riceSpoiled[day] = food.riceSpoiled;
+      d.stored[day] = sum(milk);
+      d.riceStored[day] = sum(rice);
+      if (food.share !== undefined) d.share[day] = food.share;
+      if (ev) { d.born[day] = ev.born; d.died[day] = ev.died; d.hungry[day] = ev.hungry; }
+      d.snaps[day] = snap();
+    };
+
+    record(0, null, { milkMade: cowAdults[0] * MILK_PER_COW, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    let last = T, capped = false, extinctDay = st.people.length ? null : 0;
+    for (let day = 1; day <= T; day++) {
+      if (extinctDay !== null) {
+        // Nobody left: the cows still give milk, but none is eaten, stored or harvested
+        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * MILK_PER_COW; }
+        continue;
+      }
+
+      // 1. Stored food ages a day; anything past its shelf life spoils
+      const milkSpoiled = milk[MILK_SHELF_LIFE - 1];
+      for (let a = MILK_SHELF_LIFE - 1; a > 0; a--) milk[a] = milk[a - 1];
+      const riceSpoiled = rice[RICE_SHELF_LIFE - 1];
+      for (let a = RICE_SHELF_LIFE - 1; a > 0; a--) rice[a] = rice[a - 1];
+
+      // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
+      const milkMade = cowAdults[day - 1] * MILK_PER_COW;
+      milk[0] = milkMade;
+      // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
+      const census = HumanModel.census(st.people, p);
+      const farmers = census.men + census.women > 0;
+      let riceMade = 0;
+      if (isHarvest(day) && farmers) riceMade = S.riceYear / HARVEST_DAYS;
+      rice[0] = riceMade;
+
+      // 3. The advisor sets today's ration: food in store plus food still to come before the
+      //    next harvest, spread evenly over the days until then. Its estimate is off by an
+      //    error that shrinks with IQ: a lasting lean plus some day-to-day wobble.
+      let share = 1;
+      if (iq != null) {
+        const doy = dayOfYear(day);
+        let horizon, riceToCome = 0;
+        if (doy < HARVEST_FIRST) {
+          horizon = HARVEST_FIRST - doy;
+        } else {
+          horizon = YEAR - doy + HARVEST_FIRST;
+          if (doy <= HARVEST_LAST && farmers) riceToCome = ((HARVEST_LAST - doy) * S.riceYear) / HARVEST_DAYS;
+        }
+        const supply = sum(milk) + sum(rice) + milkMade * (horizon - 1) + riceToCome;
+        const need = st.people.length * p.c * horizon;
+        const err = bias + (sigma / 2) * gauss();
+        share = need > 0 ? Math.min(1, (supply / need) * Math.exp(err)) : 1;
+      }
+
+      // 4. People eat their ration, whatever spoils soonest first; the rest stays stored
+      let want = st.people.length * p.c * share, milkEaten = 0, riceEaten = 0;
+      let i = MILK_SHELF_LIFE - 1, j = RICE_SHELF_LIFE - 1;
+      while (want > 1e-9 && (i >= 0 || j >= 0)) {
+        const fromMilk = j < 0 || (i >= 0 && MILK_SHELF_LIFE - i <= RICE_SHELF_LIFE - j);
+        const store = fromMilk ? milk : rice, a = fromMilk ? i : j;
+        const take = Math.min(store[a], want);
+        store[a] -= take;
+        want -= take;
+        if (fromMilk) { milkEaten += take; i--; } else { riceEaten += take; j--; }
+      }
+
+      // 5. What was eaten is the day's food, shared equally
+      p.F = milkEaten + riceEaten;
+      const ev = HumanModel.stepPeople(st, p, rand);
+      record(day, ev, { milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, share: iq != null ? share : undefined });
+      if (st.people.length === 0) extinctDay = day;
+      if (st.people.length > MAX_PEOPLE) { capped = true; last = day; break; }
+    }
+    return { counts, last, capped, extinctDay, survived: capped || counts[T] > 0, ...d };
+  }
+
+  function recompute() {
+    stop();
+    loadSettings();
+    for (const sp of HERDS) {
+      const base = S.seed * 7919 + sp.salt;
+      const runs = [runHerd(HS.N0, base, true)];
+      for (let i = 1; i < RUNS; i++) runs.push(runHerd(HS.N0, base + i, false));
+      result[sp.key] = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
+    }
+    const base = S.seed * 7919 + HUMAN_SALT;
+    const cowRuns = result.cows.runs;
+    const iqNow = S.advisor ? S.iq : null;
+    const runs = [runPeople(base, true, cowRuns[0].adults, iqNow)];
+    for (let i = 1; i < RUNS; i++) runs.push(runPeople(base + i, false, cowRuns[i].adults, iqNow));
+    result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
+
+    // The same villages and luck under each policy, to compare
+    const aliveWith = (iq) => {
+      if (iq === iqNow) return result.people.alive;
+      let n = 0;
+      for (let i = 0; i < RUNS; i++) if (runPeople(base + i, false, cowRuns[i].adults, iq).survived) n++;
+      return n;
+    };
+    result.compare = { none: aliveWith(null), advisor: aliveWith(S.iq), perfect: aliveWith(PERFECT_IQ) };
+
+    saveS();
+    syncSpeed();
+    syncRice();
+    syncAdvisor();
+    drawParams();
+    drawVerdict();
+    drawChartStatic();
+    drawFoodStatic();
+    drawFrame();
+  }
+
+  // ---------- Panel ----------
+  function syncAdvisor() {
+    S.iq = Math.round(clamp(Number(S.iq) || 100, 40, 200));
+    $("adv-on").setAttribute("aria-pressed", String(!!S.advisor));
+    $("adv-off").setAttribute("aria-pressed", String(!S.advisor));
+    $("farming").classList.toggle("advisor-off", !S.advisor);
+    $("iq-range").value = S.iq;
+    if (document.activeElement !== $("iq-num")) $("iq-num").value = S.iq;
+    const err = iqError(S.iq);
+    $("iq-hint").innerHTML = err === 0
+      ? `Spot on: the advisor knows exactly how much food there will be, so its ration is the best plan.`
+      : `Food estimates are typically off by <b>±${fmt(err * 100)}%</b>, with a lasting lean one way. Too high and the food runs out; too low and people go hungry for nothing. At IQ ${PERFECT_IQ}+ it's spot on.`;
+    const c = result.compare;
+    if (c) {
+      const best = Math.max(c.none, c.advisor, c.perfect);
+      const row = (label, n) => `<dt></dt><dd>${label}</dd><dd class="v${n === best ? " best" : ""}">${n}/${RUNS}</dd>`;
+      $("advisor-compare").innerHTML =
+        `<dt></dt><dd class="h">Villages alive at day ${fmt(T)}</dd><dd class="h v"></dd>` +
+        row("No advisor", c.none) +
+        row(`Advisor, IQ ${S.iq}`, c.advisor) +
+        row(`Perfect advisor (IQ ${PERFECT_IQ})`, c.perfect);
+    }
+  }
+
+  function syncRice() {
+    S.riceYear = clamp(Number(S.riceYear) || 0, 0, 5000);
+    $("rice-range").value = S.riceYear;
+    if (document.activeElement !== $("rice-num")) $("rice-num").value = S.riceYear;
+    const eats = YEAR * UP.c;
+    $("rice-hint").innerHTML = `Harvested evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(S.riceYear / HARVEST_DAYS)}</b> rice a day. A person eats <b>${milkText(eats)}</b> food a year, so this alone feeds about <b>${fmt(S.riceYear / eats, 1)}</b> people for a year.`;
+  }
+  function syncSpeed() {
+    for (const b of document.querySelectorAll("[data-speed]")) b.setAttribute("aria-pressed", Number(b.dataset.speed) === S.speed);
+  }
+
+  const paramRows = (rows) => rows.map(([s, label, v, cls = ""]) =>
+    `<dt class="${cls}">${s}</dt><dd class="${cls}">${label}</dd><dd class="v ${cls}">${v}</dd>`).join("");
+
+  function drawParams() {
+    $("herd-params").innerHTML = paramRows([
+      ["r", "Intrinsic growth rate", `${fmt(HP.r, 3)} /day`],
+      ["K", "Carrying capacity", fmt(HP.K)],
+      ["A", "Allee threshold", fmt(HP.A)],
+      ["L", "Average lifespan", `${fmt(HP.L)} days`],
+      ["±", "Lifespan spread", `${fmt(HP.S)}%`],
+      ["M", "Adult at age", `${fmt(HP.M)} days`],
+      ...(EQ.exists
+        ? [["≈", "Settles at", fmt(EQ.hi, 1), "sep"], ["≈", "Tipping point", fmt(EQ.lo, 1)]]
+        : [["!", "No herd can last", "", "sep"]]),
+    ]);
+    $("human-params").innerHTML = paramRows([
+      ["p", "Birth chance", `${UP.p} /day`],
+      ["L", "Average lifespan", `${fmt(UP.L)} days`],
+      ["M", "Adult at age", `${fmt(UP.M)} days`],
+      ["±", "Lifespan spread", `${fmt(UP.S)}%`],
+      ["c", "Food need", `${fmt(UP.c, 1)} /person`, "sep"],
+      ["K", "Hunger toll", `${fmt(UP.K)} days`],
+      ["n", "Hunger curve power", fmt(UP.n, 1)],
+    ]);
+    $("herd-start").innerHTML = `Start with <b>${fmt(HS.N0)} cows</b>`;
+    $("human-start").innerHTML = `Start with <b>${fmt(US.men)} men</b> and <b>${fmt(US.women)} women</b>`;
+    const note = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
+    $("herd-source").hidden = herdSaved;
+    $("herd-source").textContent = note;
+    $("human-source").hidden = humanSaved;
+    $("human-source").textContent = note;
+  }
+
+  function drawVerdict() {
+    const groups = [...HERDS, { key: "people", name: "People", many: "people" }];
+    for (const g of groups) {
+      const r = result[g.key], m = r.main, pill = $("pill-" + g.key);
+      const odds = `${r.alive}/${RUNS} runs survive`;
+      let text;
+      if (m.extinctDay === 0) { pill.className = "pill crash"; text = `No ${g.many}`; }
+      else if (m.extinctDay !== null) { pill.className = "pill crash"; text = `${g.name} die out, day ${fmt(m.extinctDay)} · ${odds}`; }
+      else if (m.capped) { pill.className = "pill ok"; text = `${g.name} pass ${fmt(MAX_PEOPLE)} by day ${fmt(m.last)} · ${odds}`; }
+      else { pill.className = "pill ok"; text = `${g.name}: ${fmt(m.counts[T])} left · ${odds}`; }
+      pill.innerHTML = `<span class="dot-key ${g.key}"></span>${text}`;
+    }
+  }
+
+  // ---------- Chart ----------
+  let chartScale = null;
+
+  function niceTicks(min, max, count) {
+    const span = max - min || 1;
+    const raw = span / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const e = raw / mag;
+    const step = (e < 1.5 ? 1 : e < 3 ? 2 : e < 7 ? 5 : 10) * mag;
+    const ticks = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-6; v += step) ticks.push(+v.toFixed(10));
+    return ticks;
+  }
+
+  // Step path that only emits a segment when the count changes
+  function stepPath(counts, last, x, y) {
+    let prev = counts[0];
+    let d = `M${x(0).toFixed(1)} ${y(prev).toFixed(1)}`;
+    for (let i = 1; i <= last; i++) {
+      if (counts[i] !== prev) { prev = counts[i]; d += `H${x(i).toFixed(1)}V${y(prev).toFixed(1)}`; }
+    }
+    return d + `H${x(last).toFixed(1)}`;
+  }
+
+  // Shaded area from the lowest to the highest count across all runs, about one step per 2 pixels
+  function bandPath(runs, x, y, width) {
+    const buckets = Math.max(20, Math.floor(width / 2));
+    const top = [], bottom = [];
+    for (let b = 0; b < buckets; b++) {
+      const d0 = Math.floor((b * T) / buckets), d1 = Math.max(d0 + 1, Math.floor(((b + 1) * T) / buckets));
+      let lo = Infinity, hi = -Infinity;
+      for (const r of runs) {
+        for (let d = d0; d < d1 && d <= r.last; d++) {
+          const v = r.counts[d];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+      }
+      if (hi === -Infinity) continue;
+      const xm = x((d0 + d1) / 2).toFixed(1);
+      top.push(xm + " " + y(hi).toFixed(1));
+      bottom.push(xm + " " + y(lo).toFixed(1));
+    }
+    if (!top.length) return "";
+    return "M" + top.join("L") + "L" + bottom.reverse().join("L") + "Z";
+  }
+
+  function drawChartStatic() {
+    const svg = $("time-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 320;
+    const m = { l: 44, r: 62, t: 14, b: 38 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    // How many people this run's milk could fully feed each day
+    const cowAdults = result.cows.main.adults;
+    const feeds = new Float32Array(T + 1);
+    for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * MILK_PER_COW) / UP.c : 0;
+    // Scale to the bold runs and reference lines; taller faint runs are clipped
+    let yMax = Math.max(HS.N0, US.men + US.women, 5);
+    if (EQ.exists) yMax = Math.max(yMax, EQ.hi);
+    for (let i = 0; i <= T; i++) if (feeds[i] > yMax) yMax = feeds[i];
+    for (const key of ["cows", "people"]) {
+      const mr = result[key].main;
+      for (let i = 0; i <= mr.last; i++) if (mr.counts[i] > yMax) yMax = mr.counts[i];
+    }
+    yMax *= 1.1;
+    const x = (t) => m.l + (t / T) * (W - m.l - m.r);
+    const y = (n) => m.t + (1 - Math.min(n, yMax) / yMax) * (H - m.t - m.b);
+    chartScale = { x, y };
+
+    let s = `<defs><clipPath id="plot"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></clipPath></defs>`;
+    for (const v of niceTicks(0, yMax, 5)) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    const every = W < 520 ? 2 : 1;
+    for (let yr = 0; yr <= T / YEAR; yr++) {
+      const d = yr * YEAR;
+      if (yr > 0 && yr < T / YEAR) s += `<line class="gridline" x1="${x(d)}" x2="${x(d)}" y1="${m.t}" y2="${y(0)}"/>`;
+      if (yr % every === 0) s += `<text x="${x(d)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(d)}</text>`;
+    }
+    s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Day</text>`;
+    s += `<text class="axis-title" transform="translate(11 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">Count</text>`;
+
+    if (EQ.exists && EQ.hi <= yMax) {
+      s += `<line class="kline" x1="${m.l}" x2="${W - m.r}" y1="${y(EQ.hi)}" y2="${y(EQ.hi)}"/>`;
+      s += `<text class="klabel reflabel" x="${W - m.r + 6}" y="${y(EQ.hi) + 4}">cows ${fmt(EQ.hi, 1)}</text>`;
+    }
+    s += `<path class="fedline" fill="none" d="${stepPath(feeds, T, x, y)}"/>`;
+    s += `<text class="fedlabel reflabel" x="${W - m.r + 6}" y="${y(feeds[T]) + 4}">milk ${fmt(feeds[T], feeds[T] < 10 && feeds[T] % 1 ? 1 : 0)}</text>`;
+
+    s += `<g clip-path="url(#plot)">`;
+    for (const key of ["cows", "people"]) s += `<path class="band ${key}" d="${bandPath(result[key].runs, x, y, W - m.l - m.r)}"/>`;
+    for (const key of ["cows", "people"]) {
+      const mr = result[key].main;
+      s += `<path class="main ${key}" d="${stepPath(mr.counts, mr.last, x, y)}"/>`;
+    }
+    s += `</g>`;
+    s += `<line class="cursor" id="cur-line" y1="${m.t}" y2="${y(0)}"/>`;
+    for (const key of ["cows", "people"]) s += `<circle class="dot ${key}" id="cur-${key}" r="4.5"/>`;
+    svg.innerHTML = s;
+  }
+
+  let foodScale = null;
+
+  function drawFoodStatic() {
+    const svg = $("food-chart");
+    const W = Math.max(280, svg.clientWidth || 640), H = 190;
+    const m = { l: 44, r: 62, t: 12, b: 34 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const pm = result.people.main;
+    let yMax = 5;
+    for (let i = 0; i <= pm.last; i++) yMax = Math.max(yMax, pm.riceStored[i], pm.stored[i]);
+    yMax *= 1.1;
+    const x = (t) => m.l + (t / T) * (W - m.l - m.r);
+    const y = (v) => m.t + (1 - Math.min(v, yMax) / yMax) * (H - m.t - m.b);
+    foodScale = { x, y };
+
+    let s = "";
+    for (let yr = 0; yr < T / YEAR; yr++) {
+      const a = yr * YEAR + HARVEST_FIRST, b = yr * YEAR + HARVEST_LAST;
+      s += `<rect class="harvest" x="${x(a)}" y="${m.t}" width="${Math.max(1, x(b) - x(a))}" height="${y(0) - m.t}"/>`;
+    }
+    for (const v of niceTicks(0, yMax, 4)) {
+      s += `<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    const every = W < 520 ? 2 : 1;
+    for (let yr = 0; yr <= T / YEAR; yr += every) s += `<text x="${x(yr * YEAR)}" y="${H - m.b + 16}" text-anchor="middle">${fmt(yr * YEAR)}</text>`;
+    s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<text class="axis-title" x="${W - m.r}" y="${H - 4}" text-anchor="end">Day</text>`;
+
+    // Thin to about one point per pixel
+    const step = Math.max(1, Math.floor(T / (W - m.l - m.r)));
+    let rice = "", milkPath = "";
+    for (let i = 0; i <= pm.last; i += step) {
+      const px = x(i).toFixed(1);
+      rice += (i ? "L" : "M") + px + " " + y(pm.riceStored[i]).toFixed(1);
+      milkPath += (i ? "L" : "M") + px + " " + y(pm.stored[i]).toFixed(1);
+    }
+    const lastX = x(Math.floor(pm.last / step) * step).toFixed(1);
+    s += `<path class="rice-area" d="${rice}L${lastX} ${y(0)}L${x(0)} ${y(0)}Z"/>`;
+    s += `<path class="rice-line" d="${rice}"/>`;
+    s += `<path class="milk-line" d="${milkPath}"/>`;
+    s += `<line class="cursor" id="food-line" y1="${m.t}" y2="${y(0)}"/>`;
+    s += `<circle class="dot rice" id="food-dot" r="4"/>`;
+    svg.innerHTML = s;
+  }
+
+  function drawFoodCursor() {
+    if (!foodScale) return;
+    const { x, y } = foodScale;
+    const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
+    const cx = x(day).toFixed(1);
+    $("food-line").setAttribute("x1", cx);
+    $("food-line").setAttribute("x2", cx);
+    $("food-dot").setAttribute("cx", cx);
+    $("food-dot").setAttribute("cy", y(pm.riceStored[i]).toFixed(1));
+  }
+
+  function drawFoodRows() {
+    const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
+    let milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0;
+    for (let k = 0; k <= pm.last; k++) {
+      milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
+      riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k]; riceSpoiled += pm.riceSpoiled[k];
+    }
+    const harvest = isHarvest(day) ? ' · <span class="harvest-tag">harvest</span>' : "";
+    $("food-day").innerHTML = `
+      <dt class="sub">Day ${fmt(day)} · day ${dayOfYear(Math.max(1, day))} of the year${harvest}</dt>
+      <dt>Milk made / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>
+      <dt>Rice harvested / eaten</dt><dd>${milkText(pm.riceMade[i])} / ${milkText(pm.riceEaten[i])}</dd>
+      <dt>In store: milk / rice</dt><dd>${milkText(pm.stored[i])} / ${milkText(pm.riceStored[i])}</dd>
+      <dt>Advisor's ration</dt><dd>${isFinite(pm.share[i]) ? fmt(pm.share[i] * 100) + "%" : "—"}</dd>
+      <dt>Fed</dt><dd>${shareText(i)}</dd>`;
+    $("food-run").innerHTML = `
+      <dt class="sub">Whole run</dt>
+      <dt>Milk drunk / spoiled</dt><dd>${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
+      <dt>Rice harvested</dt><dd>${milkText(riceMade)}</dd>
+      <dt>Rice eaten / spoiled</dt><dd>${milkText(riceEaten)} / ${milkText(riceSpoiled)}</dd>`;
+  }
+
+  function drawChartCursor() {
+    if (!chartScale) return;
+    const { x, y } = chartScale;
+    const day = currentDay();
+    const cx = x(day).toFixed(1);
+    $("cur-line").setAttribute("x1", cx);
+    $("cur-line").setAttribute("x2", cx);
+    for (const key of ["cows", "people"]) {
+      const mr = result[key].main;
+      const dot = $("cur-" + key);
+      dot.setAttribute("cx", cx);
+      dot.setAttribute("cy", y(mr.counts[Math.min(day, mr.last)]).toFixed(1));
+    }
+  }
+
+  // ---------- Farm drawing ----------
+  function hash01(n) {
+    let t = Math.imul((n + 1) | 0, 0x9e3779b1);
+    t = Math.imul(t ^ (t >>> 16), 0x85ebca6b);
+    t = Math.imul(t ^ (t >>> 13), 0xc2b2ae35);
+    return ((t ^ (t >>> 16)) >>> 0) / 4294967296;
+  }
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  function drawCow(ctx, cx, cy, s, face, spot, c) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(face * s, s);
+    ctx.lineWidth = 1.3 / s;
+    ctx.strokeStyle = c.spot;
+    ctx.beginPath();
+    for (const lx of [-7, -3, 4, 8]) { ctx.moveTo(lx, 3); ctx.lineTo(lx, 11); }
+    ctx.stroke();
+    ctx.fillStyle = c.body;
+    ctx.beginPath(); ctx.ellipse(0, 0, 12, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c.spot;
+    ctx.beginPath(); ctx.ellipse(-4 + spot * 4, -2, 3.2, 2.4, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5 - spot * 3, 2, 2.2, 1.8, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = c.body;
+    ctx.beginPath(); ctx.ellipse(14, -4, 4.6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c.muzzle;
+    ctx.beginPath(); ctx.ellipse(17, -2.5, 2.2, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11, -7); ctx.lineTo(9, -10); ctx.moveTo(-12, -1); ctx.quadraticCurveTo(-15, 3, -14, 7); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Men wear a straight tunic, women a flared dress
+  function drawPerson(ctx, cx, cy, s, male, c) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(s, s);
+    ctx.lineWidth = 1.4 / s;
+    ctx.strokeStyle = c.ink;
+    ctx.beginPath();
+    ctx.moveTo(-2, 5); ctx.lineTo(-2.4, 11);
+    ctx.moveTo(2, 5); ctx.lineTo(2.4, 11);
+    ctx.stroke();
+    ctx.fillStyle = male ? c.men : c.women;
+    ctx.beginPath();
+    if (male) {
+      ctx.roundRect ? ctx.roundRect(-4, -6, 8, 12, 2) : ctx.rect(-4, -6, 8, 12);
+    } else {
+      ctx.moveTo(-3, -6); ctx.lineTo(3, -6); ctx.lineTo(6, 7); ctx.lineTo(-6, 7); ctx.closePath();
+    }
+    ctx.fill();
+    ctx.fillStyle = c.skin;
+    ctx.beginPath(); ctx.arc(0, -10, 3.6, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 1 / s;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFarm() {
+    const canvas = $("pasture");
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const day = currentDay();
+    const c = {
+      body: cssVar("--cow-body"), spot: cssVar("--cow-spot"), muzzle: cssVar("--cow-muzzle"),
+      ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), skin: cssVar("--skin"),
+    };
+    const base = clamp(w / 700, 0.75, 1.15);
+    const all = [];
+    const place = (key, age, kind, extra) => all.push({
+      kind, age, ...extra,
+      x: 0.03 + hash01(key) * 0.94,
+      y: 0.3 + hash01(key + 1) * 0.62,
+      face: hash01(key + 2) < 0.5 ? 1 : -1,
+      spot: hash01(key + 3),
+    });
+    HERDS.forEach((sp, gi) => {
+      const snap = result[sp.key].main.snaps[day];
+      for (let i = 0; i < snap.length; i += 2) place(snap[i] * 16 + gi * 4, snap[i + 1], sp.key);
+    });
+    const pm = result.people.main;
+    const psnap = pm.snaps[Math.min(day, pm.last)] || new Int32Array(0);
+    for (let i = 0; i < psnap.length; i += 3) place(psnap[i] * 16 + 8, psnap[i + 1], "people", { male: psnap[i + 2] === HumanModel.MALE });
+    all.sort((a, b) => a.y - b.y);
+
+    for (const a of all) {
+      const grownAt = a.kind === "people" ? UP.M : HP.M;
+      const grown = 0.55 + 0.45 * Math.min(1, a.age / grownAt);
+      const s = base * (0.7 + a.y * 0.45) * grown;
+      if (a.kind === "cows") drawCow(ctx, a.x * w, a.y * h, s, a.face, a.spot, c);
+      else drawPerson(ctx, a.x * w, a.y * h, s * 1.05, a.male, c);
+    }
+
+    const cows = result.cows.main, pi = Math.min(day, pm.last);
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * MILK_PER_COW)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
+
+    const herdPart = (sp, cls) => {
+      const r = result[sp.key].main;
+      const died = r.old[day] + r.size[day];
+      return `<b class="${cls}">${sp.name}</b> +${fmt(r.born[day])} −${fmt(died)}`;
+    };
+    const peoplePart = () => {
+      if (day > pm.last) return "<b>People</b> run stopped";
+      const hungry = pm.hungry[pi] ? ` (${fmt(pm.hungry[pi])} from hunger)` : "";
+      const harvest = pm.riceMade[pi] ? ` · <span class="harvest-tag">harvest +${milkText(pm.riceMade[pi])} rice</span>` : "";
+      return `<b>People</b> +${fmt(pm.born[pi])} −${fmt(pm.died[pi])}${hungry} · fed ${shareText(pi)}${harvest}`;
+    };
+    $("events").innerHTML = day === 0
+      ? "Day 0: everyone starts at a random age"
+      : `Day ${fmt(day)}: ${herdPart(HERDS[0], "c")} · ${peoplePart()}`;
+  }
+
+  // Milk amounts: whole numbers, or one decimal when the food need isn't a whole number
+  const milkText = (v) => { const r = Math.round(v * 10) / 10; return fmt(r, r % 1 ? 1 : 0); };
+
+  function shareText(i) {
+    const pm = result.people.main, r = pm.ration[i];
+    if (!(pm.counts[i] > 0) || !isFinite(r)) return "—";
+    return r >= 10 ? "999%+" : `${fmt(r * 100)}%`;
+  }
+
+  // ---------- Stats ----------
+  function drawStats() {
+    const day = currentDay();
+    for (const sp of HERDS) {
+      const r = result[sp.key], m = r.main;
+      let born = 0, old = 0, size = 0, peak = 0, peakDay = 0;
+      for (let i = 0; i <= T; i++) {
+        born += m.born[i]; old += m.old[i]; size += m.size[i];
+        if (m.counts[i] > peak) { peak = m.counts[i]; peakDay = i; }
+      }
+      const outcome = m.extinctDay === null ? "alive" : m.extinctDay === 0 ? "none" : `died, day ${fmt(m.extinctDay)}`;
+      $("stats-" + sp.key).innerHTML = `
+        <div class="stat-head">
+          <h3><span class="dot-key ${sp.key}"></span>${sp.name}</h3>
+          <span class="big">${fmt(m.counts[day])}<small>on day ${fmt(day)}</small></span>
+        </div>
+        <dl class="rows">
+          <dt class="sub">On this day</dt>
+          <dt>Adults</dt><dd>${fmt(m.counts[day] - m.young[day])}</dd>
+          <dt>${sp.young[0].toUpperCase() + sp.young.slice(1)}</dt><dd>${fmt(m.young[day])}</dd>
+          <dt>Born</dt><dd>${fmt(m.born[day])}</dd>
+          <dt>Died, old age</dt><dd>${fmt(m.old[day])}</dd>
+          <dt>Died, herd size</dt><dd>${fmt(m.size[day])}</dd>
+          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * MILK_PER_COW)}</dd>` : ""}
+          <dt class="sub">Whole run</dt>
+          <dt>Max herd</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
+          <dt>Born</dt><dd>${fmt(born)}</dd>
+          <dt>Died, old age</dt><dd>${fmt(old)}</dd>
+          <dt>Died, herd size</dt><dd>${fmt(size)}</dd>
+          <dt>Outcome</dt><dd>${outcome}</dd>
+          <dt>Runs surviving</dt><dd>${r.alive}/${RUNS}</dd>
+        </dl>`;
+    }
+
+    const r = result.people, m = r.main, i = Math.min(day, m.last);
+    let born = 0, died = 0, hungry = 0, peak = 0, peakDay = 0;
+    for (let k = 0; k <= m.last; k++) {
+      born += m.born[k]; died += m.died[k]; hungry += m.hungry[k];
+      if (m.counts[k] > peak) { peak = m.counts[k]; peakDay = k; }
+    }
+    const outcome = m.extinctDay === 0 ? "nobody to start with"
+      : m.extinctDay !== null ? `died, day ${fmt(m.extinctDay)}`
+      : m.capped ? `passed ${fmt(MAX_PEOPLE)}`
+      : "alive";
+    $("stats-people").innerHTML = `
+      <div class="stat-head">
+        <h3><span class="dot-key people"></span>People</h3>
+        <span class="big">${fmt(m.counts[i])}<small>on day ${fmt(day)}</small></span>
+      </div>
+      <dl class="rows">
+        <dt class="sub">On this day</dt>
+        <dt>Men / women</dt><dd>${fmt(m.men[i])} / ${fmt(m.women[i])}</dd>
+        <dt>Boys / girls</dt><dd>${fmt(m.boys[i])} / ${fmt(m.girls[i])}</dd>
+        <dt>Couples</dt><dd>${fmt(m.couples[i])}</dd>
+        <dt>Fed</dt><dd>${shareText(i)}</dd>
+        <dt>Born / died</dt><dd>${fmt(m.born[i])} / ${fmt(m.died[i])}</dd>
+        <dt class="sub">Whole run</dt>
+        <dt>Max population</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
+        <dt>Born</dt><dd>${fmt(born)}</dd>
+        <dt>Died, all causes</dt><dd>${fmt(died)}</dd>
+        <dt>Died, hunger</dt><dd>${fmt(hungry)}</dd>
+        <dt>Outcome</dt><dd>${outcome}</dd>
+        <dt>Runs surviving</dt><dd>${r.alive}/${RUNS}</dd>
+      </dl>`;
+  }
+
+  // ---------- Playback ----------
+  const currentDay = () => clamp(Math.floor(cursor === null ? T : cursor), 0, T);
+
+  function drawDay() {
+    const day = currentDay();
+    $("day").max = T;
+    $("day").value = day;
+    $("day-label").textContent = "day " + fmt(day);
+  }
+
+  function drawFrame() {
+    drawChartCursor();
+    drawFoodCursor();
+    drawFoodRows();
+    drawFarm();
+    drawStats();
+    drawDay();
+  }
+
+  function stop() {
+    playing = false;
+    cancelAnimationFrame(rafId);
+    $("play").textContent = "Play";
+  }
+
+  $("play").addEventListener("click", () => {
+    if (playing) { stop(); return; }
+    playing = true;
+    $("play").textContent = "Pause";
+    const from = cursor === null || cursor >= T ? 0 : cursor;
+    let start = null;
+    const tick = (now) => {
+      if (!playing) return;
+      // Time from the first frame, not the click: a frame's timestamp can predate the click
+      if (start === null) start = now;
+      const day = from + ((now - start) / 1000) * S.speed;
+      cursor = day >= T ? null : Math.floor(Math.max(0, day));
+      drawFrame();
+      if (cursor === null) stop(); else rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+  });
+
+  $("day").addEventListener("input", (e) => {
+    stop();
+    const v = Number(e.target.value);
+    cursor = v >= T ? null : v;
+    drawFrame();
+  });
+
+  for (const b of document.querySelectorAll("[data-speed]")) {
+    b.addEventListener("click", () => { S.speed = Number(b.dataset.speed); saveS(); syncSpeed(); });
+  }
+  $("reroll").addEventListener("click", () => { S.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
+
+  let riceTimer = 0;
+  const riceChanged = (v) => {
+    if (!isFinite(v)) return;
+    S.riceYear = v;
+    clearTimeout(riceTimer);
+    riceTimer = setTimeout(recompute, 80);
+  };
+  $("rice-range").addEventListener("input", (e) => { $("rice-num").value = e.target.value; riceChanged(Number(e.target.value)); });
+  $("rice-num").addEventListener("input", (e) => { if (e.target.value !== "") riceChanged(Number(e.target.value)); });
+  $("rice-num").addEventListener("change", syncRice);
+
+  $("adv-on").addEventListener("click", () => { S.advisor = true; recompute(); });
+  $("adv-off").addEventListener("click", () => { S.advisor = false; recompute(); });
+  let iqTimer = 0;
+  const iqChanged = (v) => {
+    if (!isFinite(v)) return;
+    S.iq = v;
+    clearTimeout(iqTimer);
+    iqTimer = setTimeout(recompute, 80);
+  };
+  $("iq-range").addEventListener("input", (e) => { $("iq-num").value = e.target.value; iqChanged(Number(e.target.value)); });
+  $("iq-num").addEventListener("input", (e) => { if (e.target.value !== "") iqChanged(Number(e.target.value)); });
+  $("iq-num").addEventListener("change", syncAdvisor);
+
+  // Follow the other pages when they're changed in another tab
+  window.addEventListener("storage", (e) => {
+    if (e.key === HerdModel.STORE_KEY || e.key === HumanModel.STORE_KEY) recompute();
+  });
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawChartStatic(); drawFoodStatic(); drawFrame(); }, 60);
+  }).observe(document.querySelector("main"));
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", drawFarm);
+  new MutationObserver(drawFarm).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  recompute();
+})();
+</script>
+</body>
+</html>
