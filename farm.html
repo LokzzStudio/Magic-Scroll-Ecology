@@ -114,7 +114,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Full Simulation</h1>
-    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). The cows follow the Herd tuner and the people follow the Humans page, including how many of each you start with; only rice farming and the food advisor are set here. People eat two foods: milk from adult cows every day, and rice they harvest in early autumn.</p>
+    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). The cows follow the Herd tuner and the people follow the Humans page, including how many of each you start with; only rice farming and the food advisor are set here. People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. Food never spoils, so leftovers build up as a reserve.</p>
   </header>
 
   <div class="layout">
@@ -133,11 +133,10 @@
           <p class="hint" id="rice-hint">Total rice harvested each year.</p>
         </div>
         <dl class="foods">
-          <dt></dt><dd class="h">Comes from</dd><dd class="h v">Keeps</dd>
-          <dt>Milk</dt><dd>1 a day per adult cow</dd><dd class="v">10 days</dd>
-          <dt>Rice</dt><dd>harvest, days 181–210</dd><dd class="v">360 days</dd>
+          <dt>Milk</dt><dd>1 a day per adult cow</dd><dd class="v"></dd>
+          <dt>Rice</dt><dd>harvest, days 181–210</dd><dd class="v"></dd>
         </dl>
-        <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored.</p>
+        <p class="hint">Food never spoils. Milk is used first and rice is kept as the reserve; leftovers are stored.</p>
 
         <div class="param">
           <div class="param-head">
@@ -272,8 +271,6 @@
   ];
   const HUMAN_SALT = 200000;
   const MILK_PER_COW = 1;         // milk each adult cow gives per day; people's only food
-  const MILK_SHELF_LIFE = 10;     // days stored milk stays good, counting the day it's made
-  const RICE_SHELF_LIFE = 360;    // days stored rice stays good
   const HARVEST_FIRST = 181, HARVEST_LAST = 210;   // harvest days within each 360-day year
   const HARVEST_DAYS = HARVEST_LAST - HARVEST_FIRST + 1;
   const PERFECT_IQ = 160;
@@ -372,14 +369,12 @@
       boys: new Int32Array(T + 1), girls: new Int32Array(T + 1), couples: new Int32Array(T + 1),
       born: new Int32Array(T + 1), died: new Int32Array(T + 1), hungry: new Int32Array(T + 1),
       ration: f32(), snaps: new Array(T + 1),
-      made: f32(), drank: f32(), stored: f32(), spoiled: f32(),                    // milk
-      riceMade: f32(), riceEaten: f32(), riceStored: f32(), riceSpoiled: f32(),    // rice
+      made: f32(), drank: f32(), stored: f32(),                // milk
+      riceMade: f32(), riceEaten: f32(), riceStored: f32(),    // rice
       share: new Float32Array(T + 1).fill(NaN),                                     // advisor's ration
     } : null;
-    // milk[a] / rice[a] = food made a days ago that is still good
-    const milk = new Float64Array(MILK_SHELF_LIFE);
-    const rice = new Float64Array(RICE_SHELF_LIFE);
-    const sum = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
+    // Food in store. It never spoils.
+    let milk = 0, rice = 0;
 
     // A sample of people to draw, as [id, age, sex] triples
     const snap = () => {
@@ -396,16 +391,16 @@
       d.couples[day] = c.couples;
       const need = st.people.length * p.c;
       d.ration[day] = ev ? ev.ration : need > 0 ? Math.min(1, food.milkMade / need) : Infinity;
-      d.made[day] = food.milkMade; d.drank[day] = food.milkEaten; d.spoiled[day] = food.milkSpoiled;
-      d.riceMade[day] = food.riceMade; d.riceEaten[day] = food.riceEaten; d.riceSpoiled[day] = food.riceSpoiled;
-      d.stored[day] = sum(milk);
-      d.riceStored[day] = sum(rice);
+      d.made[day] = food.milkMade; d.drank[day] = food.milkEaten;
+      d.riceMade[day] = food.riceMade; d.riceEaten[day] = food.riceEaten;
+      d.stored[day] = milk;
+      d.riceStored[day] = rice;
       if (food.share !== undefined) d.share[day] = food.share;
       if (ev) { d.born[day] = ev.born; d.died[day] = ev.died; d.hungry[day] = ev.hungry; }
       d.snaps[day] = snap();
     };
 
-    record(0, null, { milkMade: cowAdults[0] * MILK_PER_COW, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    record(0, null, { milkMade: cowAdults[0] * MILK_PER_COW, milkEaten: 0, riceMade: 0, riceEaten: 0 });
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
@@ -414,23 +409,17 @@
         continue;
       }
 
-      // 1. Stored food ages a day; anything past its shelf life spoils
-      const milkSpoiled = milk[MILK_SHELF_LIFE - 1];
-      for (let a = MILK_SHELF_LIFE - 1; a > 0; a--) milk[a] = milk[a - 1];
-      const riceSpoiled = rice[RICE_SHELF_LIFE - 1];
-      for (let a = RICE_SHELF_LIFE - 1; a > 0; a--) rice[a] = rice[a - 1];
-
-      // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
+      // 1. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
       const milkMade = cowAdults[day - 1] * MILK_PER_COW;
-      milk[0] = milkMade;
+      milk += milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
       const farmers = census.men + census.women > 0;
       let riceMade = 0;
       if (isHarvest(day) && farmers) riceMade = S.riceYear / HARVEST_DAYS;
-      rice[0] = riceMade;
+      rice += riceMade;
 
-      // 3. The advisor sets today's ration: food in store plus food still to come before the
+      // 2. The advisor sets today's ration: food in store plus food still to come before the
       //    next harvest, spread evenly over the days until then. Its estimate is off by an
       //    error that shrinks with IQ: a lasting lean plus some day-to-day wobble.
       let share = 1;
@@ -443,28 +432,23 @@
           horizon = YEAR - doy + HARVEST_FIRST;
           if (doy <= HARVEST_LAST && farmers) riceToCome = ((HARVEST_LAST - doy) * S.riceYear) / HARVEST_DAYS;
         }
-        const supply = sum(milk) + sum(rice) + milkMade * (horizon - 1) + riceToCome;
+        const supply = milk + rice + milkMade * (horizon - 1) + riceToCome;
         const need = st.people.length * p.c * horizon;
         const err = bias + (sigma / 2) * gauss();
         share = need > 0 ? Math.min(1, (supply / need) * Math.exp(err)) : 1;
       }
 
-      // 4. People eat their ration, whatever spoils soonest first; the rest stays stored
-      let want = st.people.length * p.c * share, milkEaten = 0, riceEaten = 0;
-      let i = MILK_SHELF_LIFE - 1, j = RICE_SHELF_LIFE - 1;
-      while (want > 1e-9 && (i >= 0 || j >= 0)) {
-        const fromMilk = j < 0 || (i >= 0 && MILK_SHELF_LIFE - i <= RICE_SHELF_LIFE - j);
-        const store = fromMilk ? milk : rice, a = fromMilk ? i : j;
-        const take = Math.min(store[a], want);
-        store[a] -= take;
-        want -= take;
-        if (fromMilk) { milkEaten += take; i--; } else { riceEaten += take; j--; }
-      }
+      // 3. People eat their ration: milk first, then rice from the reserve; the rest stays stored
+      const want = st.people.length * p.c * share;
+      const milkEaten = Math.min(milk, want);
+      const riceEaten = Math.min(rice, want - milkEaten);
+      milk -= milkEaten;
+      rice -= riceEaten;
 
-      // 5. What was eaten is the day's food, shared equally
+      // 4. What was eaten is the day's food, shared equally
       p.F = milkEaten + riceEaten;
       const ev = HumanModel.stepPeople(st, p, rand);
-      record(day, ev, { milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, share: iq != null ? share : undefined });
+      record(day, ev, { milkMade, milkEaten, riceMade, riceEaten, share: iq != null ? share : undefined });
       if (st.people.length === 0) extinctDay = day;
       if (st.people.length > MAX_PEOPLE) { capped = true; last = day; break; }
     }
@@ -754,10 +738,10 @@
 
   function drawFoodRows() {
     const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
-    let milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0;
+    let milkMade = 0, milkDrunk = 0, riceMade = 0, riceEaten = 0;
     for (let k = 0; k <= pm.last; k++) {
-      milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
-      riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k]; riceSpoiled += pm.riceSpoiled[k];
+      milkMade += pm.made[k]; milkDrunk += pm.drank[k];
+      riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k];
     }
     const harvest = isHarvest(day) ? ' · <span class="harvest-tag">harvest</span>' : "";
     $("food-day").innerHTML = `
@@ -769,9 +753,9 @@
       <dt>Fed</dt><dd>${shareText(i)}</dd>`;
     $("food-run").innerHTML = `
       <dt class="sub">Whole run</dt>
-      <dt>Milk drunk / spoiled</dt><dd>${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
+      <dt>Milk made / drunk</dt><dd>${milkText(milkMade)} / ${milkText(milkDrunk)}</dd>
       <dt>Rice harvested</dt><dd>${milkText(riceMade)}</dd>
-      <dt>Rice eaten / spoiled</dt><dd>${milkText(riceEaten)} / ${milkText(riceSpoiled)}</dd>`;
+      <dt>Rice eaten</dt><dd>${milkText(riceEaten)}</dd>`;
   }
 
   function drawChartCursor() {
