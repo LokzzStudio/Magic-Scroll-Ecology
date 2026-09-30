@@ -178,6 +178,28 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .param-chip b { font-family: var(--body); font-weight: 600; color: var(--ink); }
 a.param-chip:hover { border-color: var(--muted); color: var(--ink); }
 @media (max-width: 900px) { .param-chip { display: none; } }
+
+/* Roll and reset, pinned in the top bar */
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.btn.roll {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+.btn.roll:hover { filter: brightness(1.08); border-color: var(--herd); }
+.btn.roll:active { transform: translateY(1px); }
+.btn.reset { font-size: 12px; padding: 5px 10px; color: var(--muted); white-space: nowrap; }
+.btn.reset:hover { color: var(--ink); }
+.btn.reset.confirm { color: var(--crash); border-color: var(--crash); }
+@media (max-width: 860px) {
+  .topbar-inner { flex-wrap: wrap; height: auto; }
+  .brand, .tabs a { min-height: var(--topbar-h); }
+  .top-actions { width: 100%; margin: 0 0 10px; }
+  .btn.roll { flex: 1; justify-content: center; }
+}
 @media (max-width: 600px) {
   .topbar-inner { gap: 10px; padding: 0 12px; }
   .brand .name { display: none; }

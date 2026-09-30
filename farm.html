@@ -104,6 +104,10 @@
       <a href="humans.html">Humans<small>Couples &amp; children</small></a>
       <a href="farm.html" aria-current="page">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
     </div>
+    <div class="top-actions">
+      <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page, the Herd tuner and the Humans page back to their defaults">Reset to defaults</button>
+    </div>
   </div>
 </nav>
 
@@ -180,14 +184,6 @@
         <div class="btn-row"><a class="btn" href="humans.html#params">Change on Humans →</a></div>
       </section>
 
-      <section class="panel-section">
-        <div class="section-head">
-          <h2>Runs</h2>
-          <p class="scope">Each group runs 20 times with different luck</p>
-        </div>
-        <div class="btn-row"><button type="button" class="btn" id="reroll">Roll new runs</button></div>
-        <p class="hint">Bold lines are one run. Shading shows the lowest to highest count across all 20.</p>
-      </section>
     </aside>
 
     <main>
@@ -224,7 +220,7 @@
       <section class="card" aria-label="Numbers over time">
         <div class="card-head">
           <h2>Numbers over time</h2>
-          <p>Gridlines mark each 360-day year.</p>
+          <p>Bold lines are one run; shading is the range across all 20. Gridlines mark each 360-day year.</p>
         </div>
         <svg class="chart" id="time-chart" height="320" role="img" aria-label="Cows and people over 3600 days"></svg>
         <div class="legend">
@@ -270,7 +266,7 @@
   const RUNS = 20;
   const MAX_ICONS = 90;           // per group
   const MAX_PEOPLE = 2000;        // a human run stops once it grows past this, to keep the page fast
-  const STORE_KEY = "farm-v3";
+  const STORE_KEY = "farm-v4";
   const HERDS = [
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
@@ -290,7 +286,8 @@
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
 
   // Rice production, the dice and playback speed belong to this page
-  let S = { seed: 1, speed: 180, riceYear: 3000, advisor: true, iq: 100 };   // riceYear: total rice harvested each year
+  const S_DEFAULTS = { seed: 1, speed: 180, riceYear: 3000, advisor: true, iq: 130 };   // riceYear: total rice harvested each year
+  let S = { ...S_DEFAULTS };
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (saved && typeof saved === "object") S = { ...S, ...saved };
@@ -681,7 +678,10 @@
       s += `<text class="klabel reflabel" x="${W - m.r + 6}" y="${y(EQ.hi) + 4}">cows ${fmt(EQ.hi, 1)}</text>`;
     }
     s += `<path class="fedline" fill="none" d="${stepPath(feeds, T, x, y)}"/>`;
-    s += `<text class="fedlabel reflabel" x="${W - m.r + 6}" y="${y(feeds[T]) + 4}">milk ${fmt(feeds[T], feeds[T] < 10 && feeds[T] % 1 ? 1 : 0)}</text>`;
+    // Keep the two margin labels apart when the lines are close
+    let milkY = y(feeds[T]) + 4;
+    if (EQ.exists && EQ.hi <= yMax && Math.abs(milkY - (y(EQ.hi) + 4)) < 13) milkY = y(EQ.hi) + 4 + (feeds[T] > EQ.hi ? -13 : 13);
+    s += `<text class="fedlabel reflabel" x="${W - m.r + 6}" y="${milkY}">milk ${fmt(feeds[T], feeds[T] < 10 && feeds[T] % 1 ? 1 : 0)}</text>`;
 
     s += `<g clip-path="url(#plot)">`;
     for (const key of ["cows", "people"]) s += `<path class="band ${key}" d="${bandPath(result[key].runs, x, y, W - m.l - m.r)}"/>`;
@@ -1036,6 +1036,31 @@
     b.addEventListener("click", () => { S.speed = Number(b.dataset.speed); saveS(); syncSpeed(); });
   }
   $("reroll").addEventListener("click", () => { S.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
+
+  // Reset covers this page and the two pages it inherits from, so it asks for a second click
+  let resetTimer = 0;
+  const disarmReset = () => {
+    clearTimeout(resetTimer);
+    $("reset").classList.remove("confirm");
+    $("reset").textContent = "Reset to defaults";
+  };
+  $("reset").addEventListener("click", () => {
+    const b = $("reset");
+    if (!b.classList.contains("confirm")) {
+      b.classList.add("confirm");
+      b.textContent = "Click again to reset all 3 pages";
+      resetTimer = setTimeout(disarmReset, 4000);
+      return;
+    }
+    disarmReset();
+    try {
+      localStorage.removeItem(HerdModel.STORE_KEY);
+      localStorage.removeItem(HumanModel.STORE_KEY);
+    } catch (e) {}
+    S = { ...S_DEFAULTS };
+    cursor = null;
+    recompute();
+  });
 
   let riceTimer = 0;
   const riceChanged = (v) => {

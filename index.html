@@ -53,7 +53,10 @@
       <a href="humans.html">Humans<small>Couples &amp; children</small></a>
       <a href="farm.html">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
     </div>
-    <span class="param-chip" title="These parameters are shared with the Full Simulation page"><b>Shared</b><span id="param-chip-text"></span></span>
+    <div class="top-actions">
+      <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
+      <button type="button" class="btn reset" id="reset" title="Put every setting on this page back to its default">Reset to defaults</button>
+    </div>
   </div>
 </nav>
 
@@ -152,10 +155,6 @@
           <input id="T-range" type="range" aria-label="Days to simulate">
         </div>
 
-        <div class="btn-row">
-          <button type="button" class="btn" id="reroll">Roll new runs</button>
-          <button type="button" class="btn" id="reset">Reset all to defaults</button>
-        </div>
       </section>
     </aside>
 
@@ -604,7 +603,6 @@ function stepCows(herd) {
     clampAll();
     syncInputs();
     EQ = HerdModel.equilibria(P);
-    $("param-chip-text").textContent = HerdModel.describe(P);
     perIcon = Math.max(1, Math.ceil((P.K * 1.5) / MAX_ICONS));
     main = simulateHerd(P.seed * 7919, true);
     runs = [main];

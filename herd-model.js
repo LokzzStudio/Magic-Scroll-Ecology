@@ -5,7 +5,7 @@
   // Model parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
     r: 0.03,  // intrinsic growth rate, per day
-    K: 12,    // carrying capacity, animals
+    K: 11,    // carrying capacity, animals
     A: 4,     // Allee threshold, animals
     L: 360,   // average lifespan, days
     S: 10,    // lifespan spread, ± percent of L
@@ -14,7 +14,7 @@
   };
 
   // Where the cow page saves its sliders
-  const STORE_KEY = "cow-herd-params-v5";
+  const STORE_KEY = "cow-herd-params-v6";
 
   function rng(seed) {
     let a = seed >>> 0;
@@ -113,7 +113,7 @@
   }
 
   // Starting herd size, set on the Herd tuner and also used by the Full Simulation
-  const START = { N0: 6 };
+  const START = { N0: 10 };
 
   // The starting herd the Herd tuner last saved, or null
   function savedStart() {

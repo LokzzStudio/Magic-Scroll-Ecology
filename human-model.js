@@ -14,7 +14,7 @@
   };
 
   // Where the Humans page saves its sliders
-  const STORE_KEY = "human-params-v3";
+  const STORE_KEY = "human-params-v4";
 
   const MALE = 0, FEMALE = 1;
 
@@ -114,7 +114,7 @@
   }
 
   // Starting population, set on the Humans page and also used by the Full Simulation
-  const START = { men: 10, women: 10 };
+  const START = { men: 6, women: 6 };
 
   // The starting men and women the Humans page last saved, or null
   function savedStart() {
