@@ -45,25 +45,37 @@
 </style>
 </head>
 <body>
-<nav class="topbar" aria-label="Pages">
+<nav class="sidenav" aria-label="Pages">
+  <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
+  <div class="tabs">
+    <a href="index.html" aria-current="page">Herd tuner<small>Set the parameters</small></a>
+    <a href="humans.html">Humans<small>Couples &amp; children</small></a>
+    <a href="farm.html">Food Model<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html">Advisor Model<small>Food advisor &amp; rations</small></a>
+    <a href="production.html">Production Model<small>Food needs workers</small></a>
+    <a href="attribute.html">Attribute Model<small>Power &amp; intelligence</small></a>
+  </div>
+</nav>
+<header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
-    <div class="tabs">
-      <a href="index.html" aria-current="page">Herd tuner<small>Set the parameters</small></a>
-      <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-      <a href="farm.html">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
-    </div>
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
       <button type="button" class="btn reset" id="reset" title="Put every setting on this page back to its default">Reset to defaults</button>
     </div>
   </div>
-</nav>
+</header>
 
 <div class="wrap">
   <header class="page-head">
     <h1>Herd tuner</h1>
-    <p class="lede">Tune how a herd grows and dies. Every animal is tracked on its own: it dies when it reaches its lifespan, and a herd below the Allee threshold is too small to breed well. The parameters and starting herd you set here also drive the Full Simulation page.</p>
+    <p class="lede">Tune how a herd grows and dies. Every animal is tracked on its own: it dies when it reaches its lifespan, and a herd below the Allee threshold is too small to breed well.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>Herd growth, lifespan and starting herd</dd>
+        <dt>Follows</dt><dd><span class="none">Nothing; this is where the cows start</span></dd>
+        <dt>Used by</dt><dd><a href="farm.html">Food Model</a> and every page after it</dd>
+      </dl>
+    </aside>
     <div class="formula" aria-label="Daily rules">
       each day: animals reaching their lifespan <span class="l">L</span> die<br>
       then born = <span class="r">r</span>·N·(N/<span class="a">A</span> − 1)·(1 − N/<span class="k">K</span>)
@@ -75,7 +87,7 @@
       <section class="panel-section" id="shared">
         <div class="section-head">
           <h2>Shared parameters</h2>
-          <p class="scope">Also used by <b><a href="farm.html">Full Simulation</a></b></p>
+          <p class="scope">Also used by the <b><a href="farm.html">Food Model</a></b> and every page after it</p>
         </div>
 
         <div class="param">
@@ -136,7 +148,7 @@
       <section class="panel-section">
         <div class="section-head">
           <h2>This test run</h2>
-          <p class="scope">Starting herd also used by <b><a href="farm.html">Full Simulation</a></b>; days only here</p>
+          <p class="scope">Starting herd also used by the <b><a href="farm.html">Food Model</a></b> and every page after it; days only here</p>
         </div>
 
         <div class="param">

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Full Simulation</title>
+<title>Food Model</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -59,10 +59,8 @@
     margin-top: 4px;
   }
   .rows .sub:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-  #rice-range { accent-color: var(--allee); }
-  #iq-range { accent-color: var(--men); }
+  #rice-range, #rice0-range { accent-color: var(--allee); }
   .param-head .lbl { font-weight: 600; font-size: 14px; }
-  .advisor-off #iq-block { opacity: 0.55; }
   .foods .best { color: var(--herd); font-weight: 600; }
   .foods {
     display: grid;
@@ -77,6 +75,7 @@
     align-items: baseline;
   }
   .foods dt { font-weight: 600; }
+  .foods.two { grid-template-columns: auto 1fr; }
   .foods dd { margin: 0; }
   .foods .v { font-family: var(--mono); font-size: 12.5px; text-align: right; white-space: nowrap; }
   .foods .h { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--body); }
@@ -96,25 +95,37 @@
 </style>
 </head>
 <body>
-<nav class="topbar" aria-label="Pages">
+<nav class="sidenav" aria-label="Pages">
+  <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
+  <div class="tabs">
+    <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+    <a href="humans.html">Humans<small>Couples &amp; children</small></a>
+    <a href="farm.html" aria-current="page">Food Model<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html">Advisor Model<small>Food advisor &amp; rations</small></a>
+    <a href="production.html">Production Model<small>Food needs workers</small></a>
+    <a href="attribute.html">Attribute Model<small>Power &amp; intelligence</small></a>
+  </div>
+</nav>
+<header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
-    <div class="tabs">
-      <a href="index.html">Herd tuner<small>Set the parameters</small></a>
-      <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-      <a href="farm.html" aria-current="page">Full Simulation<small>Cows &amp; humans, 3600 days</small></a>
-    </div>
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
       <button type="button" class="btn reset" id="reset" title="Put this page, the Herd tuner and the Humans page back to their defaults">Reset to defaults</button>
     </div>
   </div>
-</nav>
+</header>
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Full Simulation</h1>
-    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). The cows follow the Herd tuner and the people follow the Humans page, including how many of each you start with; only rice farming and the food advisor are set here. People eat two foods: milk from adult cows every day, and rice they harvest in early autumn.</p>
+    <h1>Food Model</h1>
+    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. There's no rationing here: everyone eats what they need until the food runs out.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>Rice harvest, starting rice and how long food keeps</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
+        <dt>Used by</dt><dd><a href="advisor.html">Advisor Model</a> and every page after it</dd>
+      </dl>
+    </aside>
   </header>
 
   <div class="layout">
@@ -122,44 +133,45 @@
       <section class="panel-section" id="farming">
         <div class="section-head">
           <h2>Food</h2>
-          <p class="scope">Rice is set here; milk comes from the cows</p>
+          <p class="scope">Also used by the <b><a href="advisor.html">Advisor Model</a></b> and every page after it</p>
         </div>
         <div class="param">
           <div class="param-head">
             <label for="rice-num">Rice harvest</label>
-            <span class="num-wrap"><input id="rice-num" type="number" min="0" step="10"><span class="unit">/year</span></span>
+            <span class="num-wrap"><input id="rice-num" type="number"><span class="unit">/year</span></span>
           </div>
-          <input id="rice-range" type="range" min="0" max="5000" step="10" aria-label="Total rice harvested each year">
-          <p class="hint" id="rice-hint">Total rice harvested each year.</p>
+          <input id="rice-range" type="range" aria-label="Rice grown each year">
+          <p class="hint" id="rice-hint"></p>
         </div>
-        <dl class="foods">
-          <dt></dt><dd class="h">Comes from</dd><dd class="h v">Keeps</dd>
-          <dt>Milk</dt><dd>1 a day per adult cow</dd><dd class="v">10 days</dd>
-          <dt>Rice</dt><dd>harvest, days 181–210</dd><dd class="v">360 days</dd>
-        </dl>
-        <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored.</p>
-
         <div class="param">
           <div class="param-head">
-            <span class="lbl">Food advisor</span>
-            <div class="seg" role="group" aria-label="Food advisor">
-              <button type="button" id="adv-off" aria-pressed="false">Off</button>
-              <button type="button" id="adv-on" aria-pressed="true">On</button>
-            </div>
+            <label for="rice0-num">Rice in store at start</label>
+            <span class="num-wrap"><input id="rice0-num" type="number"></span>
           </div>
-          <p class="hint">Each day the advisor sets a ration: the food in store plus what's still to come, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.</p>
+          <input id="rice0-range" type="range" aria-label="Rice in store on day 0">
+          <p class="hint" id="rice0-hint"></p>
         </div>
-
-        <div class="param" id="iq-block">
+        <div class="param">
           <div class="param-head">
-            <label for="iq-num">Advisor IQ</label>
-            <span class="num-wrap"><input id="iq-num" type="number" min="40" max="200" step="1"></span>
+            <label for="mk-num">Milk keeps</label>
+            <span class="num-wrap"><input id="mk-num" type="number"><span class="unit">days</span></span>
           </div>
-          <input id="iq-range" type="range" min="40" max="200" step="1" aria-label="Advisor IQ">
-          <p class="hint" id="iq-hint"></p>
+          <input id="mk-range" type="range" aria-label="Days milk keeps">
+          <p class="hint" id="mk-hint"></p>
         </div>
-
-        <dl class="foods" id="advisor-compare"></dl>
+        <div class="param">
+          <div class="param-head">
+            <label for="rk-num">Rice keeps</label>
+            <span class="num-wrap"><input id="rk-num" type="number"><span class="unit">days</span></span>
+          </div>
+          <input id="rk-range" type="range" aria-label="Days rice keeps">
+          <p class="hint" id="rk-hint"></p>
+        </div>
+        <dl class="foods two">
+          <dt>Milk</dt><dd>10 a day per adult cow</dd>
+          <dt>Rice</dt><dd>harvest, days 181–210</dd>
+        </dl>
+        <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
       </section>
 
       <section class="panel-section">
@@ -228,7 +240,7 @@
           <span><i class="swatch people"></i>People</span>
           <span><i class="swatch band"></i>Range across 20 runs</span>
           <span><i class="swatch dash-herd"></i>Where cows settle</span>
-          <span><i class="swatch dash-people"></i>People the milk feeds</span>
+          <span><i class="swatch dash-people"></i>Grown-ups the milk feeds</span>
         </div>
       </section>
 
@@ -259,6 +271,7 @@
 
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
+<script src="food-model.js"></script>
 <script>
 (() => {
   const T = 3600;
@@ -266,33 +279,32 @@
   const RUNS = 20;
   const MAX_ICONS = 90;           // per group
   const MAX_PEOPLE = 2000;        // a human run stops once it grows past this, to keep the page fast
-  const STORE_KEY = "farm-v4";
+  const STORE_KEY = "farm-v5";
   const HERDS = [
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
   const HUMAN_SALT = 200000;
-  const MILK_PER_COW = 1;         // milk each adult cow gives per day; people's only food
-  const MILK_SHELF_LIFE = 10;     // days stored milk stays good, counting the day it's made
-  const RICE_SHELF_LIFE = 360;    // days stored rice stays good
+  const MILK_PER_COW = 10;        // milk each adult cow gives per day
   const HARVEST_FIRST = 181, HARVEST_LAST = 210;   // harvest days within each 360-day year
   const HARVEST_DAYS = HARVEST_LAST - HARVEST_FIRST + 1;
-  const PERFECT_IQ = 160;
-  // How far off an advisor's food estimates typically are, as a fraction: 0 at IQ 160+, 15% at IQ 100
-  const iqError = (iq) => Math.max(0, (PERFECT_IQ - iq) / 400);
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
   const isHarvest = (day) => day >= 1 && dayOfYear(day) >= HARVEST_FIRST && dayOfYear(day) <= HARVEST_LAST;
   const $ = (id) => document.getElementById(id);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
 
-  // Rice production, the dice and playback speed belong to this page
-  const S_DEFAULTS = { seed: 1, speed: 180, riceYear: 3000, advisor: true, iq: 130 };   // riceYear: total rice harvested each year
+  // The dice and playback speed belong to this page
+  const S_DEFAULTS = { seed: 1, speed: 180 };
   let S = { ...S_DEFAULTS };
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (saved && typeof saved === "object") S = { ...S, ...saved };
   } catch (e) {}
   const saveS = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} };
+
+  // Food settings are set here and shared with the pages after this one (see food-model.js)
+  let F = FoodModel.savedParams() || { ...FoodModel.DEFAULTS };
+  const saveF = () => { try { localStorage.setItem(FoodModel.STORE_KEY, JSON.stringify(F)); } catch (e) {} };
 
   // Inherited settings
   let HP = null, HS = null, herdSaved = false, EQ = null;     // herds
@@ -354,14 +366,8 @@
     return { counts, adults, last: T, extinctDay, survived: counts[T] > 0, ...d };
   }
 
-  // iq: the advisor's IQ, or null for no advisor
-  function runPeople(seed, detailed, cowAdults, iq) {
+  function runPeople(seed, detailed, cowAdults) {
     const rand = HerdModel.rng(seed);
-    // The advisor has its own dice, so every policy faces the same births, deaths and herd
-    const arand = HerdModel.rng((seed ^ 0x5bd1e995) >>> 0);
-    const gauss = () => Math.sqrt(-2 * Math.log(1 - arand())) * Math.cos(2 * Math.PI * arand());
-    const sigma = iq == null ? 0 : iqError(iq);
-    const bias = sigma * gauss();   // this advisor's lasting lean: over- or underestimating food
     // Same human parameters, but the food shared out each day is what's eaten from the stores
     const p = { ...UP, F: 0 };
     const st = HumanModel.startPeople(US.men, US.women, p, rand);
@@ -369,17 +375,16 @@
     const f32 = () => new Float32Array(T + 1);
     const d = detailed ? {
       men: new Int32Array(T + 1), women: new Int32Array(T + 1),
-      boys: new Int32Array(T + 1), girls: new Int32Array(T + 1), couples: new Int32Array(T + 1),
+      boys: new Int32Array(T + 1), girls: new Int32Array(T + 1), elders: new Int32Array(T + 1), couples: new Int32Array(T + 1),
       born: new Int32Array(T + 1), died: new Int32Array(T + 1), hungry: new Int32Array(T + 1),
       ration: f32(), snaps: new Array(T + 1),
       made: f32(), drank: f32(), stored: f32(), spoiled: f32(),                    // milk
       riceMade: f32(), riceEaten: f32(), riceStored: f32(), riceSpoiled: f32(),    // rice
-      share: new Float32Array(T + 1).fill(NaN),                                     // advisor's ration
     } : null;
-    // milk[a] / rice[a] = food made a days ago that is still good
-    const milk = new Float64Array(MILK_SHELF_LIFE);
-    const rice = new Float64Array(RICE_SHELF_LIFE);
-    const sum = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
+    // Food in store by age; it spoils once past its keeping time
+    const stores = FoodModel.newStores(F);
+    stores.rice[0] = F.riceStart;
+    const { total } = FoodModel;
 
     // A sample of people to draw, as [id, age, sex] triples
     const snap = () => {
@@ -393,14 +398,14 @@
       if (!d) return;
       const c = HumanModel.census(st.people, p);
       d.men[day] = c.men; d.women[day] = c.women; d.boys[day] = c.boys; d.girls[day] = c.girls;
+      d.elders[day] = c.elders;
       d.couples[day] = c.couples;
-      const need = st.people.length * p.c;
+      const need = HumanModel.foodNeed(st.people, p);
       d.ration[day] = ev ? ev.ration : need > 0 ? Math.min(1, food.milkMade / need) : Infinity;
       d.made[day] = food.milkMade; d.drank[day] = food.milkEaten; d.spoiled[day] = food.milkSpoiled;
       d.riceMade[day] = food.riceMade; d.riceEaten[day] = food.riceEaten; d.riceSpoiled[day] = food.riceSpoiled;
-      d.stored[day] = sum(milk);
-      d.riceStored[day] = sum(rice);
-      if (food.share !== undefined) d.share[day] = food.share;
+      d.stored[day] = total(stores.milk);
+      d.riceStored[day] = total(stores.rice);
       if (ev) { d.born[day] = ev.born; d.died[day] = ev.died; d.hungry[day] = ev.hungry; }
       d.snaps[day] = snap();
     };
@@ -414,57 +419,26 @@
         continue;
       }
 
-      // 1. Stored food ages a day; anything past its shelf life spoils
-      const milkSpoiled = milk[MILK_SHELF_LIFE - 1];
-      for (let a = MILK_SHELF_LIFE - 1; a > 0; a--) milk[a] = milk[a - 1];
-      const riceSpoiled = rice[RICE_SHELF_LIFE - 1];
-      for (let a = RICE_SHELF_LIFE - 1; a > 0; a--) rice[a] = rice[a - 1];
+      // 1. Stored food ages a day; anything past its keeping time spoils
+      const { milkSpoiled, riceSpoiled } = FoodModel.ageStores(stores);
 
       // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
       const milkMade = cowAdults[day - 1] * MILK_PER_COW;
-      milk[0] = milkMade;
+      stores.milk[0] = milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
       const farmers = census.men + census.women > 0;
       let riceMade = 0;
-      if (isHarvest(day) && farmers) riceMade = S.riceYear / HARVEST_DAYS;
-      rice[0] = riceMade;
+      if (isHarvest(day) && farmers) riceMade = F.riceYear / HARVEST_DAYS;
+      stores.rice[0] = riceMade;
 
-      // 3. The advisor sets today's ration: food in store plus food still to come before the
-      //    next harvest, spread evenly over the days until then. Its estimate is off by an
-      //    error that shrinks with IQ: a lasting lean plus some day-to-day wobble.
-      let share = 1;
-      if (iq != null) {
-        const doy = dayOfYear(day);
-        let horizon, riceToCome = 0;
-        if (doy < HARVEST_FIRST) {
-          horizon = HARVEST_FIRST - doy;
-        } else {
-          horizon = YEAR - doy + HARVEST_FIRST;
-          if (doy <= HARVEST_LAST && farmers) riceToCome = ((HARVEST_LAST - doy) * S.riceYear) / HARVEST_DAYS;
-        }
-        const supply = sum(milk) + sum(rice) + milkMade * (horizon - 1) + riceToCome;
-        const need = st.people.length * p.c * horizon;
-        const err = bias + (sigma / 2) * gauss();
-        share = need > 0 ? Math.min(1, (supply / need) * Math.exp(err)) : 1;
-      }
+      // 3. People eat what they need while it lasts, whatever spoils soonest first; the rest stays stored
+      const { milkEaten, riceEaten } = FoodModel.eat(stores, HumanModel.foodNeed(st.people, p));
 
-      // 4. People eat their ration, whatever spoils soonest first; the rest stays stored
-      let want = st.people.length * p.c * share, milkEaten = 0, riceEaten = 0;
-      let i = MILK_SHELF_LIFE - 1, j = RICE_SHELF_LIFE - 1;
-      while (want > 1e-9 && (i >= 0 || j >= 0)) {
-        const fromMilk = j < 0 || (i >= 0 && MILK_SHELF_LIFE - i <= RICE_SHELF_LIFE - j);
-        const store = fromMilk ? milk : rice, a = fromMilk ? i : j;
-        const take = Math.min(store[a], want);
-        store[a] -= take;
-        want -= take;
-        if (fromMilk) { milkEaten += take; i--; } else { riceEaten += take; j--; }
-      }
-
-      // 5. What was eaten is the day's food, shared equally
+      // 4. What was eaten is the day's food, shared out by need
       p.F = milkEaten + riceEaten;
       const ev = HumanModel.stepPeople(st, p, rand);
-      record(day, ev, { milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, share: iq != null ? share : undefined });
+      record(day, ev, { milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled });
       if (st.people.length === 0) extinctDay = day;
       if (st.people.length > MAX_PEOPLE) { capped = true; last = day; break; }
     }
@@ -474,6 +448,8 @@
   function recompute() {
     stop();
     loadSettings();
+    syncFood();   // clamps the food settings before they're used
+    saveF();
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
       const runs = [runHerd(HS.N0, base, true)];
@@ -482,24 +458,12 @@
     }
     const base = S.seed * 7919 + HUMAN_SALT;
     const cowRuns = result.cows.runs;
-    const iqNow = S.advisor ? S.iq : null;
-    const runs = [runPeople(base, true, cowRuns[0].adults, iqNow)];
-    for (let i = 1; i < RUNS; i++) runs.push(runPeople(base + i, false, cowRuns[i].adults, iqNow));
+    const runs = [runPeople(base, true, cowRuns[0].adults)];
+    for (let i = 1; i < RUNS; i++) runs.push(runPeople(base + i, false, cowRuns[i].adults));
     result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
-
-    // The same villages and luck under each policy, to compare
-    const aliveWith = (iq) => {
-      if (iq === iqNow) return result.people.alive;
-      let n = 0;
-      for (let i = 0; i < RUNS; i++) if (runPeople(base + i, false, cowRuns[i].adults, iq).survived) n++;
-      return n;
-    };
-    result.compare = { none: aliveWith(null), advisor: aliveWith(S.iq), perfect: aliveWith(PERFECT_IQ) };
 
     saveS();
     syncSpeed();
-    syncRice();
-    syncAdvisor();
     drawParams();
     drawVerdict();
     drawChartStatic();
@@ -508,35 +472,33 @@
   }
 
   // ---------- Panel ----------
-  function syncAdvisor() {
-    S.iq = Math.round(clamp(Number(S.iq) || 100, 40, 200));
-    $("adv-on").setAttribute("aria-pressed", String(!!S.advisor));
-    $("adv-off").setAttribute("aria-pressed", String(!S.advisor));
-    $("farming").classList.toggle("advisor-off", !S.advisor);
-    $("iq-range").value = S.iq;
-    if (document.activeElement !== $("iq-num")) $("iq-num").value = S.iq;
-    const err = iqError(S.iq);
-    $("iq-hint").innerHTML = err === 0
-      ? `Spot on: the advisor knows exactly how much food there will be, so its ration is the best plan.`
-      : `Food estimates are typically off by <b>±${fmt(err * 100)}%</b>, with a lasting lean one way. Too high and the food runs out; too low and people go hungry for nothing. At IQ ${PERFECT_IQ}+ it's spot on.`;
-    const c = result.compare;
-    if (c) {
-      const best = Math.max(c.none, c.advisor, c.perfect);
-      const row = (label, n) => `<dt></dt><dd>${label}</dd><dd class="v${n === best ? " best" : ""}">${n}/${RUNS}</dd>`;
-      $("advisor-compare").innerHTML =
-        `<dt></dt><dd class="h">Villages alive at day ${fmt(T)}</dd><dd class="h v"></dd>` +
-        row("No advisor", c.none) +
-        row(`Advisor, IQ ${S.iq}`, c.advisor) +
-        row(`Perfect advisor (IQ ${PERFECT_IQ})`, c.perfect);
-    }
-  }
+  // Food sliders: [input id, setting, step]
+  const FOOD_INPUTS = [["rice", "riceYear", 100], ["rice0", "riceStart", 100], ["mk", "milkKeep", 1], ["rk", "riceKeep", 10]];
 
-  function syncRice() {
-    S.riceYear = clamp(Number(S.riceYear) || 0, 0, 5000);
-    $("rice-range").value = S.riceYear;
-    if (document.activeElement !== $("rice-num")) $("rice-num").value = S.riceYear;
+  function syncFood() {
+    for (const [id, key, step] of FOOD_INPUTS) {
+      const [lo, hi] = FoodModel.LIMITS[key];
+      let v = clamp(Number(F[key]), lo, hi);
+      if (!isFinite(v)) v = FoodModel.DEFAULTS[key];
+      F[key] = key.endsWith("Keep") ? Math.round(v) : v;
+      const range = $(id + "-range"), num = $(id + "-num");
+      range.min = num.min = lo;
+      range.max = num.max = hi;
+      range.step = num.step = step;
+      range.value = F[key];
+      if (document.activeElement !== num) num.value = F[key];
+    }
     const eats = YEAR * UP.c;
-    $("rice-hint").innerHTML = `Harvested evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(S.riceYear / HARVEST_DAYS)}</b> rice a day. A person eats <b>${milkText(eats)}</b> food a year, so this alone feeds about <b>${fmt(S.riceYear / eats, 1)}</b> people for a year.`;
+    $("rice-hint").innerHTML = `Harvested evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> rice a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
+    const people = US.men + US.women, dailyNeed = people * UP.c;
+    $("rice0-hint").innerHTML = F.riceStart > 0 && dailyNeed > 0
+      ? `Fresh on day 0. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.riceStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`
+      : `Nothing stored on day 0: until the first harvest on day ${HARVEST_FIRST}, people live on milk alone.`;
+    $("mk-hint").innerHTML = F.milkKeep === 0
+      ? "Milk must be drunk the day it's made; any left over spoils that night."
+      : `Milk made today can be drunk until <b>${F.milkKeep === 1 ? "tomorrow" : `${fmt(F.milkKeep)} days later`}</b>, then it spoils.`;
+    $("rk-hint").innerHTML = `Rice harvested today can be eaten for <b>${fmt(F.riceKeep)}</b> more days.` +
+      (F.riceKeep < YEAR - (HARVEST_LAST - HARVEST_FIRST) ? " That's shorter than the gap between harvests, so each year's rice spoils before the next comes in." : "");
   }
   function syncSpeed() {
     for (const b of document.querySelectorAll("[data-speed]")) b.setAttribute("aria-pressed", Number(b.dataset.speed) === S.speed);
@@ -561,6 +523,7 @@
       ["p", "Birth chance", `${UP.p} /day`],
       ["L", "Average lifespan", `${fmt(UP.L)} days`],
       ["M", "Adult at age", `${fmt(UP.M)} days`],
+      ["E", "Elder at age", `${fmt(UP.E)} days`],
       ["±", "Lifespan spread", `${fmt(UP.S)}%`],
       ["c", "Food need", `${fmt(UP.c, 1)} /person`, "sep"],
       ["K", "Hunger toll", `${fmt(UP.K)} days`],
@@ -641,7 +604,7 @@
     const W = Math.max(280, svg.clientWidth || 640), H = 320;
     const m = { l: 44, r: 62, t: 14, b: 38 };
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    // How many people this run's milk could fully feed each day
+    // How many grown-ups this run's milk could fully feed each day
     const cowAdults = result.cows.main.adults;
     const feeds = new Float32Array(T + 1);
     for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * MILK_PER_COW) / UP.c : 0;
@@ -703,7 +666,7 @@
     const m = { l: 44, r: 62, t: 12, b: 34 };
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const pm = result.people.main;
-    let yMax = 5;
+    let yMax = 50;
     for (let i = 0; i <= pm.last; i++) yMax = Math.max(yMax, pm.riceStored[i], pm.stored[i]);
     yMax *= 1.1;
     const x = (t) => m.l + (t / T) * (W - m.l - m.r);
@@ -754,9 +717,9 @@
 
   function drawFoodRows() {
     const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
-    let milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0;
+    let milkMade = 0, milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0;
     for (let k = 0; k <= pm.last; k++) {
-      milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
+      milkMade += pm.made[k]; milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
       riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k]; riceSpoiled += pm.riceSpoiled[k];
     }
     const harvest = isHarvest(day) ? ' · <span class="harvest-tag">harvest</span>' : "";
@@ -765,11 +728,10 @@
       <dt>Milk made / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>
       <dt>Rice harvested / eaten</dt><dd>${milkText(pm.riceMade[i])} / ${milkText(pm.riceEaten[i])}</dd>
       <dt>In store: milk / rice</dt><dd>${milkText(pm.stored[i])} / ${milkText(pm.riceStored[i])}</dd>
-      <dt>Advisor's ration</dt><dd>${isFinite(pm.share[i]) ? fmt(pm.share[i] * 100) + "%" : "—"}</dd>
       <dt>Fed</dt><dd>${shareText(i)}</dd>`;
     $("food-run").innerHTML = `
       <dt class="sub">Whole run</dt>
-      <dt>Milk drunk / spoiled</dt><dd>${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
+      <dt>Milk made / drunk / spoiled</dt><dd>${milkText(milkMade)} / ${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
       <dt>Rice harvested</dt><dd>${milkText(riceMade)}</dd>
       <dt>Rice eaten / spoiled</dt><dd>${milkText(riceEaten)} / ${milkText(riceSpoiled)}</dd>`;
   }
@@ -820,8 +782,8 @@
     ctx.restore();
   }
 
-  // Men wear a straight tunic, women a flared dress
-  function drawPerson(ctx, cx, cy, s, male, c) {
+  // Men wear a straight tunic, women a flared dress. Elders have white hair and a stick.
+  function drawPerson(ctx, cx, cy, s, male, c, elder) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(s, s);
@@ -843,6 +805,12 @@
     ctx.beginPath(); ctx.arc(0, -10, 3.6, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = 1 / s;
     ctx.stroke();
+    if (elder) {
+      ctx.fillStyle = c.hair;
+      ctx.beginPath(); ctx.arc(0, -10, 3.6, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.4 / s;
+      ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(7.5, 11); ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -860,7 +828,7 @@
     const day = currentDay();
     const c = {
       body: cssVar("--cow-body"), spot: cssVar("--cow-spot"), muzzle: cssVar("--cow-muzzle"),
-      ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), skin: cssVar("--skin"),
+      ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), skin: cssVar("--skin"), hair: cssVar("--wool"),
     };
     const base = clamp(w / 700, 0.75, 1.15);
     const all = [];
@@ -877,7 +845,7 @@
     });
     const pm = result.people.main;
     const psnap = pm.snaps[Math.min(day, pm.last)] || new Int32Array(0);
-    for (let i = 0; i < psnap.length; i += 3) place(psnap[i] * 16 + 8, psnap[i + 1], "people", { male: psnap[i + 2] === HumanModel.MALE });
+    for (let i = 0; i < psnap.length; i += 3) place(psnap[i] * 16 + 8, psnap[i + 1], "people", { male: psnap[i + 2] === HumanModel.MALE, elder: psnap[i + 1] >= UP.E });
     all.sort((a, b) => a.y - b.y);
 
     for (const a of all) {
@@ -885,7 +853,7 @@
       const grown = 0.55 + 0.45 * Math.min(1, a.age / grownAt);
       const s = base * (0.7 + a.y * 0.45) * grown;
       if (a.kind === "cows") drawCow(ctx, a.x * w, a.y * h, s, a.face, a.spot, c);
-      else drawPerson(ctx, a.x * w, a.y * h, s * 1.05, a.male, c);
+      else drawPerson(ctx, a.x * w, a.y * h, s * 1.05, a.male, c, a.elder);
     }
 
     const cows = result.cows.main, pi = Math.min(day, pm.last);
@@ -969,6 +937,7 @@
         <dt class="sub">On this day</dt>
         <dt>Men / women</dt><dd>${fmt(m.men[i])} / ${fmt(m.women[i])}</dd>
         <dt>Boys / girls</dt><dd>${fmt(m.boys[i])} / ${fmt(m.girls[i])}</dd>
+        <dt>Elders</dt><dd>${fmt(m.elders[i])}</dd>
         <dt>Couples</dt><dd>${fmt(m.couples[i])}</dd>
         <dt>Fed</dt><dd>${shareText(i)}</dd>
         <dt>Born / died</dt><dd>${fmt(m.born[i])} / ${fmt(m.died[i])}</dd>
@@ -1037,7 +1006,8 @@
   }
   $("reroll").addEventListener("click", () => { S.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
 
-  // Reset covers this page and the two pages it inherits from, so it asks for a second click
+  // Reset covers this page (including the food settings the pages after it share) and the
+  // two pages it inherits from, so it asks for a second click
   let resetTimer = 0;
   const disarmReset = () => {
     clearTimeout(resetTimer);
@@ -1048,7 +1018,7 @@
     const b = $("reset");
     if (!b.classList.contains("confirm")) {
       b.classList.add("confirm");
-      b.textContent = "Click again to reset all 3 pages";
+      b.textContent = "Click again to also reset Herd tuner & Humans";
       resetTimer = setTimeout(disarmReset, 4000);
       return;
     }
@@ -1058,33 +1028,24 @@
       localStorage.removeItem(HumanModel.STORE_KEY);
     } catch (e) {}
     S = { ...S_DEFAULTS };
+    F = { ...FoodModel.DEFAULTS };
     cursor = null;
     recompute();
   });
 
-  let riceTimer = 0;
-  const riceChanged = (v) => {
+  let foodTimer = 0;
+  const foodChanged = (key, v) => {
     if (!isFinite(v)) return;
-    S.riceYear = v;
-    clearTimeout(riceTimer);
-    riceTimer = setTimeout(recompute, 80);
+    F[key] = v;
+    clearTimeout(foodTimer);
+    foodTimer = setTimeout(recompute, 80);
   };
-  $("rice-range").addEventListener("input", (e) => { $("rice-num").value = e.target.value; riceChanged(Number(e.target.value)); });
-  $("rice-num").addEventListener("input", (e) => { if (e.target.value !== "") riceChanged(Number(e.target.value)); });
-  $("rice-num").addEventListener("change", syncRice);
+  for (const [id, key] of FOOD_INPUTS) {
+    $(id + "-range").addEventListener("input", (e) => { $(id + "-num").value = e.target.value; foodChanged(key, Number(e.target.value)); });
+    $(id + "-num").addEventListener("input", (e) => { if (e.target.value !== "") foodChanged(key, Number(e.target.value)); });
+    $(id + "-num").addEventListener("change", syncFood);
+  }
 
-  $("adv-on").addEventListener("click", () => { S.advisor = true; recompute(); });
-  $("adv-off").addEventListener("click", () => { S.advisor = false; recompute(); });
-  let iqTimer = 0;
-  const iqChanged = (v) => {
-    if (!isFinite(v)) return;
-    S.iq = v;
-    clearTimeout(iqTimer);
-    iqTimer = setTimeout(recompute, 80);
-  };
-  $("iq-range").addEventListener("input", (e) => { $("iq-num").value = e.target.value; iqChanged(Number(e.target.value)); });
-  $("iq-num").addEventListener("input", (e) => { if (e.target.value !== "") iqChanged(Number(e.target.value)); });
-  $("iq-num").addEventListener("change", syncAdvisor);
 
   // Follow the other pages when they're changed in another tab
   window.addEventListener("storage", (e) => {

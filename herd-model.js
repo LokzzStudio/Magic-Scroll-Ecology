@@ -4,17 +4,17 @@
 (function () {
   // Model parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    r: 0.03,  // intrinsic growth rate, per day
-    K: 11,    // carrying capacity, animals
-    A: 4,     // Allee threshold, animals
+    r: 0.02,  // intrinsic growth rate, per day
+    K: 10,    // carrying capacity, animals
+    A: 2,     // Allee threshold, animals
     L: 360,   // average lifespan, days
-    S: 10,    // lifespan spread, ± percent of L
+    S: 15,    // lifespan spread, ± percent of L
     M: 60,    // adult at age, days. Younger animals are calves or lambs.
               // Only a label: young animals still count toward births and crowding.
   };
 
   // Where the cow page saves its sliders
-  const STORE_KEY = "cow-herd-params-v6";
+  const STORE_KEY = "cow-herd-params-v8";
 
   function rng(seed) {
     let a = seed >>> 0;
@@ -112,8 +112,8 @@
     }
   }
 
-  // Starting herd size, set on the Herd tuner and also used by the Full Simulation
-  const START = { N0: 10 };
+  // Starting herd size, set on the Herd tuner and also used by the Food Model and every page after it
+  const START = { N0: 11 };
 
   // The starting herd the Herd tuner last saved, or null
   function savedStart() {
