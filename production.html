@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Production Model</title>
+<title>Production</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -107,10 +107,10 @@
   <div class="tabs">
     <a href="index.html">Herd tuner<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-    <a href="farm.html">Food Model<small>Harvest, stores &amp; spoiling</small></a>
-    <a href="advisor.html">Advisor Model<small>Food advisor &amp; rations</small></a>
-    <a href="production.html" aria-current="page">Production Model<small>Food needs workers</small></a>
-    <a href="attribute.html">Attribute Model<small>Power &amp; intelligence</small></a>
+    <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
+    <a href="production.html" aria-current="page">Production<small>Food needs workers</small></a>
+    <a href="attribute.html">Attribute<small>Power &amp; intelligence</small></a>
   </div>
 </nav>
 <header class="topbar">
@@ -124,7 +124,7 @@
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Production Model</h1>
+    <h1>Production</h1>
     <p class="lede">The same farm, but food only comes in if people work for it. Every adult cow needs an adult to milk it, and the rice needs hands from spring to autumn. Children don't work, and elders can milk but not farm.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
@@ -147,7 +147,7 @@
         <p class="source" id="food-source" hidden></p>
         <div class="btn-row"><a class="btn" href="farm.html#farming">Change on Food Model →</a></div>
         <dl class="foods two">
-          <dt>Milk</dt><dd>10 a day per adult cow, if milked</dd>
+          <dt>Milk</dt><dd id="milk-source">as much as its milker collects</dd>
           <dt>Rice</dt><dd>harvest, days 181–270</dd>
         </dl>
         <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
@@ -160,7 +160,7 @@
         </div>
         <dl class="foods">
           <dt></dt><dd class="h">Needs</dd><dd class="h v">Days</dd>
-          <dt>Milk</dt><dd>1 adult or elder per adult cow (10 milk a day)</dd><dd class="v">all year</dd>
+          <dt>Milk</dt><dd id="milk-work">1 adult or elder per adult cow (10 milk a day)</dd><dd class="v">all year</dd>
           <dt>Rice</dt><dd>adults only: tending, then harvest</dd><dd class="v">1–270</dd>
         </dl>
         <p class="hint">Milk comes first: every adult cow gets a milker, elders before adults since elders can't farm. Adults left over go to the rice, up to 4. <b>Tending</b> (days 1–180): each hand gives 25% of the full crop, so 4 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each hand brings in 250 rice a day until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.</p>
@@ -304,8 +304,7 @@
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
   const HUMAN_SALT = 200000;
-  const MILK_PER_COW = 10;        // milk each adult cow gives per day
-  const MILK_PER_HAND = 10;       // milk one adult can collect per day
+  let milkPerHand = 10;           // milk one milker collects per day (from the food settings); a cow gives all of it
   const FULL_CREW = 4;            // rice hands for full production; each one gives a quarter
   const HARVEST_FIRST = 181, HARVEST_LAST = 270;   // harvest days within each 360-day year
   const TEND_DAYS = HARVEST_FIRST - 1;             // days 1–180 tending the rice
@@ -399,7 +398,7 @@
   // Each grown-up does one job a day. Every adult cow gets a milker first, elders before
   // adults since elders can't farm; adults left over go to the rice, up to the hands it wants.
   function assignWork(adults, elders, cows, riceWanted) {
-    const milkNeed = Math.ceil((cows * MILK_PER_COW) / MILK_PER_HAND);
+    const milkNeed = cows;   // one milker per adult cow
     const elderMilkers = Math.min(milkNeed, elders);
     const adultMilkers = Math.min(milkNeed - elderMilkers, adults);
     const farm = Math.min(riceWanted, adults - adultMilkers);
@@ -499,7 +498,7 @@
       // 3. Today's food goes into the stores: milk from the cows that were milked, and at
       //    harvest, up to 250 rice per hand until the field is bare. Rice still standing
       //    after the last harvest day is lost.
-      const milkMade = Math.min(work.milkers * MILK_PER_HAND, cows * MILK_PER_COW);
+      const milkMade = work.milkers * milkPerHand;
       stores.milk[0] = milkMade;
       const riceMade = isHarvest(day) ? Math.min(field, work.farm * HARVEST_PER_HAND) : 0;
       field -= riceMade;
@@ -545,6 +544,7 @@
   function recompute() {
     stop();
     loadSettings();
+    milkPerHand = FoodModel.milkPerDay(F);
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
       const runs = [runHerd(HS.N0, base, true)];
@@ -648,12 +648,14 @@
     $("human-source").hidden = humanSaved;
     $("human-source").textContent = note;
     $("food-params").innerHTML = paramRows([
-      ["", "Rice, full crew", `${fmt(F.riceYear)} /year`],
+      ["", "Rice effectiveness", `${fmt(F.energyPerRice, 2)} energy per rice (${fmt(F.riceYear)} a year)`],
       ["", "Rice in store at start", fmt(F.riceStart)],
       ["", "Milk keeps", FoodModel.keepText(F.milkKeep)],
       ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
+      ["", "Milk effectiveness", `${fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0)} energy per milk`],
     ]);
     $("food-source").hidden = foodSaved;
+    $("milk-work").textContent = `1 adult or elder per adult cow (${milkText(milkPerHand)} milk a day)`;
     $("food-source").textContent = note;
   }
 
@@ -897,11 +899,10 @@
 
   function drawFoodRows() {
     const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
-    let milkMade = 0, milkDrunk = 0, milkSpoiled = 0, milkMissed = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0, riceLost = 0;
+    let milkMade = 0, milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0, riceLost = 0;
     for (let k = 1; k <= pm.last; k++) {
       milkMade += pm.made[k]; milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
       riceSpoiled += pm.riceSpoiled[k];
-      milkMissed += pm.cows[k] * MILK_PER_COW - pm.made[k];
       riceLost += pm.riceLost[k];
       riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k];
     }
@@ -912,7 +913,7 @@
     $("food-day").innerHTML = `
       <dt class="sub">Day ${fmt(day)} · day ${doy} of the year${harvest}</dt>
       <dt>Milking / on the rice / idle</dt><dd>${fmt(pm.milkers[i])} / ${fmt(pm.farm[i])} / ${fmt(idle)}</dd>
-      <dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - Math.ceil(pm.made[i] / MILK_PER_COW)))} of ${fmt(pm.cows[i])}</dd>
+      <dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - pm.milkers[i]))} of ${fmt(pm.cows[i])}</dd>
       <dt>Milk collected / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>
       <dt>This year's rice crop</dt><dd>${crop}</dd>
       <dt>Rice still in the field</dt><dd>${milkText(pm.field[i])}</dd>
@@ -923,7 +924,6 @@
     $("food-run").innerHTML = `
       <dt class="sub">Whole run</dt>
       <dt>Milk collected / drunk / spoiled</dt><dd>${milkText(milkMade)} / ${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
-      <dt>Milk never collected</dt><dd>${milkText(milkMissed)}</dd>
       <dt>Rice harvested / left in the field</dt><dd>${milkText(riceMade)} / ${milkText(riceLost)}</dd>
       <dt>Rice eaten / spoiled</dt><dd>${milkText(riceEaten)} / ${milkText(riceSpoiled)}</dd>`;
   }
@@ -1077,10 +1077,10 @@
   }
 
   // ---------- Stats ----------
-  // Milk the people collected on a day, out of what the adult cows could give
+  // Milk the people collected on a day
   function milkRow(day) {
     const pm = result.people.main, i = Math.min(day, pm.last);
-    return `<dt>Milk collected</dt><dd>${milkText(pm.made[i])} of ${fmt(pm.cows[i] * MILK_PER_COW)}</dd>`;
+    return `<dt>Milk collected</dt><dd>${milkText(pm.made[i])}</dd>`;
   }
 
   function drawStats() {

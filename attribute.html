@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Attribute Model</title>
+<title>Attribute</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -109,10 +109,10 @@
   <div class="tabs">
     <a href="index.html">Herd tuner<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-    <a href="farm.html">Food Model<small>Harvest, stores &amp; spoiling</small></a>
-    <a href="advisor.html">Advisor Model<small>Food advisor &amp; rations</small></a>
-    <a href="production.html">Production Model<small>Food needs workers</small></a>
-    <a href="attribute.html" aria-current="page">Attribute Model<small>Power &amp; intelligence</small></a>
+    <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
+    <a href="production.html">Production<small>Food needs workers</small></a>
+    <a href="attribute.html" aria-current="page">Attribute<small>Power &amp; intelligence</small></a>
   </div>
 </nav>
 <header class="topbar">
@@ -126,8 +126,8 @@
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Attribute Model</h1>
-    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Intelligence sets how much work each hour gets done, Power sets how many hours someone lasts before they're spent. At 100 and 100 everyone does exactly a standard day's work, so the results match the Production Model run for run.</p>
+    <h1>Attribute</h1>
+    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each milk takes a set amount of energy to collect (work effectiveness, from the Food page). A cow gives as much milk as its milker collects. At 100 and 100 everyone does exactly what they did on the Production Model, so the results match run for run.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
@@ -150,7 +150,7 @@
             <span class="num-wrap"><input id="pow-num" type="number"></span>
           </div>
           <input id="pow-range" type="range" aria-label="Power">
-          <p class="hint">Work durability (耐力): each day starts with this much, and work uses it up. At 0, nobody can work for the rest of the day.</p>
+          <p class="hint">Work durability (耐力): the energy someone can spend in a day. 100 Power = 100 energy; when it's used up, they stop for the day.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -158,7 +158,11 @@
             <span class="num-wrap"><input id="int-num" type="number"></span>
           </div>
           <input id="int-range" type="range" aria-label="Intelligence">
-          <p class="hint">Work efficiency (效率): 100 is 100%, so each hour does 10% of a standard day (1 milk). Each hour also costs efficiency × 10 Power.</p>
+          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 10 energy an hour. Nobody works more than 10 hours a day.</p>
+        </div>
+        <div class="param">
+          <div class="param-head"><span class="lbl">Milk effectiveness</span><span class="num-wrap" id="eff-text">10 energy = 1 milk</span></div>
+          <p class="hint">The same for everyone; set on the <a href="farm.html#farming">Food page</a>. Rice works the same way: its effectiveness (tending energy per rice) is set there too, and harvesting brings in 250 rice per 100 energy.</p>
         </div>
         <dl class="foods" id="workday"></dl>
         <p class="hint" id="attr-hint"></p>
@@ -175,7 +179,7 @@
         <p class="source" id="food-source" hidden></p>
         <div class="btn-row"><a class="btn" href="farm.html#farming">Change on Food Model →</a></div>
         <dl class="foods two">
-          <dt>Milk</dt><dd>10 a day per adult cow, if milked</dd>
+          <dt>Milk</dt><dd>as much as each adult cow's milker collects</dd>
           <dt>Rice</dt><dd>harvest, days 181–270</dd>
         </dl>
         <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
@@ -188,10 +192,10 @@
         </div>
         <dl class="foods">
           <dt></dt><dd class="h">Needs</dd><dd class="h v">Days</dd>
-          <dt>Milk</dt><dd>10 milk a day per adult cow; 1 standard day of work collects 10</dd><dd class="v">all year</dd>
+          <dt>Milk</dt><dd id="milk-work">1 milker per adult cow; 10 energy collects 1 milk</dd><dd class="v">all year</dd>
           <dt>Rice</dt><dd>adults only: tending, then harvest</dd><dd class="v">1–270</dd>
         </dl>
-        <p class="hint">Work is counted in <b>standard days</b>: what a person with 100 Power and 100 Intelligence does in a day. Milk comes first: every adult cow's milk gets collected, by elders before adults since elders can't farm. Adults left over go to the rice, up to 4 standard days of work. <b>Tending</b> (days 1–180): each standard day of work gives 25% of the full crop, so 4 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each standard day of work brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.</p>
+        <p class="hint">Work is counted in <b>energy</b>; 100 energy is what a person with 100 Power spends in a day. Milk comes first: every adult cow gets a milker, elders before adults since elders can't farm, and a cow gives as much as its milker collects. Adults left over go to the rice, up to 400 energy of work. <b>Tending</b> (days 1–180): each 100 energy gives 25% of the full crop, so 400 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each 100 energy brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.</p>
       </section>
 
       <section class="panel-section" id="advice">
@@ -332,14 +336,13 @@
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
   const HUMAN_SALT = 200000;
-  const MILK_PER_COW = 10;        // milk each adult cow gives per day
-  const MILK_PER_HAND = 10;       // milk one adult can collect per day
   const FULL_CREW = 4;            // rice hands for full production; each one gives a quarter
   const HARVEST_FIRST = 181, HARVEST_LAST = 270;   // harvest days within each 360-day year
   const TEND_DAYS = HARVEST_FIRST - 1;             // days 1–180 tending the rice
   const HARVEST_PER_HAND = 250;    // rice one standard day of work brings in at harvest
   const MAX_HOURS = 10;            // longest working day
-  const POWER_PER_HOUR = 10;       // Power one hour of work costs at 100% efficiency
+  const ENERGY_PER_HOUR = 10;      // work efficiency at 100 Intelligence
+  const DAY_ENERGY = FoodModel.DAY_ENERGY;   // work durability at 100 Power; also one person's day on the rice
   const ATTR_DEFAULT = { power: 100, intel: 100 };
   const ATTR_MAX = 300;
   const ATTR_INPUTS = [["pow", "power"], ["int", "intel"]];
@@ -429,26 +432,27 @@
     return { counts, adults, last: T, extinctDay, survived: counts[T] > 0, ...d };
   }
 
-  // One person's working day. Each hour does (Intelligence ÷ 100) × 10% of a standard day's
-  // work and costs Intelligence ÷ 10 Power; they stop when their Power is spent or after
-  // 10 hours. Output is in standard days: min(Power, Intelligence) ÷ 100.
+  // One person's working day. Durability (Power) is the energy they can spend; efficiency
+  // (Intelligence) is how fast they spend it. They stop when it's spent or after 10 hours.
+  // output is the day's energy in units of 100, so the rice can count it in person-days.
   function workDay(power, intel) {
-    const rate = intel / 100;   // efficiency
-    const hours = rate > 0 ? Math.min(MAX_HOURS, power / (POWER_PER_HOUR * rate)) : MAX_HOURS;
-    return { hours, output: (hours * rate) / MAX_HOURS, powerLeft: power - hours * POWER_PER_HOUR * rate };
+    const durability = (DAY_ENERGY * power) / 100;
+    const rate = (ENERGY_PER_HOUR * intel) / 100;   // energy an hour
+    const energy = Math.min(durability, rate * MAX_HOURS);
+    const hours = rate > 0 ? energy / rate : 0;
+    return { durability, rate, hours, energy, energyLeft: durability - energy, output: energy / DAY_ENERGY };
   }
 
-  // Each grown-up does one job a day. The adult cows' milk gets collected first, by elders
-  // before adults since elders can't farm; adults left over go to the rice until it has the
-  // work it wants. Work is counted in standard days.
+  // Each grown-up does one job a day. Every adult cow gets a milker first, elders before
+  // adults since elders can't farm; adults left over go to the rice until it has the work it
+  // wants. Work is counted in person-days of 100 energy.
   function assignWork(adults, elders, cows, riceWanted) {
-    const milkNeed = (cows * MILK_PER_COW) / MILK_PER_HAND;
     let milkers = 0, milkWork = 0, farm = 0, farmWork = 0;
     const left = [];
     for (const group of [elders, adults]) {
       for (const h of group) {
         const out = workDay(h.power, h.intel).output;
-        if (milkWork < milkNeed - 1e-9 && out > 0) { milkers++; milkWork += out; }
+        if (milkers < cows && out > 0) { milkers++; milkWork += out; }
         else if (group === adults) left.push(out);
       }
     }
@@ -560,7 +564,7 @@
       // 3. Today's food goes into the stores: milk from the cows that were milked, and at
       //    harvest, up to 250 rice per hand until the field is bare. Rice still standing
       //    after the last harvest day is lost.
-      const milkMade = Math.min(work.milkWork * MILK_PER_HAND, cows * MILK_PER_COW);
+      const milkMade = (work.milkWork * DAY_ENERGY) / F.energyPerMilk;   // no cap on what a cow gives
       stores.milk[0] = milkMade;
       const riceMade = isHarvest(day) ? Math.min(field, work.farmWork * HARVEST_PER_HAND) : 0;
       field -= riceMade;
@@ -596,7 +600,7 @@
       record(day, ev, {
         milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, share: iq != null ? share : undefined,
         adults: adults + elders, farm: work.farm, milkers: work.milkers, cows, crop, field, riceLost,
-        milkWork: Math.min(work.milkWork, (cows * MILK_PER_COW) / MILK_PER_HAND), farmWork: Math.min(work.farmWork, FULL_CREW),
+        milkWork: work.milkWork, farmWork: Math.min(work.farmWork, FULL_CREW),
       });
       if (st.people.length === 0) extinctDay = day;
       if (st.people.length > MAX_PEOPLE) { capped = true; last = day; break; }
@@ -694,19 +698,19 @@
 
   function drawAttributes() {
     const w = workDay(S.power, S.intel);
-    const hoursText = (h) => fmt(h, Number.isInteger(h) ? 0 : 1);
+    const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;
     $("workday").innerHTML =
       `<dt></dt><dd class="h">One person's working day</dd><dd class="h v"></dd>` +
-      `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(S.intel)}%</dd>` +
-      `<dt></dt><dd>Hours worked</dd><dd class="v">${hoursText(w.hours)} of ${MAX_HOURS}</dd>` +
-      `<dt></dt><dd>Power left at the end</dd><dd class="v">${fmt(w.powerLeft)}</dd>` +
-      `<dt></dt><dd>Work done</dd><dd class="v">${fmt(w.output * 100)}%</dd>` +
-      `<dt></dt><dd>Milk collected</dd><dd class="v">${milkText(w.output * MILK_PER_HAND)}</dd>`;
+      `<dt></dt><dd>Durability</dd><dd class="v">${fmt(w.durability)} energy</dd>` +
+      `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} energy/h</dd>` +
+      `<dt></dt><dd>Time worked</dd><dd class="v">${hoursText(w.hours)} of ${MAX_HOURS}</dd>` +
+      `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(w.energy)} / ${fmt(w.energyLeft)}</dd>` +
+      `<dt></dt><dd>Milk collected</dd><dd class="v">${milkText(w.energy / F.energyPerMilk)}</dd>`;
     $("attr-hint").innerHTML = S.power === S.intel
-      ? `Balanced: Power runs out right at the end of the 10-hour day, so nothing is wasted.`
-      : S.power > S.intel
-        ? `Intelligence is the limit: the day ends after 10 hours with <b>${fmt(w.powerLeft)}</b> Power unused. Raising Power alone won't help.`
-        : `Power is the limit: the work is efficient, but Power runs out after <b>${hoursText(w.hours)}</b> hours. Raising Intelligence alone won't help.`;
+      ? `Balanced: the energy runs out right at the end of the 10-hour day, so nothing is wasted.`
+      : w.energyLeft > 1e-9
+        ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the 10-hour day ends with <b>${fmt(w.energyLeft)}</b> energy unspent. Raising Power alone won't help.`
+        : `Power is the limit: the energy runs out after <b>${hoursText(w.hours)}</b>. Raising Intelligence alone won't help.`;
     const c = result.attrCompare;
     if (c) {
       const row = (label, n, best) => `<dt></dt><dd>${label}</dd><dd class="v${best ? " best" : ""}">${n}/${RUNS}</dd>`;
@@ -759,12 +763,16 @@
     $("human-source").hidden = humanSaved;
     $("human-source").textContent = note;
     $("food-params").innerHTML = paramRows([
-      ["", "Rice, full crew", `${fmt(F.riceYear)} /year`],
+      ["", "Rice effectiveness", `${fmt(F.energyPerRice, 2)} energy per rice (${fmt(F.riceYear)} a year)`],
       ["", "Rice in store at start", fmt(F.riceStart)],
       ["", "Milk keeps", FoodModel.keepText(F.milkKeep)],
       ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
+      ["", "Milk effectiveness", `${fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0)} energy per milk`],
     ]);
     $("food-source").hidden = foodSaved;
+    const eff = fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0);
+    $("eff-text").textContent = `${eff} energy = 1 milk`;
+    $("milk-work").textContent = `1 milker per adult cow; ${eff} energy collects 1 milk`;
     $("food-source").textContent = note;
   }
 
@@ -1008,11 +1016,10 @@
 
   function drawFoodRows() {
     const pm = result.people.main, day = currentDay(), i = Math.min(day, pm.last);
-    let milkMade = 0, milkDrunk = 0, milkSpoiled = 0, milkMissed = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0, riceLost = 0;
+    let milkMade = 0, milkDrunk = 0, milkSpoiled = 0, riceMade = 0, riceEaten = 0, riceSpoiled = 0, riceLost = 0;
     for (let k = 1; k <= pm.last; k++) {
       milkMade += pm.made[k]; milkDrunk += pm.drank[k]; milkSpoiled += pm.spoiled[k];
       riceSpoiled += pm.riceSpoiled[k];
-      milkMissed += pm.cows[k] * MILK_PER_COW - pm.made[k];
       riceLost += pm.riceLost[k];
       riceMade += pm.riceMade[k]; riceEaten += pm.riceEaten[k];
     }
@@ -1024,7 +1031,7 @@
       <dt class="sub">Day ${fmt(day)} · day ${doy} of the year${harvest}</dt>
       <dt>Milking / on the rice / idle</dt><dd>${fmt(pm.milkers[i])} / ${fmt(pm.farm[i])} / ${fmt(idle)}</dd>
       <dt>Work done: milking / rice</dt><dd>${fmt(pm.milkWork[i], 1)} / ${fmt(pm.farmWork[i], 1)} days</dd>
-      <dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - Math.ceil(pm.made[i] / MILK_PER_COW)))} of ${fmt(pm.cows[i])}</dd>
+      <dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - pm.milkers[i]))} of ${fmt(pm.cows[i])}</dd>
       <dt>Milk collected / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>
       <dt>This year's rice crop</dt><dd>${crop}</dd>
       <dt>Rice still in the field</dt><dd>${milkText(pm.field[i])}</dd>
@@ -1035,7 +1042,6 @@
     $("food-run").innerHTML = `
       <dt class="sub">Whole run</dt>
       <dt>Milk collected / drunk / spoiled</dt><dd>${milkText(milkMade)} / ${milkText(milkDrunk)} / ${milkText(milkSpoiled)}</dd>
-      <dt>Milk never collected</dt><dd>${milkText(milkMissed)}</dd>
       <dt>Rice harvested / left in the field</dt><dd>${milkText(riceMade)} / ${milkText(riceLost)}</dd>
       <dt>Rice eaten / spoiled</dt><dd>${milkText(riceEaten)} / ${milkText(riceSpoiled)}</dd>`;
   }
@@ -1192,7 +1198,7 @@
   // Milk the people collected on a day, out of what the adult cows could give
   function milkRow(day) {
     const pm = result.people.main, i = Math.min(day, pm.last);
-    return `<dt>Milk collected</dt><dd>${milkText(pm.made[i])} of ${fmt(pm.cows[i] * MILK_PER_COW)}</dd>`;
+    return `<dt>Milk collected</dt><dd>${milkText(pm.made[i])}</dd>`;
   }
 
   function drawStats() {

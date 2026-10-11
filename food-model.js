@@ -1,16 +1,32 @@
-// Shared food model for the Magic Scroll ecology pages: how much rice the farm grows,
+// Shared food model for the Magic Scroll ecology pages: how much work a rice and a milk take,
 // what's in store at the start, and how long milk and rice keep.
 // The Food Model page (farm.html) is where these are tuned; the pages after it read them from here.
 (function () {
+  // Energy one person spends in a standard working day (100 Power, 100 Intelligence)
+  const DAY_ENERGY = 100;
+
+  // The rice season every page assumes: a full crew of 4 tending it for 180 days
+  const TEND_CREW = 4, TEND_DAYS = 180;
+  const CREW_ENERGY = TEND_CREW * TEND_DAYS * DAY_ENERGY;   // 72,000 energy
+
+  // Rice a full crew grows in a year: its tending energy ÷ rice effectiveness
+  const riceYearOf = (p) => CREW_ENERGY / p.energyPerRice;
+
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    riceYear: 20000,  // rice grown each year (on the Production Model, with a full crew)
+    energyPerRice: 3.6, // rice effectiveness: tending energy that grows 1 rice
     riceStart: 20000, // rice in store on day 0
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
+    energyPerMilk: 10, // milk effectiveness: energy it takes to collect 1 milk
   };
+  DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from energyPerRice; not a setting of its own
+
   // Slider ranges, [min, max]
-  const LIMITS = { riceYear: [0, 50000], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080] };
+  const LIMITS = { energyPerRice: [1, 30], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], energyPerMilk: [1, 50] };
+
+  // Milk one standard working day collects; where nobody works, what each adult cow gives
+  const milkPerDay = (p) => DAY_ENERGY / p.energyPerMilk;
 
   // Where the Food Model page saves its sliders
   const STORE_KEY = "food-params-v2";
@@ -61,18 +77,21 @@
       const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
       if (!saved || typeof saved !== "object") return null;
       const p = {};
-      for (const k of Object.keys(DEFAULTS)) {
-        const v = k in saved ? Number(saved[k]) : DEFAULTS[k];
+      for (const k of Object.keys(LIMITS)) {
+        let v = k in saved ? Number(saved[k]) : DEFAULTS[k];
+        // Saved before rice effectiveness existed: work it out from the yearly harvest
+        if (k === "energyPerRice" && !(k in saved) && Number(saved.riceYear) > 0) v = CREW_ENERGY / Number(saved.riceYear);
         if (!isFinite(v)) return null;
         p[k] = Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], v));
       }
       p.milkKeep = Math.round(p.milkKeep);
       p.riceKeep = Math.round(p.riceKeep);
+      p.riceYear = riceYearOf(p);
       return p;
     } catch (e) {
       return null;
     }
   }
 
-  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, newStores, ageStores, total, eat, keepText, savedParams };
+  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, milkPerDay, newStores, ageStores, total, eat, keepText, savedParams };
 })();

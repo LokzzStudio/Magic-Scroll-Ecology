@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Food Model</title>
+<title>Food</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -100,10 +100,10 @@
   <div class="tabs">
     <a href="index.html">Herd tuner<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-    <a href="farm.html" aria-current="page">Food Model<small>Harvest, stores &amp; spoiling</small></a>
-    <a href="advisor.html">Advisor Model<small>Food advisor &amp; rations</small></a>
-    <a href="production.html">Production Model<small>Food needs workers</small></a>
-    <a href="attribute.html">Attribute Model<small>Power &amp; intelligence</small></a>
+    <a href="farm.html" aria-current="page">Food<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
+    <a href="production.html">Production<small>Food needs workers</small></a>
+    <a href="attribute.html">Attribute<small>Power &amp; intelligence</small></a>
   </div>
 </nav>
 <header class="topbar">
@@ -117,11 +117,11 @@
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Food Model</h1>
+    <h1>Food</h1>
     <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. There's no rationing here: everyone eats what they need until the food runs out.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Rice harvest, starting rice and how long food keeps</dd>
+        <dt>Set here</dt><dd>Rice and milk effectiveness (energy per rice and per milk), starting rice and how long food keeps</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
         <dt>Used by</dt><dd><a href="advisor.html">Advisor Model</a> and every page after it</dd>
       </dl>
@@ -137,10 +137,10 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="rice-num">Rice harvest</label>
-            <span class="num-wrap"><input id="rice-num" type="number"><span class="unit">/year</span></span>
+            <label for="rice-num">Rice effectiveness</label>
+            <span class="num-wrap"><input id="rice-num" type="number"><span class="unit">energy/rice</span></span>
           </div>
-          <input id="rice-range" type="range" aria-label="Rice grown each year">
+          <input id="rice-range" type="range" aria-label="Tending energy that grows 1 rice">
           <p class="hint" id="rice-hint"></p>
         </div>
         <div class="param">
@@ -167,8 +167,16 @@
           <input id="rk-range" type="range" aria-label="Days rice keeps">
           <p class="hint" id="rk-hint"></p>
         </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="eff-num">Milk effectiveness</label>
+            <span class="num-wrap"><input id="eff-num" type="number"><span class="unit">energy/milk</span></span>
+          </div>
+          <input id="eff-range" type="range" aria-label="Energy it takes to collect 1 milk">
+          <p class="hint" id="eff-hint"></p>
+        </div>
         <dl class="foods two">
-          <dt>Milk</dt><dd>10 a day per adult cow</dd>
+          <dt>Milk</dt><dd id="milk-source">10 a day per adult cow</dd>
           <dt>Rice</dt><dd>harvest, days 181–210</dd>
         </dl>
         <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
@@ -284,7 +292,7 @@
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
   const HUMAN_SALT = 200000;
-  const MILK_PER_COW = 10;        // milk each adult cow gives per day
+  let milkPerCow = 10;            // milk each adult cow gives per day: one standard working day's worth
   const HARVEST_FIRST = 181, HARVEST_LAST = 210;   // harvest days within each 360-day year
   const HARVEST_DAYS = HARVEST_LAST - HARVEST_FIRST + 1;
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
@@ -410,12 +418,12 @@
       d.snaps[day] = snap();
     };
 
-    record(0, null, { milkMade: cowAdults[0] * MILK_PER_COW, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    record(0, null, { milkMade: cowAdults[0] * milkPerCow, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
         // Nobody left: the cows still give milk, but none is eaten, stored or harvested
-        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * MILK_PER_COW; }
+        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * milkPerCow; }
         continue;
       }
 
@@ -423,7 +431,7 @@
       const { milkSpoiled, riceSpoiled } = FoodModel.ageStores(stores);
 
       // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
-      const milkMade = cowAdults[day - 1] * MILK_PER_COW;
+      const milkMade = cowAdults[day - 1] * milkPerCow;
       stores.milk[0] = milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
@@ -450,6 +458,8 @@
     loadSettings();
     syncFood();   // clamps the food settings before they're used
     saveF();
+    milkPerCow = FoodModel.milkPerDay(F);
+    syncFood();   // again, now the hints can use the milk per cow
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
       const runs = [runHerd(HS.N0, base, true)];
@@ -473,7 +483,7 @@
 
   // ---------- Panel ----------
   // Food sliders: [input id, setting, step]
-  const FOOD_INPUTS = [["rice", "riceYear", 100], ["rice0", "riceStart", 100], ["mk", "milkKeep", 1], ["rk", "riceKeep", 10]];
+  const FOOD_INPUTS = [["rice", "energyPerRice", 0.1], ["rice0", "riceStart", 100], ["mk", "milkKeep", 1], ["rk", "riceKeep", 10], ["eff", "energyPerMilk", 1]];
 
   function syncFood() {
     for (const [id, key, step] of FOOD_INPUTS) {
@@ -488,8 +498,11 @@
       range.value = F[key];
       if (document.activeElement !== num) num.value = F[key];
     }
+    F.riceYear = FoodModel.riceYearOf(F);
+    $("eff-hint").innerHTML = `The energy it takes to collect 1 milk. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Production and Attribute pages use it for their milkers.`;
+    $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
     const eats = YEAR * UP.c;
-    $("rice-hint").innerHTML = `Harvested evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> rice a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
+    $("rice-hint").innerHTML = `The tending energy that grows 1 rice. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
     const people = US.men + US.women, dailyNeed = people * UP.c;
     $("rice0-hint").innerHTML = F.riceStart > 0 && dailyNeed > 0
       ? `Fresh on day 0. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.riceStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`
@@ -607,7 +620,7 @@
     // How many grown-ups this run's milk could fully feed each day
     const cowAdults = result.cows.main.adults;
     const feeds = new Float32Array(T + 1);
-    for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * MILK_PER_COW) / UP.c : 0;
+    for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * milkPerCow) / UP.c : 0;
     // Scale to the bold runs and reference lines; taller faint runs are clipped
     let yMax = Math.max(HS.N0, US.men + US.women, 5);
     if (EQ.exists) yMax = Math.max(yMax, EQ.hi);
@@ -857,7 +870,7 @@
     }
 
     const cows = result.cows.main, pi = Math.min(day, pm.last);
-    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * MILK_PER_COW)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * milkPerCow)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
 
     const herdPart = (sp, cls) => {
       const r = result[sp.key].main;
@@ -907,7 +920,7 @@
           <dt>Born</dt><dd>${fmt(m.born[day])}</dd>
           <dt>Died, old age</dt><dd>${fmt(m.old[day])}</dd>
           <dt>Died, herd size</dt><dd>${fmt(m.size[day])}</dd>
-          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * MILK_PER_COW)}</dd>` : ""}
+          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * milkPerCow)}</dd>` : ""}
           <dt class="sub">Whole run</dt>
           <dt>Max herd</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
           <dt>Born</dt><dd>${fmt(born)}</dd>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Advisor Model</title>
+<title>Advisor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -102,10 +102,10 @@
   <div class="tabs">
     <a href="index.html">Herd tuner<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
-    <a href="farm.html">Food Model<small>Harvest, stores &amp; spoiling</small></a>
-    <a href="advisor.html" aria-current="page">Advisor Model<small>Food advisor &amp; rations</small></a>
-    <a href="production.html">Production Model<small>Food needs workers</small></a>
-    <a href="attribute.html">Attribute Model<small>Power &amp; intelligence</small></a>
+    <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
+    <a href="advisor.html" aria-current="page">Advisor<small>Food advisor &amp; rations</small></a>
+    <a href="production.html">Production<small>Food needs workers</small></a>
+    <a href="attribute.html">Attribute<small>Power &amp; intelligence</small></a>
   </div>
 </nav>
 <header class="topbar">
@@ -119,7 +119,7 @@
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Advisor Model</h1>
+    <h1>Advisor</h1>
     <p class="lede">The Food Model's farm, with a food advisor who decides how much is eaten each day. Without one, everyone eats what they need until the food runs out; with one, the village rations its stores to last until the next harvest.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
@@ -171,7 +171,7 @@
         <p class="source" id="food-source" hidden></p>
         <div class="btn-row"><a class="btn" href="farm.html#farming">Change on Food Model →</a></div>
         <dl class="foods two">
-          <dt>Milk</dt><dd>10 a day per adult cow</dd>
+          <dt>Milk</dt><dd id="milk-source">10 a day per adult cow</dd>
           <dt>Rice</dt><dd>harvest, days 181–210</dd>
         </dl>
         <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
@@ -289,7 +289,7 @@
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
   const HUMAN_SALT = 200000;
-  const MILK_PER_COW = 10;        // milk each adult cow gives per day
+  let milkPerCow = 10;            // milk each adult cow gives per day: one standard working day's worth
   const HARVEST_FIRST = 181, HARVEST_LAST = 210;   // harvest days within each 360-day year
   const HARVEST_DAYS = HARVEST_LAST - HARVEST_FIRST + 1;
   const { PERFECT_IQ, iqError } = RationModel;
@@ -429,12 +429,12 @@
       d.snaps[day] = snap();
     };
 
-    record(0, null, { milkMade: cowAdults[0] * MILK_PER_COW, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    record(0, null, { milkMade: cowAdults[0] * milkPerCow, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
         // Nobody left: the cows still give milk, but none is eaten, stored or harvested
-        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * MILK_PER_COW; }
+        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * milkPerCow; }
         continue;
       }
 
@@ -442,7 +442,7 @@
       const { milkSpoiled, riceSpoiled } = FoodModel.ageStores(stores);
 
       // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
-      const milkMade = cowAdults[day - 1] * MILK_PER_COW;
+      const milkMade = cowAdults[day - 1] * milkPerCow;
       stores.milk[0] = milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
@@ -486,7 +486,8 @@
   function recompute() {
     stop();
     loadSettings();
-    R.iq = Math.round(clamp(Number(R.iq) || RationModel.DEFAULTR.iq, ...RationModel.IQ_RANGE));
+    milkPerCow = FoodModel.milkPerDay(F);
+    R.iq = Math.round(clamp(Number(R.iq) || RationModel.DEFAULTS.iq, ...RationModel.IQ_RANGE));
     saveR();
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
@@ -546,12 +547,14 @@
 
   function drawFood() {
     $("food-params").innerHTML = paramRows([
-      ["", "Rice harvest", `${fmt(F.riceYear)} /year`],
+      ["", "Rice effectiveness", `${fmt(F.energyPerRice, 2)} energy per rice (${fmt(F.riceYear)} a year)`],
       ["", "Rice in store at start", fmt(F.riceStart)],
       ["", "Milk keeps", FoodModel.keepText(F.milkKeep)],
       ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
+      ["", "Milk effectiveness", `${fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0)} energy per milk`],
     ]);
     $("food-source").hidden = foodSaved;
+    $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
     $("food-source").textContent = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
     const eats = YEAR * UP.c;
     $("rice-hint").innerHTML = `Harvested evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> rice a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
@@ -663,7 +666,7 @@
     // How many grown-ups this run's milk could fully feed each day
     const cowAdults = result.cows.main.adults;
     const feeds = new Float32Array(T + 1);
-    for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * MILK_PER_COW) / UP.c : 0;
+    for (let i = 0; i <= T; i++) feeds[i] = UP.c > 0 ? (cowAdults[i] * milkPerCow) / UP.c : 0;
     // Scale to the bold runs and reference lines; taller faint runs are clipped
     let yMax = Math.max(HS.N0, US.men + US.women, 5);
     if (EQ.exists) yMax = Math.max(yMax, EQ.hi);
@@ -914,7 +917,7 @@
     }
 
     const cows = result.cows.main, pi = Math.min(day, pm.last);
-    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * MILK_PER_COW)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * milkPerCow)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
 
     const herdPart = (sp, cls) => {
       const r = result[sp.key].main;
@@ -964,7 +967,7 @@
           <dt>Born</dt><dd>${fmt(m.born[day])}</dd>
           <dt>Died, old age</dt><dd>${fmt(m.old[day])}</dd>
           <dt>Died, herd size</dt><dd>${fmt(m.size[day])}</dd>
-          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * MILK_PER_COW)}</dd>` : ""}
+          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * milkPerCow)}</dd>` : ""}
           <dt class="sub">Whole run</dt>
           <dt>Max herd</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
           <dt>Born</dt><dd>${fmt(born)}</dd>
