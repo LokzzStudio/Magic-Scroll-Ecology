@@ -5,7 +5,7 @@
   const DEFAULTS = {
     p: 0.002,  // chance a fertile couple has a child each day
     M: 360,    // adult at age, days. Younger people are children.
-    E: 3600,   // elder at age, days. Elders still pair up, and can milk but not farm.
+    E: 3240,   // elder at age, days. Elders still pair up, and can milk but not farm.
     L: 3600,   // average lifespan, days
     S: 10,     // lifespan spread, ± percent of L
     F: 200,    // food produced per day, shared by everyone in proportion to need
@@ -15,7 +15,7 @@
   };
 
   // Where the Humans page saves its sliders
-  const STORE_KEY = "human-params-v6";
+  const STORE_KEY = "human-params-v7";
 
   const MALE = 0, FEMALE = 1;
 

@@ -113,6 +113,8 @@
     <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
     <a href="production.html">Production<small>Food needs workers</small></a>
     <a href="attribute.html" aria-current="page">Attribute<small>Power &amp; intelligence</small></a>
+    <a href="inheritance.html">Inheritance<small>Children take after parents</small></a>
+    <a href="education.html">Education<small>A scholar teaches children</small></a>
   </div>
 </nav>
 <header class="topbar">
@@ -127,12 +129,12 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Attribute</h1>
-    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives as much milk as its milker collects. At 100 and 100 everyone does exactly what they did on the Production Model, so the results match run for run.</p>
+    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives as much milk as its milker collects. Elders have 10% less of both. At 100 and 100, everyone under elder age does exactly what they did on the Production Model.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a>, with the <a href="production.html">Production Model</a>'s work rules</dd>
-        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+        <dt>Used by</dt><dd><a href="inheritance.html">Inheritance</a>, for its starting grown-ups</dd>
       </dl>
     </aside>
   </header>
@@ -142,7 +144,7 @@
       <section class="panel-section" id="attributes">
         <div class="section-head">
           <h2>Attributes</h2>
-          <p class="scope">Every person has both; this page only</p>
+          <p class="scope">Every person has both, elders 10% less; this page only</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -352,6 +354,7 @@
   const ENERGY_PER_HOUR = 1;       // work efficiency at 100 Intelligence
   const DAY_ENERGY = FoodModel.DAY_ENERGY;   // work durability at 100 Power; also one person's day on the rice
   const ATTR_STANDARD = { power: 100, intel: 100 };   // a standard working day, as on the Production page
+  const ELDER_ATTR = 0.9;          // elders work with 90% of their Power and Intelligence
   const ATTR_MAX = 300;
   const ATTR_INPUTS = [["pow", "power"], ["int", "intel"]];
   const { PERFECT_IQ, iqError } = RationModel;
@@ -460,7 +463,8 @@
     const left = [];
     for (const group of [elders, adults]) {
       for (const h of group) {
-        const w = workDay(h.power, h.intel);
+        const k = group === elders ? ELDER_ATTR : 1;   // elders have 10% less of each
+        const w = workDay(h.power * k, h.intel * k);
         if (milkers < cows && w.energy > 0) { milkers++; milkWork += w.output; milkEnergy += w.energy; }
         else if (group === adults) left.push(w);
       }
@@ -713,6 +717,8 @@
 
   function drawAttributes() {
     const w = workDay(S.power, S.intel);
+    const we = workDay(S.power * ELDER_ATTR, S.intel * ELDER_ATTR);   // the same person once they're an elder
+    const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
     const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;
     $("workday").innerHTML =
       `<dt></dt><dd class="h">One person's working day</dd><dd class="h v"></dd>` +
@@ -720,7 +726,8 @@
       `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} energy/h</dd>` +
       `<dt></dt><dd>Time worked</dd><dd class="v">${hoursText(w.hours)} of ${MAX_HOURS}</dd>` +
       `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(w.energy)} / ${fmt(w.energyLeft)}</dd>` +
-      `<dt></dt><dd>Milk collected</dd><dd class="v">${milkRange(w.energy)}</dd>`;
+      `<dt></dt><dd>Milk collected</dd><dd class="v">${milkRange(w.energy)}</dd>` +
+      `<dt></dt><dd>An elder (${attrText(S.power * ELDER_ATTR)} / ${attrText(S.intel * ELDER_ATTR)})</dd><dd class="v">${fmt(we.energy)} energy, ${milkRange(we.energy)} milk</dd>`;
     $("attr-hint").innerHTML = S.power === S.intel
       ? `Balanced: the energy runs out right at the end of the 10-hour day, so nothing is wasted.`
       : w.energyLeft > 1e-9

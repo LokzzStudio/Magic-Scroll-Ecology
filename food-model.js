@@ -80,6 +80,20 @@
     return { milkEaten, riceEaten };
   }
 
+  // Eat up to `want` (rounded to whole food) of what would spoil overnight: the batches on the last
+  // day of their keeping time, milk first. Returns how much came from each.
+  function eatExpiring(stores, want) {
+    want = Math.round(want);
+    const take = (arr) => {
+      const a = arr.length - 1, t = Math.max(0, Math.min(arr[a], want));
+      arr[a] -= t;
+      want -= t;
+      return t;
+    };
+    const milkEaten = take(stores.milk), riceEaten = take(stores.rice);
+    return { milkEaten, riceEaten };
+  }
+
   // "same day", "until tomorrow" or "N days"
   const keepText = (days) => (days === 0 ? "same day" : days === 1 ? "until tomorrow" : `${days} days`);
 
@@ -114,5 +128,5 @@
     }
   }
 
-  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, wholeFood, yieldOf, milkPerDay, spread, newStores, ageStores, total, eat, keepText, savedParams };
+  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, wholeFood, yieldOf, milkPerDay, spread, newStores, ageStores, total, eat, eatExpiring, keepText, savedParams };
 })();
