@@ -98,7 +98,7 @@
 <nav class="sidenav" aria-label="Pages">
   <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
   <div class="tabs">
-    <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+    <a href="index.html">Herd<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
     <a href="farm.html" aria-current="page">Food<small>Harvest, stores &amp; spoiling</small></a>
     <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
@@ -121,7 +121,7 @@
     <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. There's no rationing here: everyone eats what they need until the food runs out.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Rice and milk effectiveness (energy per rice and per milk), starting rice and how long food keeps</dd>
+        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), starting rice and how long food keeps</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
         <dt>Used by</dt><dd><a href="advisor.html">Advisor Model</a> and every page after it</dd>
       </dl>
@@ -136,11 +136,11 @@
           <p class="scope">Also used by the <b><a href="advisor.html">Advisor Model</a></b> and every page after it</p>
         </div>
         <div class="param">
-          <div class="param-head">
+          <div class="param-head eq">
             <label for="rice-num">Rice effectiveness</label>
-            <span class="num-wrap"><input id="rice-num" type="number"><span class="unit">energy/rice</span></span>
+            <span class="num-wrap"><span class="unit">1 energy =</span><input id="rice-num" type="number"><span class="unit">rice</span></span>
           </div>
-          <input id="rice-range" type="range" aria-label="Tending energy that grows 1 rice">
+          <input id="rice-range" type="range" aria-label="Rice that 1 energy of tending grows">
           <p class="hint" id="rice-hint"></p>
         </div>
         <div class="param">
@@ -168,11 +168,11 @@
           <p class="hint" id="rk-hint"></p>
         </div>
         <div class="param">
-          <div class="param-head">
+          <div class="param-head eq">
             <label for="eff-num">Milk effectiveness</label>
-            <span class="num-wrap"><input id="eff-num" type="number"><span class="unit">energy/milk</span></span>
+            <span class="num-wrap"><span class="unit">1 energy =</span><input id="eff-num" type="number"><span class="unit">milk</span></span>
           </div>
-          <input id="eff-range" type="range" aria-label="Energy it takes to collect 1 milk">
+          <input id="eff-range" type="range" aria-label="Milk that 1 energy collects">
           <p class="hint" id="eff-hint"></p>
         </div>
         <dl class="foods two">
@@ -273,6 +273,13 @@
         <section class="card" aria-label="Cow stats" id="stats-cows"></section>
         <section class="card" aria-label="People stats" id="stats-people"></section>
       </div>
+      <section class="card impl" id="rules" data-page="food" aria-label="Implementation details">
+        <div class="card-head">
+          <h2>Implementation details</h2>
+          <p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p>
+        </div>
+        <div class="rules-body"></div>
+      </section>
     </main>
   </div>
 </div>
@@ -280,6 +287,7 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
+<script src="rules.js"></script>
 <script>
 (() => {
   const T = 3600;
@@ -418,12 +426,13 @@
       d.snaps[day] = snap();
     };
 
-    record(0, null, { milkMade: cowAdults[0] * milkPerCow, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    record(0, null, { milkMade: FoodModel.wholeFood(cowAdults[0] * FoodModel.DAY_ENERGY, F.milkPerEnergy), milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
+    let milkEnergy = 0;   // energy's worth of milking so far, so milk fractions carry over
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
         // Nobody left: the cows still give milk, but none is eaten, stored or harvested
-        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * milkPerCow; }
+        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = Math.floor(cowAdults[day - 1] * milkPerCow); }
         continue;
       }
 
@@ -431,13 +440,15 @@
       const { milkSpoiled, riceSpoiled } = FoodModel.ageStores(stores);
 
       // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
-      const milkMade = cowAdults[day - 1] * milkPerCow;
+      const cowEnergy = cowAdults[day - 1] * FoodModel.DAY_ENERGY;   // one standard day per adult cow
+      const milkMade = FoodModel.yieldOf(milkEnergy, cowEnergy, F.milkPerEnergy);   // whole milk, fractions carried over
+      milkEnergy += cowEnergy;
       stores.milk[0] = milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
       const farmers = census.men + census.women > 0;
       let riceMade = 0;
-      if (isHarvest(day) && farmers) riceMade = F.riceYear / HARVEST_DAYS;
+      if (isHarvest(day) && farmers) riceMade = FoodModel.spread(F.riceYear, HARVEST_DAYS, dayOfYear(day) - HARVEST_FIRST + 1);
       stores.rice[0] = riceMade;
 
       // 3. People eat what they need while it lasts, whatever spoils soonest first; the rest stays stored
@@ -483,7 +494,7 @@
 
   // ---------- Panel ----------
   // Food sliders: [input id, setting, step]
-  const FOOD_INPUTS = [["rice", "energyPerRice", 0.1], ["rice0", "riceStart", 100], ["mk", "milkKeep", 1], ["rk", "riceKeep", 10], ["eff", "energyPerMilk", 1]];
+  const FOOD_INPUTS = [["rice", "ricePerEnergy", 0.01], ["rice0", "riceStart", 100], ["mk", "milkKeep", 1], ["rk", "riceKeep", 10], ["eff", "milkPerEnergy", 0.1]];
 
   function syncFood() {
     for (const [id, key, step] of FOOD_INPUTS) {
@@ -496,13 +507,13 @@
       range.max = num.max = hi;
       range.step = num.step = step;
       range.value = F[key];
-      if (document.activeElement !== num) num.value = F[key];
+      if (document.activeElement !== num) num.value = Number.isInteger(F[key]) ? F[key] : +F[key].toFixed(2);
     }
     F.riceYear = FoodModel.riceYearOf(F);
-    $("eff-hint").innerHTML = `The energy it takes to collect 1 milk. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Production and Attribute pages use it for their milkers.`;
+    $("eff-hint").innerHTML = `The milk 1 energy collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Production and Attribute pages use it for their milkers.`;
     $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
     const eats = YEAR * UP.c;
-    $("rice-hint").innerHTML = `The tending energy that grows 1 rice. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
+    $("rice-hint").innerHTML = `The rice 1 energy of tending grows. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly (in whole rice) over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
     const people = US.men + US.women, dailyNeed = people * UP.c;
     $("rice0-hint").innerHTML = F.riceStart > 0 && dailyNeed > 0
       ? `Fresh on day 0. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.riceStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`
@@ -870,7 +881,7 @@
     }
 
     const cows = result.cows.main, pi = Math.min(day, pm.last);
-    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * milkPerCow)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${fmt(Math.floor(cows.adults[day] * milkPerCow))} milk · ${milkText(pm.riceStored[pi])} rice stored`;
 
     const herdPart = (sp, cls) => {
       const r = result[sp.key].main;
@@ -920,7 +931,7 @@
           <dt>Born</dt><dd>${fmt(m.born[day])}</dd>
           <dt>Died, old age</dt><dd>${fmt(m.old[day])}</dd>
           <dt>Died, herd size</dt><dd>${fmt(m.size[day])}</dd>
-          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * milkPerCow)}</dd>` : ""}
+          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(Math.floor(m.adults[day] * milkPerCow))}</dd>` : ""}
           <dt class="sub">Whole run</dt>
           <dt>Max herd</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
           <dt>Born</dt><dd>${fmt(born)}</dd>

@@ -5,7 +5,7 @@
   // Advisor settings. Change these to change the defaults on every page.
   const DEFAULTS = {
     advisor: true,  // false: everyone eats what they need until the food runs out
-    iq: 130,        // the advisor's IQ
+    iq: 120,        // the advisor's IQ
   };
   const IQ_RANGE = [40, 200];
 
@@ -16,7 +16,7 @@
   const iqError = (iq) => Math.max(0, (PERFECT_IQ - iq) / 400);
 
   // Where the Advisor Model page saves its settings
-  const STORE_KEY = "ration-params-v1";
+  const STORE_KEY = "ration-params-v2";
 
   // The settings the Advisor Model page last saved, or null if it hasn't saved any
   // (or the browser keeps each page's storage separate).

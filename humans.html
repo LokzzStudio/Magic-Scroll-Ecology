@@ -111,7 +111,7 @@
 <nav class="sidenav" aria-label="Pages">
   <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
   <div class="tabs">
-    <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+    <a href="index.html">Herd<small>Set the parameters</small></a>
     <a href="humans.html" aria-current="page">Humans<small>Couples &amp; children</small></a>
     <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
     <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
@@ -352,12 +352,20 @@
           <p class="copy-note" id="copy-note" aria-live="polite"></p>
         </div>
       </section>
+      <section class="card impl" id="rules" data-page="humans" aria-label="Implementation details">
+        <div class="card-head">
+          <h2>Implementation details</h2>
+          <p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p>
+        </div>
+        <div class="rules-body"></div>
+      </section>
     </main>
   </div>
 </div>
 
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
+<script src="rules.js"></script>
 <script>
 (() => {
   const { MALE } = HumanModel;

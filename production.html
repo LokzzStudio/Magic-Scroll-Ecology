@@ -105,7 +105,7 @@
 <nav class="sidenav" aria-label="Pages">
   <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
   <div class="tabs">
-    <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+    <a href="index.html">Herd<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
     <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
     <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
@@ -284,6 +284,13 @@
         <section class="card" aria-label="Cow stats" id="stats-cows"></section>
         <section class="card" aria-label="People stats" id="stats-people"></section>
       </div>
+      <section class="card impl" id="rules" data-page="production" aria-label="Implementation details">
+        <div class="card-head">
+          <h2>Implementation details</h2>
+          <p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p>
+        </div>
+        <div class="rules-body"></div>
+      </section>
     </main>
   </div>
 </div>
@@ -292,6 +299,7 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="rules.js"></script>
 <script>
 (() => {
   const T = 3600;
@@ -309,6 +317,7 @@
   const HARVEST_FIRST = 181, HARVEST_LAST = 270;   // harvest days within each 360-day year
   const TEND_DAYS = HARVEST_FIRST - 1;             // days 1–180 tending the rice
   const HARVEST_PER_HAND = 250;    // rice one hand can bring in on a harvest day
+  const DAY_ENERGY = FoodModel.DAY_ENERGY;   // energy one person spends in a working day
   const { PERFECT_IQ, iqError } = RationModel;
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
   const isHarvest = (day) => day >= 1 && dayOfYear(day) >= HARVEST_FIRST && dayOfYear(day) <= HARVEST_LAST;
@@ -470,6 +479,7 @@
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     let tended = 0;   // full-crew days of tending so far this year
     let field = 0;    // ripe rice still standing in the field
+    let milkEnergy = 0;   // energy spent milking so far, so milk fractions carry over
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
         // Nobody left: the cows go unmilked and the rice untended
@@ -488,7 +498,7 @@
       const cows = cowAdults[day - 1];
       const doy = dayOfYear(day);
       if (doy === 1) tended = 0;
-      if (doy === HARVEST_FIRST) field = (F.riceYear * tended) / TEND_DAYS;   // this year's crop stands ripe
+      if (doy === HARVEST_FIRST) field = FoodModel.wholeFood(Math.round(tended * FULL_CREW * DAY_ENERGY), F.ricePerEnergy);   // this year's crop stands ripe: its tending energy × rice effectiveness, in whole rice
       const riceWanted = doy < HARVEST_FIRST ? FULL_CREW
         : doy <= HARVEST_LAST ? Math.min(FULL_CREW, Math.ceil(field / HARVEST_PER_HAND - 1e-9)) : 0;
       const work = assignWork(adults, elders, cows, riceWanted);
@@ -498,7 +508,8 @@
       // 3. Today's food goes into the stores: milk from the cows that were milked, and at
       //    harvest, up to 250 rice per hand until the field is bare. Rice still standing
       //    after the last harvest day is lost.
-      const milkMade = work.milkers * milkPerHand;
+      const milkMade = FoodModel.yieldOf(milkEnergy, work.milkers * DAY_ENERGY, F.milkPerEnergy);   // whole milk, fractions carried over
+      milkEnergy += work.milkers * DAY_ENERGY;
       stores.milk[0] = milkMade;
       const riceMade = isHarvest(day) ? Math.min(field, work.farm * HARVEST_PER_HAND) : 0;
       field -= riceMade;
@@ -648,11 +659,11 @@
     $("human-source").hidden = humanSaved;
     $("human-source").textContent = note;
     $("food-params").innerHTML = paramRows([
-      ["", "Rice effectiveness", `${fmt(F.energyPerRice, 2)} energy per rice (${fmt(F.riceYear)} a year)`],
+      ["", "Rice effectiveness", `1 energy = ${fmt(F.ricePerEnergy, Number.isInteger(F.ricePerEnergy) ? 0 : 2)} rice (${fmt(F.riceYear)} a year)`],
       ["", "Rice in store at start", fmt(F.riceStart)],
       ["", "Milk keeps", FoodModel.keepText(F.milkKeep)],
       ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
-      ["", "Milk effectiveness", `${fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0)} energy per milk`],
+      ["", "Milk effectiveness", `1 energy = ${fmt(F.milkPerEnergy, Number.isInteger(F.milkPerEnergy) ? 0 : 2)} milk`],
     ]);
     $("food-source").hidden = foodSaved;
     $("milk-work").textContent = `1 adult or elder per adult cow (${milkText(milkPerHand)} milk a day)`;

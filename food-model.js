@@ -3,33 +3,45 @@
 // The Food Model page (farm.html) is where these are tuned; the pages after it read them from here.
 (function () {
   // Energy one person spends in a standard working day (100 Power, 100 Intelligence)
-  const DAY_ENERGY = 100;
+  const DAY_ENERGY = 10;
 
   // The rice season every page assumes: a full crew of 4 tending it for 180 days
   const TEND_CREW = 4, TEND_DAYS = 180;
-  const CREW_ENERGY = TEND_CREW * TEND_DAYS * DAY_ENERGY;   // 72,000 energy
+  const CREW_ENERGY = TEND_CREW * TEND_DAYS * DAY_ENERGY;   // 7,200 energy
 
-  // Rice a full crew grows in a year: its tending energy ÷ rice effectiveness
-  const riceYearOf = (p) => CREW_ENERGY / p.energyPerRice;
+  // Food comes in whole units. The whole food the first `energy` energy makes at `rate` food
+  // per energy, rounded down (the tiny allowance absorbs float error in rates like 2.3)
+  const wholeFood = (energy, rate) => Math.floor(energy * rate + 1e-7);
+  // Whole food `spent` more energy makes after `before` energy has already been spent: fractions
+  // carry over, so at 2.5 food per energy the 1st energy gives 2, the 2nd 3, the 3rd 2, ...
+  const yieldOf = (before, spent, rate) => wholeFood(before + spent, rate) - wholeFood(before, rate);
+
+  // Rice a full crew grows in a year: its tending energy × rice effectiveness, in whole rice
+  const riceYearOf = (p) => wholeFood(CREW_ENERGY, p.ricePerEnergy);
 
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    energyPerRice: 3.6, // rice effectiveness: tending energy that grows 1 rice
+    ricePerEnergy: 2,  // rice effectiveness: rice 1 energy of tending grows (14,400 a year)
     riceStart: 20000, // rice in store on day 0
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
-    energyPerMilk: 10, // milk effectiveness: energy it takes to collect 1 milk
+    milkPerEnergy: 1, // milk effectiveness: milk 1 energy collects
   };
-  DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from energyPerRice; not a setting of its own
+  DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from ricePerEnergy; not a setting of its own
 
   // Slider ranges, [min, max]
-  const LIMITS = { energyPerRice: [1, 30], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], energyPerMilk: [1, 50] };
+  const LIMITS = { ricePerEnergy: [0.1, 10], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10] };
 
   // Milk one standard working day collects; where nobody works, what each adult cow gives
-  const milkPerDay = (p) => DAY_ENERGY / p.energyPerMilk;
+  // (on average: each day's milk is whole, with fractions carried over)
+  const milkPerDay = (p) => DAY_ENERGY * p.milkPerEnergy;
 
-  // Where the Food Model page saves its sliders
-  const STORE_KEY = "food-params-v2";
+  // Whole units of food made on the k-th of n days when `amount` is spread evenly over them;
+  // the n days add up to exactly `amount`
+  const spread = (amount, n, k) => Math.floor((amount * k) / n) - Math.floor((amount * (k - 1)) / n);
+
+  // Where the Food Model page saves its sliders, and where it saved them before energy was rebased
+  const STORE_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
 
   // Food in store by age: stores.milk[a] / stores.rice[a] = food made a days ago that is still good
   function newStores(p) {
@@ -50,10 +62,11 @@
 
   const total = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
 
-  // Eat up to `want` from the stores, whatever spoils soonest first (milk first on a tie).
-  // Returns how much came from each.
+  // Eat up to `want` from the stores, rounded to whole food, whatever spoils soonest first
+  // (milk first on a tie). Returns how much came from each.
   function eat(stores, want) {
     const { milk, rice } = stores;
+    want = Math.round(want);
     let milkEaten = 0, riceEaten = 0;
     let i = milk.length - 1, j = rice.length - 1;   // oldest batches first
     while (want > 1e-9 && (i >= 0 || j >= 0)) {
@@ -74,13 +87,21 @@
   // (or the browser keeps each page's storage separate).
   function savedParams() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
-      if (!saved || typeof saved !== "object") return null;
+      let saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+      if (!saved || typeof saved !== "object") {
+        // Settings saved at the old scale (100 energy a day): convert them once
+        const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+        if (!old || typeof old !== "object") return null;
+        saved = { ...old };
+        if (Number(old.energyPerRice) > 0) saved.ricePerEnergy = 10 / Number(old.energyPerRice);
+        else if (Number(old.riceYear) > 0) saved.ricePerEnergy = Number(old.riceYear) / CREW_ENERGY;
+        if (Number(old.energyPerMilk) > 0) saved.milkPerEnergy = 10 / Number(old.energyPerMilk);
+        localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+        localStorage.removeItem(OLD_KEY);
+      }
       const p = {};
       for (const k of Object.keys(LIMITS)) {
-        let v = k in saved ? Number(saved[k]) : DEFAULTS[k];
-        // Saved before rice effectiveness existed: work it out from the yearly harvest
-        if (k === "energyPerRice" && !(k in saved) && Number(saved.riceYear) > 0) v = CREW_ENERGY / Number(saved.riceYear);
+        const v = k in saved ? Number(saved[k]) : DEFAULTS[k];
         if (!isFinite(v)) return null;
         p[k] = Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], v));
       }
@@ -93,5 +114,5 @@
     }
   }
 
-  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, milkPerDay, newStores, ageStores, total, eat, keepText, savedParams };
+  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, wholeFood, yieldOf, milkPerDay, spread, newStores, ageStores, total, eat, keepText, savedParams };
 })();

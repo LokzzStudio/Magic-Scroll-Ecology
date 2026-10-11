@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Herd Tuner</title>
+<title>Herd</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -48,7 +48,7 @@
 <nav class="sidenav" aria-label="Pages">
   <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
   <div class="tabs">
-    <a href="index.html" aria-current="page">Herd tuner<small>Set the parameters</small></a>
+    <a href="index.html" aria-current="page">Herd<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
     <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
     <a href="advisor.html">Advisor<small>Food advisor &amp; rations</small></a>
@@ -67,7 +67,7 @@
 
 <div class="wrap">
   <header class="page-head">
-    <h1>Herd tuner</h1>
+    <h1>Herd</h1>
     <p class="lede">Tune how a herd grows and dies. Every animal is tracked on its own: it dies when it reaches its lifespan, and a herd below the Allee threshold is too small to breed well.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
@@ -227,11 +227,19 @@
           <p class="copy-note" id="copy-note" aria-live="polite"></p>
         </div>
       </section>
+      <section class="card impl" id="rules" data-page="herd" aria-label="Implementation details">
+        <div class="card-head">
+          <h2>Implementation details</h2>
+          <p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p>
+        </div>
+        <div class="rules-body"></div>
+      </section>
     </main>
   </div>
 </div>
 
 <script src="herd-model.js"></script>
+<script src="rules.js"></script>
 <script>
 (() => {
   const DEFAULTS = { ...HerdModel.DEFAULTS, ...HerdModel.START, T: 1000, seed: 1 };

@@ -100,7 +100,7 @@
 <nav class="sidenav" aria-label="Pages">
   <a class="brand" href="index.html"><span class="mark" aria-hidden="true">牧</span><span class="name">Magic Scroll Ecology</span></a>
   <div class="tabs">
-    <a href="index.html">Herd tuner<small>Set the parameters</small></a>
+    <a href="index.html">Herd<small>Set the parameters</small></a>
     <a href="humans.html">Humans<small>Couples &amp; children</small></a>
     <a href="farm.html">Food<small>Harvest, stores &amp; spoiling</small></a>
     <a href="advisor.html" aria-current="page">Advisor<small>Food advisor &amp; rations</small></a>
@@ -269,6 +269,13 @@
         <section class="card" aria-label="Cow stats" id="stats-cows"></section>
         <section class="card" aria-label="People stats" id="stats-people"></section>
       </div>
+      <section class="card impl" id="rules" data-page="advisor" aria-label="Implementation details">
+        <div class="card-head">
+          <h2>Implementation details</h2>
+          <p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p>
+        </div>
+        <div class="rules-body"></div>
+      </section>
     </main>
   </div>
 </div>
@@ -277,6 +284,7 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="rules.js"></script>
 <script>
 (() => {
   const T = 3600;
@@ -429,12 +437,13 @@
       d.snaps[day] = snap();
     };
 
-    record(0, null, { milkMade: cowAdults[0] * milkPerCow, milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
+    record(0, null, { milkMade: FoodModel.wholeFood(cowAdults[0] * FoodModel.DAY_ENERGY, F.milkPerEnergy), milkEaten: 0, milkSpoiled: 0, riceMade: 0, riceEaten: 0, riceSpoiled: 0 });
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
+    let milkEnergy = 0;   // energy's worth of milking so far, so milk fractions carry over
     for (let day = 1; day <= T; day++) {
       if (extinctDay !== null) {
         // Nobody left: the cows still give milk, but none is eaten, stored or harvested
-        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = cowAdults[day - 1] * milkPerCow; }
+        if (d) { d.snaps[day] = new Int32Array(0); d.made[day] = Math.floor(cowAdults[day - 1] * milkPerCow); }
         continue;
       }
 
@@ -442,13 +451,15 @@
       const { milkSpoiled, riceSpoiled } = FoodModel.ageStores(stores);
 
       // 2. Today's food goes into the stores: milk from adult cows, rice from adult farmers at harvest
-      const milkMade = cowAdults[day - 1] * milkPerCow;
+      const cowEnergy = cowAdults[day - 1] * FoodModel.DAY_ENERGY;   // one standard day per adult cow
+      const milkMade = FoodModel.yieldOf(milkEnergy, cowEnergy, F.milkPerEnergy);   // whole milk, fractions carried over
+      milkEnergy += cowEnergy;
       stores.milk[0] = milkMade;
       // The year's rice comes in evenly over the harvest days, as long as there's an adult to farm
       const census = HumanModel.census(st.people, p);
       const farmers = census.men + census.women > 0;
       let riceMade = 0;
-      if (isHarvest(day) && farmers) riceMade = F.riceYear / HARVEST_DAYS;
+      if (isHarvest(day) && farmers) riceMade = FoodModel.spread(F.riceYear, HARVEST_DAYS, dayOfYear(day) - HARVEST_FIRST + 1);
       stores.rice[0] = riceMade;
 
       // 3. The advisor sets today's ration: food in store plus food still to come before the
@@ -547,11 +558,11 @@
 
   function drawFood() {
     $("food-params").innerHTML = paramRows([
-      ["", "Rice effectiveness", `${fmt(F.energyPerRice, 2)} energy per rice (${fmt(F.riceYear)} a year)`],
+      ["", "Rice effectiveness", `1 energy = ${fmt(F.ricePerEnergy, Number.isInteger(F.ricePerEnergy) ? 0 : 2)} rice (${fmt(F.riceYear)} a year)`],
       ["", "Rice in store at start", fmt(F.riceStart)],
       ["", "Milk keeps", FoodModel.keepText(F.milkKeep)],
       ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
-      ["", "Milk effectiveness", `${fmt(F.energyPerMilk, F.energyPerMilk % 1 ? 1 : 0)} energy per milk`],
+      ["", "Milk effectiveness", `1 energy = ${fmt(F.milkPerEnergy, Number.isInteger(F.milkPerEnergy) ? 0 : 2)} milk`],
     ]);
     $("food-source").hidden = foodSaved;
     $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
@@ -917,7 +928,7 @@
     }
 
     const cows = result.cows.main, pi = Math.min(day, pm.last);
-    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milkText(cows.adults[day] * milkPerCow)} milk · ${milkText(pm.riceStored[pi])} rice stored`;
+    $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${fmt(Math.floor(cows.adults[day] * milkPerCow))} milk · ${milkText(pm.riceStored[pi])} rice stored`;
 
     const herdPart = (sp, cls) => {
       const r = result[sp.key].main;
@@ -967,7 +978,7 @@
           <dt>Born</dt><dd>${fmt(m.born[day])}</dd>
           <dt>Died, old age</dt><dd>${fmt(m.old[day])}</dd>
           <dt>Died, herd size</dt><dd>${fmt(m.size[day])}</dd>
-          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(m.adults[day] * milkPerCow)}</dd>` : ""}
+          ${sp.key === "cows" ? `<dt>Milk given</dt><dd>${fmt(Math.floor(m.adults[day] * milkPerCow))}</dd>` : ""}
           <dt class="sub">Whole run</dt>
           <dt>Max herd</dt><dd>${fmt(peak)} (day ${fmt(peakDay)})</dd>
           <dt>Born</dt><dd>${fmt(born)}</dd>
