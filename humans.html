@@ -144,9 +144,9 @@
     <ol class="rules" aria-label="Daily rules, in order">
       <li><span class="step">1 · Food</span><span><b>F</b> is shared by need: <b>c</b> for a grown-up, half for a child. Anyone short loses <span class="f">K × shortfall<sup>n</sup></span> days of life.</span></li>
       <li><span class="step">2 · Ageing</span><span>Anyone who reaches their lifespan dies.</span></li>
-      <li><span class="step">3 · Couples</span><span><span class="f">min(grown men,</span> <span class="f">grown women)</span>, elders included</span></li>
+      <li><span class="step">3 · Couples</span><span><span class="f">min(adult men,</span> <span class="f">adult women)</span>; elders don't have children</span></li>
       <li><span class="step">4 · Births</span><span>Each couple: chance <b>p</b> of a child. Boy or girl, 50/50.</span></li>
-      <li><span class="step">5 · Life stages</span><span>Children grow up at <b id="rule-adult">360</b> days and become elders at <b id="rule-elder">3,240</b>.</span></li>
+      <li><span class="step">5 · Life stages</span><span>Children grow up at <b id="rule-adult">360</b> days and become elders at <b id="rule-elder">2,880</b>.</span></li>
     </ol>
   </header>
 
@@ -512,7 +512,7 @@
     $("M-hint").innerHTML = `Child from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b>, elder from day <b>${fmt(P.E)}</b>, until death at ${deathText} days.`;
     $("E-hint").innerHTML = P.E > dieHi
       ? `Later than anyone lives (at most ${fmt(dieHi)} days), so nobody becomes an elder.`
-      : `Elders still pair up and have children. On the Production Model they can milk but not farm.` +
+      : `Elders no longer have children. On the Production page they can milk but not farm.` +
         (P.E <= dieLo ? "" : ` With these lifespans, only some people live to be elders.`);
     $("rule-adult").textContent = fmt(P.M);
     $("rule-elder").textContent = fmt(P.E);
@@ -572,7 +572,7 @@ function newPerson(sex) {
   return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread) };
 }
 
-// Grown-ups are adults and elders. Elders still pair up,
+// Grown-ups are adults and elders. Elders don't have children,
 // and can milk but not farm.
 const isGrownUp = (h) => h.age >= HUMAN_ADULT_AGE;
 const isElder = (h) => h.age >= HUMAN_ELDER_AGE;
@@ -592,9 +592,9 @@ function stepHumans(people) {
   for (const h of people) h.age += 1;
   people = people.filter((h) => h.age < h.lifespan);
 
-  // 3. Each grown-up man-woman couple may have a child
-  const men = people.filter((h) => isGrownUp(h) && h.sex === "male").length;
-  const women = people.filter((h) => isGrownUp(h) && h.sex === "female").length;
+  // 3. Each adult man-woman couple may have a child; elders don't
+  const men = people.filter((h) => isAdult(h) && h.sex === "male").length;
+  const women = people.filter((h) => isAdult(h) && h.sex === "female").length;
   const couples = Math.min(men, women);
   for (let i = 0; i < couples; i++) {
     if (Math.random() < HUMAN_BIRTH_CHANCE) {

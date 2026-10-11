@@ -5,7 +5,7 @@
   const DEFAULTS = {
     p: 0.002,  // chance a fertile couple has a child each day
     M: 360,    // adult at age, days. Younger people are children.
-    E: 3240,   // elder at age, days. Elders still pair up, and can milk but not farm.
+    E: 2880,   // elder at age, days. Elders don't have children, and can milk but not farm.
     L: 3600,   // average lifespan, days
     S: 10,     // lifespan spread, ± percent of L
     F: 200,    // food produced per day, shared by everyone in proportion to need
@@ -15,7 +15,7 @@
   };
 
   // Where the Humans page saves its sliders
-  const STORE_KEY = "human-params-v7";
+  const STORE_KEY = "human-params-v8";
 
   const MALE = 0, FEMALE = 1;
 
@@ -39,8 +39,8 @@
   // Life stages: child (under M), adult (M up to E), elder (E and over)
   const stage = (h, p) => (h.age < p.M ? "child" : h.age < p.E ? "adult" : "elder");
 
-  // men / women count adults only; elders are counted apart. Grown men and women,
-  // adults and elders alike, pair up; each man-woman pair is one fertile couple.
+  // men / women count adults only; elders are counted apart. Only adults pair up:
+  // each adult man-woman pair is one fertile couple.
   function census(people, p) {
     let men = 0, women = 0, boys = 0, girls = 0, elderMen = 0, elderWomen = 0;
     for (const h of people) {
@@ -50,7 +50,7 @@
     }
     return {
       men, women, boys, girls, elderMen, elderWomen, elders: elderMen + elderWomen,
-      couples: Math.min(men + elderMen, women + elderWomen),
+      couples: Math.min(men, women),
     };
   }
 
@@ -111,7 +111,7 @@
   }
 
   // Children a couple can expect if both live out their adult years well fed
-  const childrenPerCouple = (p) => p.p * Math.max(0, p.L - p.M);
+  const childrenPerCouple = (p) => p.p * Math.max(0, Math.min(p.L, p.E) - p.M);
 
   // How many grown-ups the daily food fully feeds (or twice as many children)
   const fedCapacity = (p) => (p.c > 0 ? p.F / p.c : Infinity);

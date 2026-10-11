@@ -134,7 +134,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Inheritance</h1>
-    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from a grown man and woman drawn at random: a share of their average, give or take a random variation. Coming of age adds 30 to both, and food that would otherwise spoil, fed to the children, adds Power for life. Without that extra food, a village drifts toward the same level whatever it starts at.</p>
+    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from an adult man and woman drawn at random: a share of their average, give or take a random variation. Coming of age adds 30 to both, and food that would otherwise spoil, fed to the children, adds Power for life. Without that extra food, a village drifts toward the same level whatever it starts at.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Share passed on, variation at birth, coming-of-age bonus and the children's extra food</dd>
@@ -154,7 +154,7 @@
         <p class="start-line" id="attr-start"></p>
         <p class="source" id="attr-source" hidden></p>
         <div class="btn-row"><a class="btn" href="attribute.html#attributes">Change on Attribute →</a></div>
-        <p class="hint">At birth, a child's Power and Intelligence are each <b>h × (man + woman) ÷ 2</b>, give or take the variation, rounded down: a share of the average of a grown man and a grown woman drawn at random.</p>
+        <p class="hint">At birth, a child's Power and Intelligence are each <b>h × (man + woman) ÷ 2</b>, give or take the variation, rounded down: a share of the average of an adult man and an adult woman drawn at random.</p>
         <div class="param">
           <div class="param-head">
             <label for="share-num">Share passed on (h)</label>
@@ -393,7 +393,7 @@
   const MAX_HOURS = 10;            // longest working day
   const ENERGY_PER_HOUR = 1;       // work efficiency at 100 Intelligence
   const DAY_ENERGY = FoodModel.DAY_ENERGY;   // work durability at 100 Power; also one person's day on the rice
-  const ELDER_ATTR = 0.9;          // elders work with 90% of their Power and Intelligence
+  let ELDER_ATTR = 0.9;            // elders work with this share of their Power and Intelligence (from the Attribute page)
   // Inheritance sliders: [input id, setting, min, max, step]
   const INHERIT_INPUTS = [["share", "share", 0, 1, 0.05], ["vary", "variation", 0, 50, 1], ["grow", "grow", 0, 100, 5], ["cap", "extraCap", 0, 20, 1], ["fpp", "foodPerPower", 1, 50, 1]];
   const { PERFECT_IQ, iqError } = RationModel;
@@ -425,7 +425,7 @@
   let F = null, foodSaved = false;                            // food
   let R = null, rationSaved = false;                          // food advisor
   // Starting grown-ups' attributes come from the Attribute page (its saved settings, or its defaults)
-  const ATTR_KEY = "attribute-v2", ATTR_DEFAULTS = { power: 120, intel: 120 }, ATTR_MAX = 300;
+  const ATTR_KEY = "attribute-v3", ATTR_DEFAULTS = { power: 120, intel: 120, elderPenalty: 20 }, ATTR_MAX = 300;
   let A0 = { ...ATTR_DEFAULTS }, attrSaved = false;
   let perIcon = 1;
   const result = {};       // cows / people: { main, runs, alive }
@@ -461,9 +461,12 @@
           const v = Number(a[k]);
           if (k in a && isFinite(v)) A0[k] = Math.round(clamp(v, 0, ATTR_MAX));
         }
+        const pen = Number(a.elderPenalty);
+        if ("elderPenalty" in a && isFinite(pen)) A0.elderPenalty = Math.round(clamp(pen, 0, 50));
         attrSaved = true;
       }
     } catch (e) {}
+    ELDER_ATTR = 1 - A0.elderPenalty / 100;
   }
 
   // ---------- Simulation ----------
@@ -538,8 +541,8 @@
     return { milkers, milkWork, milkEnergy, farm, farmWork, farmEnergy };
   }
 
-  // Children take after their parents. Newborns get h × the average of a random grown man and a random
-  // grown woman, give or take the variation, rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
+  // Children take after their parents. Newborns get h × the average of a random adult man and a random
+  // adult woman, give or take the variation, rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
   // 1 Power for every foodPerPower extra food they ate as a child.
   function inheritAttrs(people, p, irand, attrs) {
     let men = null, women = null;
@@ -547,7 +550,7 @@
       if (h.power === undefined) {   // born today
         if (!men) {
           men = []; women = [];
-          for (const g of people) if (g.power !== undefined && g.age >= p.M) (g.sex === HumanModel.MALE ? men : women).push(g);
+          for (const g of people) if (g.power !== undefined && HumanModel.stage(g, p) === "adult") (g.sex === HumanModel.MALE ? men : women).push(g);
         }
         const dad = men[Math.floor(irand() * men.length)], mum = women[Math.floor(irand() * women.length)];
         // h × the parents' average, give or take the variation, drawn separately for each attribute
@@ -828,7 +831,7 @@
   }
 
   function drawInherit() {
-    $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(A0.power)}</b> and <b>Intelligence ${fmt(A0.intel)}</b>. Elders work with 10% less.`;
+    $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(A0.power)}</b> and <b>Intelligence ${fmt(A0.intel)}</b>. Elders work with ${fmt(A0.elderPenalty)}% less.`;
     $("attr-source").hidden = attrSaved;
     $("attr-source").textContent = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
     const settle = (S.share < 1 ? S.grow / (1 - S.share) : Infinity);

@@ -35,9 +35,9 @@
       title: "People", where: "Humans",
       items: [
         "Each person has a sex, an age in days and a lifespan of 3,600 days ± 10%, drawn evenly.",
-        "Children are under 360 days, adults 360 and over, elders 3,240 and over. Adults and elders are grown-ups.",
+        "Children are under 360 days, adults 360 and over, elders 2,880 and over. Adults and elders are grown-ups.",
         "Start: 5 men and 5 women, all grown-up, at random ages up to their lifespan.",
-        "Couples = the smaller of grown men and grown women. Each couple has a child with a 0.002 chance a day, a boy or girl 50/50.",
+        "Couples = the smaller of adult men and adult women; elders don't have children. Each couple has a child with a 0.002 chance a day, a boy or girl 50/50.",
         "Food needed a day: 8 per grown-up, 4 per child. Everyone gets the same share of their need: food eaten ÷ food needed.",
         "Hunger: with a shortfall g = 1 − share, everyone loses <b>3,600 × g³</b> days of lifespan that day.",
         is("humans") && "Each day, in order: hunger shortens lifespans; everyone ages a day and anyone who reaches their lifespan dies; then each couple rolls for a child.",
@@ -101,7 +101,7 @@
         is("attribute") ? "Everyone has Power (力量) and Intelligence (智力): 120 each."
           : "The starting grown-ups have Power (力量) and Intelligence (智力) of 120 each; everyone born later inherits theirs.",
         "Power is durability (耐力): Power ÷ 10 energy a day. Intelligence is efficiency (效率): Intelligence ÷ 100 energy an hour, for at most 10 hours. A day's energy is the smaller, rounded down: <b>floor(min(Power, Intelligence) ÷ 10)</b>. With 0 energy, no job.",
-        "Elders work with 90% of both.",
+        "Elders work with 80% of both (an elder penalty of 20%).",
       ],
     });
 
@@ -109,7 +109,7 @@
     if (at("inheritance")) out.push({
       title: "Inheritance", where: "Inheritance",
       items: [
-        "A newborn's parents are a grown man and a grown woman drawn at random. Each attribute = <b>floor(0.7 × their average × (1 + v))</b>, with v drawn evenly from −10% to +10%, separately for Power and Intelligence. Parents pass on their full values, not the elder 90%.",
+        "A newborn's parents are an adult man and an adult woman drawn at random. Each attribute = <b>floor(0.7 × their average × (1 + v))</b>, with v drawn evenly from −10% to +10%, separately for Power and Intelligence.",
         "On coming of age (360 days), both attributes go up by 30, and Power by 1 more for every 20 extra food eaten as a child, rounded down.",
         "Extra food: on days everyone ate their full need, food that would spoil overnight goes to the children, split evenly, up to 8 each. It doesn't count toward need.",
       ],
@@ -120,7 +120,7 @@
       title: "Scholar and school", where: "Education",
       items: [
         "The village picks its adult with the highest Intelligence as Scholar (文人), first in line on a tie, for life. When the scholar dies, it picks again the next day.",
-        "The scholar does no other work, and is the food advisor. In the job, they work with Intelligence × 1.1 and Power × 0.9 (not passed on).",
+        "The scholar does no other work, and is the food advisor. In the job, they work with Intelligence × 1.1 and Power × 0.9 (a scholar adjustment of 10%), not passed on.",
         "Every child comes to class. The scholar and each child start together, and each stops when their energy runs out. Over the time both are there, with the scholar spending S energy and the child K (whole, rounded down), the child takes home <b>floor(S × 1 × min(1, K ÷ S))</b> knowledge, 1 being the knowledge effectiveness.",
         "Every 100 knowledge is +1 Intelligence for life.",
       ],

@@ -129,7 +129,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Attribute</h1>
-    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives as much milk as its milker collects. Elders have 10% less of both. At 100 and 100, everyone under elder age does exactly what they did on the Production Model.</p>
+    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives as much milk as its milker collects. Elders have less of both (the elder penalty). At 100 and 100, everyone under elder age does exactly what they did on the Production Model.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
@@ -144,7 +144,7 @@
       <section class="panel-section" id="attributes">
         <div class="section-head">
           <h2>Attributes</h2>
-          <p class="scope">Every person has both, elders 10% less; this page only</p>
+          <p class="scope">Every person has both; this page only</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -161,6 +161,14 @@
           </div>
           <input id="int-range" type="range" aria-label="Intelligence">
           <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 1 energy an hour. Nobody works more than 10 hours a day.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="eld-num">Elder penalty</label>
+            <span class="num-wrap"><span class="unit">−</span><input id="eld-num" type="number"><span class="unit">%</span></span>
+          </div>
+          <input id="eld-range" type="range" aria-label="How much less Power and Intelligence elders work with, percent">
+          <p class="hint" id="eld-hint"></p>
         </div>
         <div class="param">
           <div class="param-head"><span class="lbl">Milk effectiveness</span><span class="num-wrap" id="eff-text">1 energy = 1 milk</span></div>
@@ -341,7 +349,7 @@
   const RUNS = 20;
   const MAX_ICONS = 90;           // per group
   const MAX_PEOPLE = 2000;        // a human run stops once it grows past this, to keep the page fast
-  const STORE_KEY = "attribute-v2";
+  const STORE_KEY = "attribute-v3";
   const HERDS = [
     { key: "cows", name: "Cows", many: "cows", young: "calves", salt: 0 },
   ];
@@ -354,9 +362,10 @@
   const ENERGY_PER_HOUR = 1;       // work efficiency at 100 Intelligence
   const DAY_ENERGY = FoodModel.DAY_ENERGY;   // work durability at 100 Power; also one person's day on the rice
   const ATTR_STANDARD = { power: 100, intel: 100 };   // a standard working day, as on the Production page
-  const ELDER_ATTR = 0.9;          // elders work with 90% of their Power and Intelligence
+  let ELDER_ATTR = 0.9;            // elders work with this share of their Power and Intelligence (1 − elder penalty)
   const ATTR_MAX = 300;
-  const ATTR_INPUTS = [["pow", "power"], ["int", "intel"]];
+  // Attribute sliders: [input id, setting, min, max, step]
+  const ATTR_INPUTS = [["pow", "power", 0, ATTR_MAX, 5], ["int", "intel", 0, ATTR_MAX, 5], ["eld", "elderPenalty", 0, 50, 5]];
   const { PERFECT_IQ, iqError } = RationModel;
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
   const isHarvest = (day) => day >= 1 && dayOfYear(day) >= HARVEST_FIRST && dayOfYear(day) <= HARVEST_LAST;
@@ -365,7 +374,7 @@
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
 
   // The dice, playback speed and attributes belong to this page
-  const S_DEFAULTS = { seed: 1, speed: 180, power: 120, intel: 120 };
+  const S_DEFAULTS = { seed: 1, speed: 180, power: 120, intel: 120, elderPenalty: 20 };   // elderPenalty: % less of both for elders
   let S = { ...S_DEFAULTS };
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
@@ -463,7 +472,7 @@
     const left = [];
     for (const group of [elders, adults]) {
       for (const h of group) {
-        const k = group === elders ? ELDER_ATTR : 1;   // elders have 10% less of each
+        const k = group === elders ? ELDER_ATTR : 1;   // elders have less of each
         const w = workDay(h.power * k, h.intel * k);
         if (milkers < cows && w.energy > 0) { milkers++; milkWork += w.output; milkEnergy += w.energy; }
         else if (group === adults) left.push(w);
@@ -631,6 +640,7 @@
     stop();
     loadSettings();
     syncAttributes();   // clamps the attributes before they're used
+    ELDER_ATTR = 1 - S.elderPenalty / 100;
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
       const runs = [runHerd(HS.N0, base, true)];
@@ -702,14 +712,14 @@
   }
 
   function syncAttributes() {
-    for (const [id, key] of ATTR_INPUTS) {
-      let v = Math.round(clamp(Number(S[key]), 0, ATTR_MAX));
+    for (const [id, key, lo, hi, step] of ATTR_INPUTS) {
+      let v = Math.round(clamp(Number(S[key]), lo, hi));
       if (!isFinite(v)) v = S_DEFAULTS[key];
       S[key] = v;
       const range = $(id + "-range"), num = $(id + "-num");
-      range.min = num.min = 0;
-      range.max = num.max = ATTR_MAX;
-      range.step = num.step = 5;
+      range.min = num.min = lo;
+      range.max = num.max = hi;
+      range.step = num.step = step;
       range.value = v;
       if (document.activeElement !== num) num.value = v;
     }
@@ -718,6 +728,7 @@
   function drawAttributes() {
     const w = workDay(S.power, S.intel);
     const we = workDay(S.power * ELDER_ATTR, S.intel * ELDER_ATTR);   // the same person once they're an elder
+    $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(ELDER_ATTR * 100)}%</b> of their Power and Intelligence. It isn't passed on to their children.`;
     const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
     const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;
     $("workday").innerHTML =

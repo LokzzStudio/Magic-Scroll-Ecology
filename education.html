@@ -151,7 +151,7 @@
           <h2>Education</h2>
           <p class="scope">One scholar teaches the children; this page only</p>
         </div>
-        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>, for life; when the scholar dies, it picks again the next day. The scholar does no other work, and works with <b>+10% Intelligence</b> and <b>−10% Power</b> in the job. Every child comes to class. The scholar is also the <b>food advisor</b>: see Rationing.</p>
+        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>, for life; when the scholar dies, it picks again the next day. The scholar does no other work, and in the job works with more Intelligence and less Power (the scholar adjustment). Every child comes to class. The scholar is also the <b>food advisor</b>: see Rationing.</p>
         <div class="param">
           <div class="param-head eq">
             <label for="kpe-num">Knowledge effectiveness</label>
@@ -168,6 +168,14 @@
           <input id="kpi-range" type="range" aria-label="Knowledge a child needs for 1 more Intelligence">
           <p class="hint">For life, from the moment they reach it.</p>
         </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="sch-num">Scholar adjustment</label>
+            <span class="num-wrap"><span class="unit">±</span><input id="sch-num" type="number"><span class="unit">%</span></span>
+          </div>
+          <input id="sch-range" type="range" aria-label="Scholar's Intelligence gain and Power loss in the job, percent">
+          <p class="hint" id="sch-hint"></p>
+        </div>
         <dl class="foods" id="classroom"></dl>
         <p class="hint" id="class-hint"></p>
         <dl class="foods" id="school-compare"></dl>
@@ -180,7 +188,7 @@
         </div>
         <p class="start-line" id="attr-start"></p>
         <dl class="params" id="inherit-params"></dl>
-        <p class="hint">A newborn's Power and Intelligence are each h × the average of a grown man and woman drawn at random, give or take the variation.</p>
+        <p class="hint">A newborn's Power and Intelligence are each h × the average of an adult man and woman drawn at random, give or take the variation.</p>
         <p class="source" id="inherit-source" hidden></p>
         <div class="btn-row"><a class="btn" href="inheritance.html#inheritance">Change on Inheritance →</a><a class="btn" href="attribute.html#attributes">Change on Attribute →</a></div>
       </section>
@@ -391,10 +399,10 @@
   const MAX_HOURS = 10;            // longest working day
   const ENERGY_PER_HOUR = 1;       // work efficiency at 100 Intelligence
   const DAY_ENERGY = FoodModel.DAY_ENERGY;   // work durability at 100 Power; also one person's day on the rice
-  const ELDER_ATTR = 0.9;          // elders work with 90% of their Power and Intelligence
-  const SCHOLAR_INTEL = 1.1, SCHOLAR_POWER = 0.9;   // the scholar works with +10% Intelligence and −10% Power
+  let ELDER_ATTR = 0.9;            // elders work with this share of their Power and Intelligence (from the Attribute page)
+  let SCHOLAR_INTEL = 1.1, SCHOLAR_POWER = 0.9;     // the scholar works with +adjustment Intelligence and −adjustment Power
   // Education sliders: [input id, setting, min, max, step]
-  const EDU_INPUTS = [["kpe", "knowPerEnergy", 0.1, 5, 0.1], ["kpi", "knowPerIntel", 10, 500, 10]];
+  const EDU_INPUTS = [["kpe", "knowPerEnergy", 0.1, 5, 0.1], ["kpi", "knowPerIntel", 10, 500, 10], ["sch", "scholarShift", 0, 50, 5]];
   const { PERFECT_IQ, iqError } = RationModel;
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
   const isHarvest = (day) => day >= 1 && dayOfYear(day) >= HARVEST_FIRST && dayOfYear(day) <= HARVEST_LAST;
@@ -407,6 +415,7 @@
     seed: 1, speed: 180,
     knowPerEnergy: 1,   // knowledge effectiveness: knowledge 1 energy of teaching gives
     knowPerIntel: 100,  // knowledge a child needs for 1 more Intelligence
+    scholarShift: 10,   // scholar adjustment: % more Intelligence and % less Power in the job
   };
   let S = { ...S_DEFAULTS };
   try {
@@ -421,7 +430,7 @@
   let F = null, foodSaved = false;                            // food
   let R = null, rationSaved = false;                          // food advisor
   // Starting grown-ups' attributes come from the Attribute page (its saved settings, or its defaults)
-  const ATTR_KEY = "attribute-v2", ATTR_DEFAULTS = { power: 120, intel: 120 }, ATTR_MAX = 300;
+  const ATTR_KEY = "attribute-v3", ATTR_DEFAULTS = { power: 120, intel: 120, elderPenalty: 20 }, ATTR_MAX = 300;
   let A0 = { ...ATTR_DEFAULTS }, attrSaved = false;
   // Inheritance settings come from the Inheritance page
   const INHERIT_KEY = "inheritance-v4";
@@ -462,9 +471,12 @@
           const v = Number(a[k]);
           if (k in a && isFinite(v)) A0[k] = Math.round(clamp(v, 0, ATTR_MAX));
         }
+        const pen = Number(a.elderPenalty);
+        if ("elderPenalty" in a && isFinite(pen)) A0.elderPenalty = Math.round(clamp(pen, 0, 50));
         attrSaved = true;
       }
     } catch (e) {}
+    ELDER_ATTR = 1 - A0.elderPenalty / 100;
 
     IH = { ...INHERIT_DEFAULTS };
     inheritSaved = false;
@@ -552,8 +564,8 @@
     return { milkers, milkWork, milkEnergy, farm, farmWork, farmEnergy };
   }
 
-  // Children take after their parents. Newborns get h × the average of a random grown man and a random
-  // grown woman, give or take the variation, rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
+  // Children take after their parents. Newborns get h × the average of a random adult man and a random
+  // adult woman, give or take the variation, rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
   // 1 Power for every foodPerPower extra food they ate as a child.
   function inheritAttrs(people, p, irand, attrs) {
     let men = null, women = null;
@@ -561,7 +573,7 @@
       if (h.power === undefined) {   // born today
         if (!men) {
           men = []; women = [];
-          for (const g of people) if (g.power !== undefined && g.age >= p.M) (g.sex === HumanModel.MALE ? men : women).push(g);
+          for (const g of people) if (g.power !== undefined && HumanModel.stage(g, p) === "adult") (g.sex === HumanModel.MALE ? men : women).push(g);
         }
         const dad = men[Math.floor(irand() * men.length)], mum = women[Math.floor(irand() * women.length)];
         // h × the parents' average, give or take the variation, drawn separately for each attribute
@@ -590,7 +602,7 @@
     return best;
   }
 
-  // The scholar's working day: +10% Intelligence and −10% Power in the job, after the elder −10%
+  // The scholar's working day: the scholar adjustment in the job, after the elder penalty
   function scholarDay(h, p) {
     const k = HumanModel.stage(h, p) === "elder" ? ELDER_ATTR : 1;
     return workDay(h.power * k * SCHOLAR_POWER, h.intel * k * SCHOLAR_INTEL);
@@ -835,6 +847,8 @@
     stop();
     loadSettings();
     syncEdu();   // clamps the settings before they're used
+    SCHOLAR_INTEL = 1 + S.scholarShift / 100;
+    SCHOLAR_POWER = 1 - S.scholarShift / 100;
     for (const sp of HERDS) {
       const base = S.seed * 7919 + sp.salt;
       const runs = [runHerd(HS.N0, base, true)];
@@ -917,6 +931,7 @@
   }
 
   function drawEdu() {
+    $("sch-hint").innerHTML = `In the job, the scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>, after the elder penalty if they're old. It isn't passed on to their children.`;
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const p = { M: UP.M, E: UP.E };
     const scholar = { power: A0.power, intel: A0.intel, age: UP.M };
