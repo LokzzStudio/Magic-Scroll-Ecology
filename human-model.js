@@ -9,13 +9,13 @@
     L: 3600,   // average lifespan, days
     S: 10,     // lifespan spread, ± percent of L
     F: 200,    // food produced per day, shared by everyone in proportion to need
-    c: 8,      // food one grown-up needs per day; a child needs half
+    c: 10,     // food one grown-up needs per day; a child needs half
     K: 3600,   // hunger toll: days of lifespan lost on a day with no food at all
     n: 3,      // hunger curve power: 1 = straight line, higher = small shortfalls hurt less
   };
 
   // Where the Humans page saves its sliders
-  const STORE_KEY = "human-params-v8";
+  const STORE_KEY = "human-params-v9";
 
   const MALE = 0, FEMALE = 1;
 

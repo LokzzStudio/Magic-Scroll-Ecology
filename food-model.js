@@ -16,8 +16,12 @@
   // carry over, so at 2.5 food per energy the 1st energy gives 2, the 2nd 3, the 3rd 2, ...
   const yieldOf = (before, spent, rate) => wholeFood(before + spent, rate) - wholeFood(before, rate);
 
-  // Rice a full crew grows in a year: its tending energy × rice effectiveness, in whole rice
-  const riceYearOf = (p) => wholeFood(CREW_ENERGY, p.ricePerEnergy);
+  // Rice a full crew of standard days grows in a year: its tending energy × rice effectiveness, in
+  // whole rice, but no more than the 4 fields can give
+  const riceYearOf = (p) => Math.min(TEND_CREW * p.fieldCap, wholeFood(CREW_ENERGY, p.ricePerEnergy));
+  // Energy that milks an adult cow fully (its milkCap milk), and a day's tending that fills a field
+  const cowEnergyOf = (p) => p.milkCap / p.milkPerEnergy;
+  const fieldEnergyOf = (p) => p.fieldCap / (TEND_DAYS * p.ricePerEnergy);
 
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
@@ -26,15 +30,17 @@
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
     milkPerEnergy: 1, // milk effectiveness: milk 1 energy collects
+    milkCap: 10,      // the most milk an adult cow gives in a day
+    fieldCap: 5000,   // the most rice one field gives in a year (there are 4)
   };
   DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from ricePerEnergy; not a setting of its own
 
   // Slider ranges, [min, max]
-  const LIMITS = { ricePerEnergy: [0.1, 10], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10] };
+  const LIMITS = { ricePerEnergy: [0.1, 10], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10], milkCap: [1, 50], fieldCap: [500, 20000] };
 
-  // Milk one standard working day collects; where nobody works, what each adult cow gives
-  // (on average: each day's milk is whole, with fractions carried over)
-  const milkPerDay = (p) => DAY_ENERGY * p.milkPerEnergy;
+  // Milk one standard working day collects from a cow, at most what the cow gives; where nobody
+  // works, what each adult cow gives (on average: each day's milk is whole, fractions carried over)
+  const milkPerDay = (p) => Math.min(p.milkCap, DAY_ENERGY * p.milkPerEnergy);
 
   // Whole units of food made on the k-th of n days when `amount` is spread evenly over them;
   // the n days add up to exactly `amount`
@@ -120,6 +126,8 @@
         p[k] = Math.min(LIMITS[k][1], Math.max(LIMITS[k][0], v));
       }
       p.milkKeep = Math.round(p.milkKeep);
+      p.milkCap = Math.round(p.milkCap);
+      p.fieldCap = Math.round(p.fieldCap);
       p.riceKeep = Math.round(p.riceKeep);
       p.riceYear = riceYearOf(p);
       return p;
@@ -128,5 +136,5 @@
     }
   }
 
-  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, wholeFood, yieldOf, milkPerDay, spread, newStores, ageStores, total, eat, eatExpiring, keepText, savedParams };
+  window.FoodModel = { DEFAULTS, LIMITS, STORE_KEY, DAY_ENERGY, TEND_CREW, TEND_DAYS, CREW_ENERGY, riceYearOf, cowEnergyOf, fieldEnergyOf, wholeFood, yieldOf, milkPerDay, spread, newStores, ageStores, total, eat, eatExpiring, keepText, savedParams };
 })();

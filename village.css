@@ -1,0 +1,105 @@
+/* Shared look for the six village pages (Food, Advisor, Production, Attribute, Inheritance, Education) */
+
+.params {
+  display: grid;
+  grid-template-columns: 1.4em 1fr auto;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 13.5px;
+  align-items: baseline;
+}
+.params dt { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.params dd { margin: 0; }
+.params .v { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.params .sep { padding-top: 6px; border-top: 1px dashed var(--line); }
+.start-line { margin: 0; font-size: 13.5px; padding: 6px 10px; background: var(--ground); border: 1px solid var(--line); border-radius: 6px; }
+.start-line b { font-weight: 600; }
+.source { font-size: 12px; color: var(--allee); margin: 0; }
+.chart .main.people { stroke: var(--ink); stroke-width: 2.2; }
+.chart .band { stroke: none; opacity: 0.1; }
+.chart .band.cows { fill: var(--cows); }
+.chart .band.people { fill: var(--ink); opacity: 0.08; }
+.chart .reflabel { font-size: 10.5px; }
+.chart .dot.people { fill: var(--ink); }
+.chart .fedline { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.6; }
+.chart .fedlabel { fill: var(--ink); opacity: 0.8; }
+.swatch.people { border-color: var(--ink); }
+.swatch.band { height: 10px; border: 0; background: var(--muted); opacity: 0.35; }
+.swatch.dash-herd { border-color: var(--herd); border-top-style: dashed; border-top-width: 1.5px; }
+.swatch.dash-people { border-color: var(--ink); border-top-style: dashed; border-top-width: 1.5px; opacity: 0.7; }
+.dot-key.people { background: var(--ink); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
+.stat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.stat-head h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; display: inline-flex; align-items: center; gap: 8px; }
+.big { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.big small { font-family: var(--body); font-weight: 400; font-size: 12.5px; color: var(--muted); margin-left: 4px; }
+.rows { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+.rows dt { color: var(--muted); }
+.rows dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.rows .sub {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.rows .sub:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.param-head .lbl { font-weight: 600; font-size: 14px; }
+.foods .best { color: var(--herd); font-weight: 600; }
+.foods {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  align-items: baseline;
+}
+.foods dt { font-weight: 600; }
+.foods.two { grid-template-columns: auto 1fr; }
+.foods dd { margin: 0; }
+.foods .v { font-family: var(--mono); font-size: 12.5px; text-align: right; white-space: nowrap; }
+.foods .h { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--body); }
+.harvest-tag { color: var(--allee); font-weight: 500; }
+.chart .harvest { fill: var(--allee); opacity: 0.1; }
+.chart .rice-area { fill: var(--allee); opacity: 0.35; }
+.chart .rice-line { fill: none; stroke: var(--allee); stroke-width: 1.6; }
+.chart .milk-line { fill: none; stroke: var(--cows); stroke-width: 1.4; }
+.chart .dot.rice { fill: var(--allee); }
+.swatch.rice { border-color: var(--allee); }
+.swatch.milk { border-color: var(--cows); }
+.swatch.harvest { height: 10px; border: 0; background: var(--allee); opacity: 0.25; }
+.food-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+@media (max-width: 620px) { .food-rows { grid-template-columns: 1fr; } }
+.chart .work-rice { fill: var(--allee); opacity: 0.55; }
+.chart .work-milk { fill: var(--cows); opacity: 0.55; }
+.chart .work-adults { fill: none; stroke: var(--ink); stroke-width: 1.6; }
+.chart .work-cows { fill: none; stroke: var(--cows); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.swatch.work-rice { height: 10px; border: 0; background: var(--allee); opacity: 0.55; }
+.swatch.work-milk { height: 10px; border: 0; background: var(--cows); opacity: 0.55; }
+.chart .work-kids { fill: var(--women); opacity: 0.45; }
+.swatch.work-kids { height: 10px; border: 0; background: var(--women); opacity: 0.45; }
+.swatch.work-cows { border-color: var(--cows); border-top-style: dashed; border-top-width: 1.5px; }
+.events .w { color: var(--allee); }
+.chart .pow-line { fill: none; stroke: var(--herd); stroke-width: 1.8; }
+.chart .int-line { fill: none; stroke: var(--allee); stroke-width: 1.8; }
+.chart .settle-line { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.chart .dot.pow { fill: var(--herd); }
+.swatch.pow { border-color: var(--herd); }
+.swatch.int { border-color: var(--allee); }
+.swatch.settle { border-color: var(--muted); border-top-style: dashed; border-top-width: 1.5px; }
+.pill .dot-key { margin-right: -2px; }
+.pill::before { display: none; }
+#rice-range, #rice0-range { accent-color: var(--allee); }
+#iq-range { accent-color: var(--men); }
+.advisor-off #iq-block { opacity: 0.55; }
+#workday .v { white-space: normal; }
+#pow-range { accent-color: var(--herd); }
+#int-range { accent-color: var(--allee); }
