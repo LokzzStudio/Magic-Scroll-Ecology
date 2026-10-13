@@ -75,6 +75,8 @@
 .chart .dot.rice { fill: var(--allee); }
 .swatch.rice { border-color: var(--allee); }
 .swatch.milk { border-color: var(--cows); }
+.chart .start-food-line { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 5 3; }
+.swatch.start-food { border-color: var(--ink); border-top-style: dashed; }
 .swatch.harvest { height: 10px; border: 0; background: var(--allee); opacity: 0.25; }
 .food-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
 @media (max-width: 620px) { .food-rows { grid-template-columns: 1fr; } }

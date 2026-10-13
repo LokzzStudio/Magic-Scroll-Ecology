@@ -23,10 +23,10 @@
   const NOTE = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
 
   // Settings the Attribute and Inheritance pages keep, read by the pages after them
-  const ATTR = { key: "attribute-v3", defaults: { power: 120, intel: 120, elderPenalty: 20 }, limits: { power: [0, 300], intel: [0, 300], elderPenalty: [0, 50] } };
+  const ATTR = { key: "attribute-v4", defaults: { power: 100, intel: 100, elderPenalty: 20 }, limits: { power: [0, 300], intel: [0, 300], elderPenalty: [0, 50] } };
   const INHERIT = {
-    key: "inheritance-v4",
-    defaults: { share: 0.7, variation: 10, grow: 30, extraCap: 8, foodPerPower: 20 },
+    key: "inheritance-v5",
+    defaults: { share: 0.7, variation: 10, grow: 30, extraCap: 5, foodPerPower: 20 },
     limits: { share: [0, 1], variation: [0, 50], grow: [0, 100], extraCap: [0, 20], foodPerPower: [1, 50] },
   };
   function readSaved(spec) {
@@ -212,7 +212,7 @@
       if ($("food-params")) {
         $("food-params").innerHTML = paramRows([
           ["", "Rice effectiveness", `1 energy = ${fmtNum(F.ricePerEnergy)} rice (${fmt(F.riceYear)} a year)`],
-          ["", "Rice in store at start", fmt(F.riceStart)],
+          ["", "Food in store at start", `${fmt(F.foodStart)}, never spoils`],
           ["", "Milk keeps", FoodModel.keepText(F.milkKeep)], ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
           ["", "Milk effectiveness", `1 energy = ${fmtNum(F.milkPerEnergy)} milk`],
           ["", "Milk per cow", `at most ${fmt(F.milkCap)} a day`],
@@ -286,8 +286,8 @@
       if (def.school) s += card("School", "School", "The scholar and the children's lessons in this run.",
         `<div class="food-rows"><dl class="rows" id="school-day"></dl><dl class="rows" id="school-run"></dl></div>`);
       s += card("Food", "Food in store", none ? "Rice arrives in one burst each autumn and is eaten through the year. Shaded bands are harvests." : "Rice comes in during the autumn harvest and is eaten through the year. Shaded bands are harvests.",
-        `<svg class="chart" id="food-chart" height="190" role="img" aria-label="Milk and rice in store over 3600 days"></svg>` +
-        legend([["rice", "Rice in store"], ["milk", "Milk in store"], ["harvest", `Harvest (days 181–${HARVEST_LAST})`]]) +
+        `<svg class="chart" id="food-chart" height="190" role="img" aria-label="Milk, rice and starting food in store over 3600 days"></svg>` +
+        legend([["rice", "Rice in store"], ["milk", "Milk in store"], ["start-food", "Starting food left (never spoils)"], ["harvest", `Harvest (days 181–${HARVEST_LAST})`]]) +
         `<div class="food-rows"><dl class="rows" id="food-day"></dl><dl class="rows" id="food-run"></dl></div>`);
       if (!none) s += card("Workers", "Workers", "What the adults and elders of this run do each day. Shaded bands are harvests.",
         `<svg class="chart" id="work-chart" height="190" role="img" aria-label="Adults and elders milking and farming over 3600 days"></svg>` +
@@ -399,16 +399,17 @@
     function drawFoodChart() {
       const pm = c.result.people.main;
       let yMax = 50;
-      for (let i = 0; i <= pm.last; i++) yMax = Math.max(yMax, pm.riceStored[i], pm.stored[i]);
+      for (let i = 0; i <= pm.last; i++) yMax = Math.max(yMax, pm.riceStored[i], pm.stored[i], pm.foodStored[i]);
       const f = frame("food-chart", 190, yMax * 1.1, { harvest: true }), { x, y, step } = f;
-      let rice = "", milk = "";
+      let rice = "", milk = "", food = "";
       for (let i = 0; i <= pm.last; i += step) {
-        const px = x(i).toFixed(1);
-        rice += (i ? "L" : "M") + px + " " + y(pm.riceStored[i]).toFixed(1);
-        milk += (i ? "L" : "M") + px + " " + y(pm.stored[i]).toFixed(1);
+        const px = x(i).toFixed(1), m = i ? "L" : "M";
+        rice += m + px + " " + y(pm.riceStored[i]).toFixed(1);
+        milk += m + px + " " + y(pm.stored[i]).toFixed(1);
+        food += m + px + " " + y(pm.foodStored[i]).toFixed(1);
       }
       const lastX = x(Math.floor(pm.last / step) * step).toFixed(1);
-      f.svg.innerHTML = f.s + `<path class="rice-area" d="${rice}L${lastX} ${y(0)}L${x(0)} ${y(0)}Z"/><path class="rice-line" d="${rice}"/><path class="milk-line" d="${milk}"/>` +
+      f.svg.innerHTML = f.s + `<path class="rice-area" d="${rice}L${lastX} ${y(0)}L${x(0)} ${y(0)}Z"/><path class="rice-line" d="${rice}"/><path class="milk-line" d="${milk}"/><path class="start-food-line" d="${food}"/>` +
         cursorLine("food-line", f) + `<circle class="dot rice" id="food-dot" r="4"/>`;
       scales.food = f;
     }
@@ -520,12 +521,14 @@
         `<dt>Milk ${made} / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>` + (none ? "" :
           `<dt>${energy ? "This year's crop, of the most" : "This year's rice crop"}</dt><dd>${crop}</dd><dt>Rice still in the field</dt><dd>${milkText(pm.field[i])}</dd>`) +
         `<dt>Rice harvested / eaten</dt><dd>${milkText(pm.riceMade[i])} / ${milkText(pm.riceEaten[i])}</dd>
-         <dt>In store: milk / rice</dt><dd>${milkText(pm.stored[i])} / ${milkText(pm.riceStored[i])}</dd>${ration}
+         <dt>Starting food eaten</dt><dd>${milkText(pm.foodEaten[i])}</dd>
+         <dt>In store: milk / rice / starting</dt><dd>${milkText(pm.stored[i])} / ${milkText(pm.riceStored[i])} / ${milkText(pm.foodStored[i])}</dd>${ration}
          <dt>Fed</dt><dd>${shareText(i)}</dd>` + (inherit() ? `<dt>Extra food to children</dt><dd>${milkText(pm.extra[i])}</dd>` : "");
       $("food-run").innerHTML = `<dt class="sub">Whole run</dt>
         <dt>Milk ${made} / drunk / spoiled</dt><dd>${milkText(sum(pm.made))} / ${milkText(sum(pm.drank))} / ${milkText(sum(pm.spoiled))}</dd>` +
         (none ? `<dt>Rice harvested</dt><dd>${milkText(sum(pm.riceMade))}</dd>` : `<dt>Rice harvested / left in the field</dt><dd>${milkText(sum(pm.riceMade))} / ${milkText(sum(pm.riceLost))}</dd>`) +
-        `<dt>Rice eaten / spoiled</dt><dd>${milkText(sum(pm.riceEaten))} / ${milkText(sum(pm.riceSpoiled))}</dd>` +
+        `<dt>Rice eaten / spoiled</dt><dd>${milkText(sum(pm.riceEaten))} / ${milkText(sum(pm.riceSpoiled))}</dd>
+         <dt>Starting food eaten / left</dt><dd>${milkText(sum(pm.foodEaten))} / ${milkText(c.F.foodStart - sum(pm.foodEaten))}</dd>` +
         (inherit() ? `<dt>Extra food to children</dt><dd>${milkText(sum(pm.extra))}</dd>` : "");
     }
 
@@ -616,7 +619,7 @@
         else drawPerson(ctx, a.x * w, a.y * h, s * 1.05, a.male, col, a.elder);
       }
       const milk = none ? `${fmt(Math.floor(cows.adults[day] * FoodModel.milkPerDay(c.F)))} milk` : `${milkText(pm.made[pi])} milk collected`;
-      $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milk} · ${milkText(pm.riceStored[pi])} rice stored`;
+      $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milk} · ${milkText(pm.riceStored[pi])} rice stored${pm.foodStored[pi] > 0 ? ` · ${milkText(pm.foodStored[pi])} starting food` : ""}`;
       const people = () => {
         if (day > pm.last) return "<b>People</b> run stopped";
         const hungry = pm.hungry[pi] ? ` (${fmt(pm.hungry[pi])} from hunger)` : "";

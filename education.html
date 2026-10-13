@@ -25,7 +25,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Education</h1>
-    <p class="lede">The Inheritance page, with a school. The village picks its adult with the highest <b>Intelligence (智力)</b> as <b>Scholar (文人)</b>, but only when it can spare them from the food work, and the scholar does no food work until they become an elder: they teach the children, and read (讀書) with any energy the lessons leave. A child takes home a share of what's taught, by how much energy they keep up with, and every 100 knowledge is +1 Intelligence for life. The scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, the smartest grown-up advises.</p>
+    <p class="lede">The Inheritance page, with a school. The village picks its adult with the highest <b>Intelligence (智力)</b> as <b>Scholar (文人)</b>, but only when it can spare them from the food work, and the scholar does no food work until they become an elder: they teach the children, and read (讀書) with any energy the lessons leave. A child takes home a share of what's taught, by how much energy they keep up with, and every 100 knowledge is +1 Intelligence for life. The scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Knowledge effectiveness, knowledge per Intelligence for children and for the scholar's reading</dd>
@@ -42,7 +42,7 @@
           <h2>Education</h2>
           <p class="scope">One scholar teaches the children; this page only</p>
         </div>
-        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>. The village only appoints one when it can spare them: the grown-ups left must still fill every cow and all the fields, without the children. Once appointed, the scholar stays, even if food work later runs short, until they become an elder (then they're like any other elder) or die. The scholar does no other work: any energy the lessons leave, they spend reading. In the job, they works with more Intelligence and less Power (the scholar adjustment). Every child comes to class. The scholar is also the <b>food advisor</b>: see Rationing.</p>
+        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>. The village only appoints one when it can spare them: the grown-ups left must still fill every cow and all the fields, without the children. Once appointed, the scholar stays, even if food work later runs short, until they become an elder (then they're like any other elder) or die. The scholar does no other work: any energy the lessons leave, they spend reading. In the job, they works with more Intelligence and less Power (the scholar adjustment). Every child comes to class. The scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
         <div class="param">
           <div class="param-head eq">
             <label for="kpe-num">Knowledge effectiveness</label>
@@ -109,15 +109,15 @@ VillagePage.start({
   }),
   // The same villages without a school, as on the Inheritance page
   compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: c.R.advisor ? c.R.iq : null }) }; },
-  rationHint: "The scholar is the food advisor; with no scholar, the smartest grown-up is. The advisor's IQ is their Intelligence at work (a scholar's with the scholar adjustment, an elder's with the elder penalty). Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.",
+  rationHint: "The scholar is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.",
   advisorChoice: (c) => ({ value: "scholar", label: `The scholar (IQ ${c.fmt(firstScholarIQ(c))} at the start)` }),
   ration: (c) => {
     const iq = firstScholarIQ(c), err = RationModel.iqError(iq), { fmt, PERFECT_IQ } = c;
     return {
-      rows: [["", "Food advisor", c.R.advisor ? "on: the scholar, else the smartest" : "off"], ["", "Advisor IQ", `the scholar's Intelligence at work, ${fmt(iq)} at the start`]],
+      rows: [["", "Food advisor", c.R.advisor ? "on: the scholar, if there is one" : "off"], ["", "Advisor IQ", `the scholar's Intelligence at work, ${fmt(iq)} at the start`]],
       hint: !c.R.advisor
         ? "The advisor is off on the Advisor page, so the scholar only teaches and everyone eats what they need until the food runs out."
-        : `The first scholar's estimates are typically off by <b>±${fmt(err * 100)}%</b>${err === 0 ? " (spot on)" : ", with a lasting lean one way"}. Each new advisor brings their own lean, and a brighter one estimates better: from IQ ${PERFECT_IQ} on, they're spot on.`,
+        : `The first scholar's estimates are typically off by <b>±${fmt(err * 100)}%</b>${err === 0 ? " (spot on)" : ", with a lasting lean one way"}. Each new scholar brings their own lean, and a brighter one estimates better; while there's no scholar, nobody rations. From IQ ${PERFECT_IQ} on, a scholar is spot on.`,
     };
   },
   drawPanel(c) {

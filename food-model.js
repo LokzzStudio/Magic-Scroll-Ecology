@@ -1,5 +1,5 @@
 // Shared food model for the Magic Scroll ecology pages: how much work a rice and a milk take,
-// what's in store at the start, and how long milk and rice keep.
+// what's in store at the start (food that never spoils), and how long milk and rice keep.
 // The Food Model page (farm.html) is where these are tuned; the pages after it read them from here.
 (function () {
   // Energy one person spends in a standard working day (100 Power, 100 Intelligence)
@@ -26,7 +26,7 @@
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
     ricePerEnergy: 2,  // rice effectiveness: rice 1 energy of tending grows (14,400 a year)
-    riceStart: 20000, // rice in store on day 0
+    foodStart: 20000, // food in store on day 0; it never spoils
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
     milkPerEnergy: 1, // milk effectiveness: milk 1 energy collects
@@ -36,7 +36,7 @@
   DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from ricePerEnergy; not a setting of its own
 
   // Slider ranges, [min, max]
-  const LIMITS = { ricePerEnergy: [0.1, 10], riceStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10], milkCap: [1, 50], fieldCap: [500, 20000] };
+  const LIMITS = { ricePerEnergy: [0.1, 10], foodStart: [0, 50000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10], milkCap: [1, 50], fieldCap: [500, 20000] };
 
   // Milk one standard working day collects from a cow, at most what the cow gives; where nobody
   // works, what each adult cow gives (on average: each day's milk is whole, fractions carried over)
@@ -49,9 +49,10 @@
   // Where the Food Model page saves its sliders, and where it saved them before energy was rebased
   const STORE_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
 
-  // Food in store by age: stores.milk[a] / stores.rice[a] = food made a days ago that is still good
+  // Food in store: stores.milk[a] / stores.rice[a] = food made a days ago that is still good, and
+  // stores.food = the food in store at the start, which never spoils
   function newStores(p) {
-    return { milk: new Float64Array(p.milkKeep + 1), rice: new Float64Array(p.riceKeep + 1) };
+    return { milk: new Float64Array(p.milkKeep + 1), rice: new Float64Array(p.riceKeep + 1), food: p.foodStart };
   }
 
   // A new day: everything in store gets a day older, and whatever is past its keeping time spoils.
@@ -69,7 +70,7 @@
   const total = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
 
   // Eat up to `want` from the stores, rounded to whole food, whatever spoils soonest first
-  // (milk first on a tie). Returns how much came from each.
+  // (milk first on a tie), so the starting food, which never spoils, last. Returns how much came from each.
   function eat(stores, want) {
     const { milk, rice } = stores;
     want = Math.round(want);
@@ -83,7 +84,9 @@
       want -= take;
       if (fromMilk) { milkEaten += take; i--; } else { riceEaten += take; j--; }
     }
-    return { milkEaten, riceEaten };
+    const foodEaten = Math.min(stores.food, want);
+    stores.food -= foodEaten;
+    return { milkEaten, riceEaten, foodEaten };
   }
 
   // Eat up to `want` (rounded to whole food) of what would spoil overnight: the batches on the last
@@ -119,6 +122,7 @@
         localStorage.setItem(STORE_KEY, JSON.stringify(saved));
         localStorage.removeItem(OLD_KEY);
       }
+      if (!("foodStart" in saved) && "riceStart" in saved) saved.foodStart = saved.riceStart;   // its old name
       const p = {};
       for (const k of Object.keys(LIMITS)) {
         const v = k in saved ? Number(saved[k]) : DEFAULTS[k];

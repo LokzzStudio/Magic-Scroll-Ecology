@@ -28,7 +28,7 @@
     <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. There's no rationing here: everyone eats what they need until the food runs out.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), starting rice and how long food keeps</dd>
+        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), food in store at start and how long food keeps</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
         <dt>Used by</dt><dd><a href="advisor.html">Advisor Model</a> and every page after it</dd>
       </dl>
@@ -60,11 +60,11 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="rice0-num">Rice in store at start</label>
-            <span class="num-wrap"><input id="rice0-num" type="number"></span>
+            <label for="food0-num">Food in store at start</label>
+            <span class="num-wrap"><input id="food0-num" type="number"></span>
           </div>
-          <input id="rice0-range" type="range" aria-label="Rice in store on day 0">
-          <p class="hint" id="rice0-hint"></p>
+          <input id="food0-range" type="range" aria-label="Food in store on day 0">
+          <p class="hint" id="food0-hint"></p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -123,7 +123,7 @@ VillagePage.start({
   inputs: [
     { id: "rice", key: "ricePerEnergy", obj: "F", ...lim("ricePerEnergy"), step: 0.01, round: "none" },
     { id: "fcap", key: "fieldCap", obj: "F", ...lim("fieldCap"), step: 500, round: "int" },
-    { id: "rice0", key: "riceStart", obj: "F", ...lim("riceStart"), step: 100, round: "none" },
+    { id: "food0", key: "foodStart", obj: "F", ...lim("foodStart"), step: 100, round: "none" },
     { id: "mk", key: "milkKeep", obj: "F", ...lim("milkKeep"), step: 1, round: "int" },
     { id: "rk", key: "riceKeep", obj: "F", ...lim("riceKeep"), step: 10, round: "int" },
     { id: "eff", key: "milkPerEnergy", obj: "F", ...lim("milkPerEnergy"), step: 0.1, round: "none" },
@@ -139,8 +139,8 @@ VillagePage.start({
     $("fcap-hint").innerHTML = `The most rice one field gives in a year; there are ${FoodModel.TEND_CREW} fields, so at most <b>${fmt(FoodModel.TEND_CREW * F.fieldCap)}</b>. A field is full at <b>${fmt(fieldE, 1)}</b> energy of tending a day; a standard day (${FoodModel.DAY_ENERGY} energy) gives ${fmt(Math.min(F.fieldCap, FoodModel.wholeFood(FoodModel.DAY_ENERGY * FoodModel.TEND_DAYS, F.ricePerEnergy)))}.`;
     $("rice-hint").innerHTML = `The rice 1 energy of tending grows. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly (in whole rice) over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
     const people = US.men + US.women, dailyNeed = people * UP.c;
-    $("rice0-hint").innerHTML = F.riceStart > 0 && dailyNeed > 0
-      ? `Fresh on day 0. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.riceStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`
+    $("food0-hint").innerHTML = F.foodStart > 0 && dailyNeed > 0
+      ? `It never spoils, so it's eaten last, after milk and rice: a reserve for lean days. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.foodStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`
       : `Nothing stored on day 0: until the first harvest on day ${HARVEST_FIRST}, people live on milk alone.`;
     $("mk-hint").innerHTML = F.milkKeep === 0
       ? "Milk must be drunk the day it's made; any left over spoils that night."

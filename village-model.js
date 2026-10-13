@@ -4,8 +4,8 @@
 //                      comes in evenly over days 181–210 (Food, Advisor)
 //             "hands"  one job a day per grown-up, each a standard day of 10 energy (Production)
 //             "energy" everyone spends their own day's energy, from Power and Intelligence (Attribute on)
-//   advisor   null (everyone eats their need), an IQ, or "scholar" (the scholar advises, else the
-//             smartest grown-up)
+//   advisor   null (everyone eats their need), an IQ, or "scholar" (the scholar advises; with no
+//             scholar, nobody rations)
 //   attrs     starting grown-ups' { power, intel }; elderAttr: the share of both elders work with
 //   inherit   null, or { share, variation, grow, extraCap, foodPerPower }: children take after parents
 //   school    null, or { knowPerEnergy, knowPerIntel, readPerIntel, shift }: a scholar teaches the
@@ -134,8 +134,6 @@
   }
   const scholarIQ = (h, p, elderAttr, school) =>
     Math.floor(h.intel * (HumanModel.stage(h, p) === "elder" ? elderAttr : 1) * (1 + school.shift / 100) + 1e-9);
-  // Someone's Intelligence at work, rounded down: their IQ as the food advisor
-  const workIQ = (h, p, elderAttr) => Math.floor(h.intel * (HumanModel.stage(h, p) === "elder" ? elderAttr : 1) + 1e-9);
 
   // One day of school. The scholar and every child start together and each stops when their energy
   // (a child's spare energy after any work) runs out. Over the time both are there, the scholar
@@ -226,9 +224,8 @@
     const st = HumanModel.startPeople(US.men, US.women, p, rand);
     if (energy) for (const h of st.people) { h.power = attrs.power; h.intel = attrs.intel; h.grown = true; h.extra = 0; }
     const stores = FoodModel.newStores(F);
-    stores.rice[0] = F.riceStart;
-    // Running totals of what's in store (food is whole, so they stay exact)
-    let milkStored = 0, riceStored = F.riceStart;
+    // Running totals of what's in store (food is whole, so they stay exact); the starting food never spoils
+    let milkStored = 0, riceStored = 0;
 
     const counts = new Int32Array(T + 1);
     const f32 = () => new Float32Array(T + 1), i32 = () => new Int32Array(T + 1), nan = () => new Float32Array(T + 1).fill(NaN);
@@ -237,6 +234,7 @@
       born: i32(), died: i32(), hungry: i32(), ration: f32(), snaps: new Array(T + 1),
       made: f32(), drank: f32(), stored: f32(), spoiled: f32(),                     // milk
       riceMade: f32(), riceEaten: f32(), riceStored: f32(), riceSpoiled: f32(),     // rice
+      foodEaten: f32(), foodStored: f32(),                                           // the starting food
       share: nan(), iq: nan(),                                                       // the advisor's ration and IQ
       adults: i32(), farm: i32(), milkers: i32(), kidsWork: i32(), cows: i32(),      // work
       crop: f32(), field: f32(), riceLost: f32(), milkWork: f32(), farmWork: f32(),
@@ -261,6 +259,7 @@
       d.made[day] = food.milkMade; d.drank[day] = food.milkEaten; d.spoiled[day] = food.milkSpoiled;
       d.riceMade[day] = food.riceMade; d.riceEaten[day] = food.riceEaten; d.riceSpoiled[day] = food.riceSpoiled;
       d.stored[day] = milkStored; d.riceStored[day] = riceStored;
+      d.foodEaten[day] = food.foodEaten || 0; d.foodStored[day] = stores.food;
       if (food.share !== undefined) { d.share[day] = food.share; d.iq[day] = food.iq; }
       if (!none) {
         d.adults[day] = food.adults; d.farm[day] = food.farm; d.milkers[day] = food.milkers; d.kidsWork[day] = food.kidsWork || 0;
@@ -291,7 +290,7 @@
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     let milkEnergy = 0;   // energy spent milking so far, so milk fractions carry over
     let tended = 0, tendEnergy = 0, field = 0;   // this year's tending (share of the most), its energy, and ripe rice standing
-    let scholar = null, lastAdvisor = null;
+    let scholar = null, lastAdvisor = null;   // lastAdvisor: the scholar who last advised
     const en = new Map();   // each person's energy for the day
 
     for (let day = 1; day <= T; day++) {
@@ -378,10 +377,8 @@
       const need = HumanModel.foodNeed(st.people, p);
       let share = 1, advIQ = cfg.advisor;
       if (scholarAdvises) {
-        const advisor = scholar || smartestGrownUp(st.people, p, elderAttr);
-        advIQ = !advisor ? null : advisor === scholar ? scholarIQ(scholar, p, elderAttr, school) : workIQ(advisor, p, elderAttr);
-        if (advisor && advisor !== lastAdvisor) lean = gauss();   // a new advisor brings their own lean
-        lastAdvisor = advisor;
+        advIQ = scholar ? scholarIQ(scholar, p, elderAttr, school) : null;   // no scholar: nobody rations
+        if (scholar && scholar !== lastAdvisor) { lean = gauss(); lastAdvisor = scholar; }   // a new scholar brings their own lean
       }
       if (advIQ != null) {
         let horizon, riceToCome = 0;
@@ -392,7 +389,7 @@
             ? (farmers ? ((HARVEST_LAST - doy) * F.riceYear) / HARVEST_DAYS : 0)
             : Math.min(field, (HARVEST_LAST - doy) * (hands ? w.farm : w.farmWork) * HARVEST_PER_HAND);
         }
-        const supply = milkStored + riceStored + milkMade * (horizon - 1) + riceToCome;
+        const supply = milkStored + riceStored + stores.food + milkMade * (horizon - 1) + riceToCome;
         const sg = scholarAdvises ? iqError(advIQ) : sigma;
         const err = (scholarAdvises ? sg * lean : bias) + (sg / 2) * gauss();
         share = need > 0 ? Math.min(1, (supply / (need * horizon)) * Math.exp(err)) : 1;
@@ -400,10 +397,10 @@
 
       // 5. People eat their share, whatever spoils soonest first. On days everyone ate their full
       //    need, food that would spoil overnight goes to the children, split evenly, up to a cap each.
-      const { milkEaten, riceEaten } = FoodModel.eat(stores, need * share);
+      const { milkEaten, riceEaten, foodEaten } = FoodModel.eat(stores, need * share);
       milkStored -= milkEaten; riceStored -= riceEaten;
       let extra = 0;
-      if (inherit && inherit.extraCap > 0 && milkEaten + riceEaten >= Math.round(need)) {
+      if (inherit && inherit.extraCap > 0 && milkEaten + riceEaten + foodEaten >= Math.round(need)) {
         const kids = st.people.filter((h) => h.age < p.M);
         if (kids.length) {
           const got = FoodModel.eatExpiring(stores, kids.length * inherit.extraCap);
@@ -415,11 +412,11 @@
 
       // 6. What was eaten is shared out by need; hunger, ageing and deaths, births. Newborns take
       //    after their parents; anyone who came of age gets their bonus.
-      p.F = milkEaten + riceEaten;
+      p.F = milkEaten + riceEaten + foodEaten;
       const ev = HumanModel.stepPeople(st, p, rand);
       if (inherit) inheritAttrs(st.people, p, irand, attrs, inherit);
       record(day, ev, {
-        milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, share: advIQ != null ? share : undefined, iq: advIQ, extra,
+        milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, foodEaten, share: advIQ != null ? share : undefined, iq: advIQ, extra,
         adults: grownUps, farm: w.farm, milkers: w.milkers, kidsWork: w.kidsWorked, cows, crop, field, riceLost,
         milkWork: w.milkWork, farmWork: w.farmWork,
         taught: lesson.knowledge, gained: lesson.gained, kids: kidCount, picked, lesson: lesson.hours, scholar, ...reading,
@@ -450,17 +447,6 @@
       const r = assignEnergy(adults, elders, cows, FULL_CREW, true, [], e, cowE, fieldE);
       return r.milkShort <= 1e-9 && r.fields >= FULL_CREW;
     }
-  }
-
-  // The grown-up with the highest Intelligence at work (first on a tie), or null
-  function smartestGrownUp(people, p, elderAttr) {
-    let best = null, bestIQ = -1;
-    for (const h of people) {
-      if (h.age < p.M || h.power === undefined) continue;
-      const v = workIQ(h, p, elderAttr);
-      if (v > bestIQ) { best = h; bestIQ = v; }
-    }
-    return best;
   }
 
   window.VillageModel = {
