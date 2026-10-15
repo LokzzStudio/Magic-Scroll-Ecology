@@ -218,21 +218,12 @@
 
         <div class="param">
           <div class="param-head">
-            <label for="K-num"><span class="sym l">K</span>Hunger toll</label>
-            <span class="num-wrap"><input id="K-num" type="number" step="1"><span class="unit">days</span></span>
+            <label for="k-num"><span class="sym l">k</span>Hunger toll</label>
+            <span class="num-wrap"><input id="k-num" type="number" step="0.5"><span class="unit">× missing²</span></span>
           </div>
-          <input id="K-range" type="range" aria-label="Hunger toll">
-          <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life lost per day against share of food"></svg>
-          <p class="hint" id="K-hint">Days of life lost for each day with no food.</p>
-        </div>
-
-        <div class="param">
-          <div class="param-head">
-            <label for="n-num" class="one-line"><span class="sym l">n</span>Hunger curve power</label>
-            <span class="num-wrap"><input id="n-num" type="number" step="0.1"></span>
-          </div>
-          <input id="n-range" type="range" aria-label="Hunger curve power">
-          <p class="hint" id="n-hint">The shape of the curve above.</p>
+          <input id="k-range" type="range" aria-label="Hunger toll: days of life lost per missing food squared">
+          <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life a grown-up loses per day against share of food"></svg>
+          <p class="hint" id="k-hint">Days of life lost = k × (missing food)², per person, each day.</p>
         </div>
       </section>
 
@@ -387,8 +378,7 @@
     S:     { min: () => 0, max: () => 90, step: 5 },
     F:     { min: () => 0, max: () => 10000, step: 10 },
     c:     { min: () => 1, max: () => 100, step: 1 },
-    K:     { min: () => 0, max: () => 10000, step: 1 },
-    n:     { min: () => 0.1, max: () => 10, step: 0.1 },
+    k:     { min: () => 0, max: () => 100, step: 0.5 },
     men:   { min: () => 0, max: () => 100, step: 1 },
     women: { min: () => 0, max: () => 100, step: 1 },
     T:     { min: () => 360, max: () => 10000, step: 10 },
@@ -509,20 +499,15 @@
     const fed = HumanModel.fedCapacity(P);
     $("F-hint").innerHTML = `Feeds up to <b>${fmt(fed, fed < 10 ? 1 : 0)}</b> grown-ups fully, or twice as many children. More than that and everyone goes hungry.`;
     $("c-hint").textContent = "What a grown-up needs each day. Children need half.";
-    const days = (v) => fmt(v, v < 10 && !Number.isInteger(v) ? 1 : 0);
-    const loss = (food) => HumanModel.hungerLoss(1 - food, P);
+    const days = (v) => { v = Math.round(v * 10) / 10; return fmt(v, v < 10 && !Number.isInteger(v) ? 1 : 0); };
+    const loss = (food) => HumanModel.hungerLoss((1 - food) * P.c, P);   // a grown-up's
     const halfFedLife = P.L / (1 + loss(0.5));   // lifespan if someone only ever got half their food
-    $("K-hint").innerHTML = P.K > 0
-      ? `Days of life lost in one day, by how much of their food people get:
+    $("k-hint").innerHTML = P.k > 0
+      ? `Each day, everyone loses k × (their missing food)² days of life, so small shortfalls cost little and big ones a lot. A grown-up (needs ${fmt(P.c)}), by how much of their food they get:
          <span class="loss-table">${[0.9, 0.75, 0.5, 0].map((f) =>
            `<span>${f ? fmt(f * 100) + "% food" : "No food"}</span><b>${days(loss(f))} days</b>`).join("")}</span>
-         Someone on half food all their life would live about <b>${fmt(halfFedLife)}</b> days instead of ${fmt(P.L)}.`
+         A child needs half as much, so misses half as much and loses a quarter of that. A grown-up on half food all their life would live about <b>${fmt(halfFedLife)}</b> days instead of ${fmt(P.L)}.`
       : "Hunger doesn't shorten lives.";
-    $("n-hint").textContent = P.n > 1.05
-      ? "Above 1: small shortfalls cost little, and the cost climbs steeply as food runs out. Higher = gentler until food is really short."
-      : P.n < 0.95
-        ? "Below 1: even small shortfalls are costly, and the cost levels off as food runs out."
-        : "1: a straight line. Each bit of missing food costs the same.";
     drawHungerCurve();
 
     const pill = $("pill");
@@ -553,8 +538,7 @@ const HUMAN_ADULT_AGE = ${P.M};      // M, days
 const HUMAN_ELDER_AGE = ${P.E};      // E, days
 const FOOD_PER_DAY = ${P.F};         // F, produced each day
 const FOOD_NEED = ${P.c};            // c, per grown-up per day; children need half
-const HUNGER_TOLL = ${P.K};          // K, days of life lost on a day with no food
-const HUNGER_POWER = ${P.n};         // n, 1 = straight line, higher = small shortfalls hurt less
+const HUNGER_TOLL = ${P.k};          // k, days of life lost per (missing food)², per person
 
 function newPerson(sex) {
   const spread = HUMAN_LIFESPAN_SPREAD * (2 * Math.random() - 1);
@@ -569,13 +553,12 @@ const isAdult = (h) => isGrownUp(h) && !isElder(h);
 
 // Call once per game day. Returns the new list of people.
 function stepHumans(people) {
-  // 1. Share the food. A shortfall shortens everyone's life,
-  //    0 days when fed, HUNGER_TOLL days with no food, a power curve between.
-  const need = people.reduce((sum, h) => sum + (isGrownUp(h) ? FOOD_NEED : FOOD_NEED / 2), 0);
+  // 1. Share the food. Each person loses HUNGER_TOLL × (their missing food)² days of life.
+  const needOf = (h) => (isGrownUp(h) ? FOOD_NEED : FOOD_NEED / 2);
+  const need = people.reduce((sum, h) => sum + needOf(h), 0);
   const ration = FOOD_PER_DAY / need;
   const gap = Math.min(1, Math.max(0, 1 - ration));   // 0 = fully fed, 1 = no food
-  const lost = HUNGER_TOLL * Math.pow(gap, HUNGER_POWER);
-  for (const h of people) h.lifespan -= lost;
+  for (const h of people) h.lifespan -= HUNGER_TOLL * (gap * needOf(h)) ** 2;
 
   // 2. Everyone ages; those reaching their lifespan die
   for (const h of people) h.age += 1;
@@ -594,19 +577,19 @@ function stepHumans(people) {
 }`;
   }
 
-  // Small curve under the hunger toll slider: days lost against share of food
+  // Small curve under the hunger toll slider: days a grown-up loses against share of food
   function drawHungerCurve() {
     const svg = $("hunger-curve");
     const W = Math.max(200, svg.clientWidth || 260), H = 112;
     const m = { l: 40, r: 8, t: 8, b: 20 };
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    const top = Math.max(P.K, 1);
+    const top = Math.max(HumanModel.hungerLoss(P.c, P), 1);
     const x = (food) => m.l + food * (W - m.l - m.r);
     const y = (d) => m.t + (1 - d / top) * (H - m.t - m.b);
     let path = "";
     for (let i = 0; i <= 100; i++) {
       const food = i / 100;
-      path += (i ? "L" : "M") + x(food).toFixed(1) + " " + y(HumanModel.hungerLoss(1 - food, P)).toFixed(1);
+      path += (i ? "L" : "M") + x(food).toFixed(1) + " " + y(HumanModel.hungerLoss((1 - food) * P.c, P)).toFixed(1);
     }
     let s = "";
     for (const v of [0, top]) {
@@ -617,7 +600,7 @@ function stepHumans(people) {
     s += `<text x="${x(0.5)}" y="${H - 5}" text-anchor="middle">half</text>`;
     s += `<text x="${x(1)}" y="${H - 5}" text-anchor="end">enough</text>`;
     s += `<path class="curve" d="${path}"/>`;
-    for (const f of [0.9, 0.75, 0.5, 0]) s += `<circle class="dot" cx="${x(f)}" cy="${y(HumanModel.hungerLoss(1 - f, P))}" r="3"/>`;
+    for (const f of [0.9, 0.75, 0.5, 0]) s += `<circle class="dot" cx="${x(f)}" cy="${y(HumanModel.hungerLoss((1 - f) * P.c, P))}" r="3"/>`;
     svg.innerHTML = s;
   }
 
@@ -865,7 +848,7 @@ function stepHumans(people) {
         ${row("Fertile couples", fmt(m.couples[day]))}
         ${row("Food made / needed", m.total[day] > 0 ? `${fmt(P.F)} / ${fmt(m.need[day], 1)}` : "—")}
         ${row("Share of need", shareText(day))}
-        ${row("Life lost to hunger", `${fmt(m.lost[day], 1)} days each`)}
+        ${row("Life lost to hunger, per grown-up", `${fmt(m.lost[day], 1)} days`)}
         ${row("Born this day", fmt(m.born[day]))}
         ${row("Died this day", fmt(m.died[day]))}
       </dl>`;

@@ -21,7 +21,7 @@
     if (at("humans")) add("People", "Humans", [
       "Lifespan 3,600 days ± 10%, drawn evenly. Child under 360 days, adult from 360, elder from 2,880; adults and elders are grown-ups. Start: 5 men and 5 women, each at a random age from 360 up to their lifespan.",
       "Couples = min(adult men, adult women); elders have no children. Each couple has a child at 0.002 a day, boy or girl 50/50.",
-      "Need: 10 food a day per grown-up, 5 per child. Everyone gets the same share = eaten ÷ need; a shortfall g = 1 − share costs everyone <b>3,600 × g³</b> days of life.",
+      "Need: 10 food a day per grown-up, 5 per child. Everyone gets the same share = eaten ÷ need; each person then loses <b>5 × (their missing food)²</b> days of life (an adult eating 6 of 10: 5 × 4² = 80 days).",
       is("humans") && "Each day: hunger, then ageing and deaths, then births. Food here is a fixed 200 a day, never stored.",
     ]);
 

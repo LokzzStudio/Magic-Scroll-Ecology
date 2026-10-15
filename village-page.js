@@ -201,7 +201,7 @@
       $("human-params").innerHTML = paramRows([
         ["p", "Birth chance", `${UP.p} /day`], ["L", "Average lifespan", `${fmt(UP.L)} days`], ["M", "Adult at age", `${fmt(UP.M)} days`],
         ["E", "Elder at age", `${fmt(UP.E)} days`], ["±", "Lifespan spread", `${fmt(UP.S)}%`],
-        ["c", "Food need", `${fmt(UP.c, 1)} /person`, "sep"], ["K", "Hunger toll", `${fmt(UP.K)} days`], ["n", "Hunger curve power", fmt(UP.n, 1)],
+        ["c", "Food need", `${fmt(UP.c, 1)} /person`, "sep"], ["k", "Hunger toll", `${fmt(UP.k, 1)} × (missing food)² days`],
       ]);
       $("herd-start").innerHTML = `Start with <b>${fmt(HS.N0)} cows</b>`;
       $("human-start").innerHTML = `Start with <b>${fmt(US.men)} men</b> and <b>${fmt(US.women)} women</b>`;

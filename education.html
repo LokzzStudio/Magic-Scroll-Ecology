@@ -107,8 +107,8 @@ VillagePage.start({
     advisor: c.R.advisor ? "scholar" : null, attrs: { power: c.A.power, intel: c.A.intel }, elderAttr: 1 - c.A.elderPenalty / 100,
     inherit: c.IH, school: schoolOf(c.S),
   }),
-  // The same villages without a school, as on the Inheritance page
-  compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: c.R.advisor ? c.R.iq : null }) }; },
+  // The same villages without a school, so without a scholar to advise on food
+  compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: null }) }; },
   rationHint: "The scholar is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.",
   advisorChoice: (c) => ({ value: "scholar", label: `The scholar (IQ ${c.fmt(firstScholarIQ(c))} at the start)` }),
   ration: (c) => {
@@ -141,7 +141,7 @@ VillagePage.start({
     const scholarFirst = sc.rate > 0 && w.rate > 0 && sc.energy / sc.rate < w.energy / w.rate;
     $("class-hint").innerHTML = `${scholarFirst ? `Here the scholar runs out first, after ${hoursText(t.hours)}, so the child spends only part of their energy and the scholar has none left to read.` : `Here the child runs out first, after ${hoursText(t.hours)}, and the scholar reads with the rest.`} Children who learn grow brighter and keep up for longer, so they learn faster as they go. The scholar is taken off the food work until they become an elder, so a small village is a worker short.`;
     const k = c.result.schoolCompare;
-    $("school-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With a scholar", k.now, k.now >= k.none], ["No school (Inheritance page)", k.none, k.none >= k.now]]);
+    $("school-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With a scholar", k.now, k.now >= k.none], ["No school, so no food advisor", k.none, k.none >= k.now]]);
   },
 });
 </script>

@@ -10,8 +10,7 @@
     S: 10,     // lifespan spread, ± percent of L
     F: 200,    // food produced per day, shared by everyone in proportion to need
     c: 10,     // food one grown-up needs per day; a child needs half
-    K: 3600,   // hunger toll: days of lifespan lost on a day with no food at all
-    n: 3,      // hunger curve power: 1 = straight line, higher = small shortfalls hurt less
+    k: 5,      // hunger toll: days of lifespan lost per (missing food)², per person per day
   };
 
   // Where the Humans page saves its sliders
@@ -68,13 +67,12 @@
   // to need (1 = fully fed)
   const rationFor = (need, p) => (need > 0 ? p.F / need : Infinity);
 
-  // Days of lifespan lost in one day for a shortfall gap from 0 (fully fed) to 1 (no food).
-  // A power curve between the ends: 0 when fed, K with no food, K × gap^n in between.
-  const hungerLoss = (gap, p) => (gap > 0 ? p.K * Math.pow(Math.min(gap, 1), p.n) : 0);
+  // Days of lifespan one person loses in a day when they eat `short` food less than they need: k × short²
+  const hungerLoss = (short, p) => (short > 0 ? p.k * short * short : 0);
 
   // One day:
-  // 1. food is shared in proportion to need. If each share falls short of the need by a gap g
-  //    (0 to 1), everyone's lifespan shrinks by hungerLoss(g) days.
+  // 1. food is shared in proportion to need. If each share falls short by a gap g (0 to 1), each
+  //    person's lifespan shrinks by hungerLoss of their own missing food (g × their need).
   // 2. everyone ages a day; those reaching their lifespan die
   // 3. each fertile couple has a child with chance p; each child is a boy or girl at random
   // Updates state in place and returns the day's counts.
@@ -82,12 +80,12 @@
     const need = foodNeed(state.people, p);
     const ration = rationFor(need, p);
     const gap = Math.max(0, 1 - ration);
-    const lost = hungerLoss(gap, p);
+    const lost = hungerLoss(gap * p.c, p), childLost = hungerLoss(gap * p.c * CHILD_FOOD, p);   // a grown-up's, a child's
 
     let died = 0, hungry = 0;
     const people = [];
     for (const h of state.people) {
-      h.life -= lost;
+      h.life -= h.age < p.M ? childLost : lost;
       h.age += 1;
       if (h.age >= h.life) {
         died++;
