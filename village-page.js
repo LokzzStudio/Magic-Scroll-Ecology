@@ -35,7 +35,7 @@
   // its defaults and slider ranges from here; the pages after it read what it saved.
   const SPECS = {
     attribute: { key: "attribute-v4", fields: { power: [100, 0, 300, 5], intel: [100, 0, 300, 5], elderPenalty: [20, 0, 50, 5] } },
-    inheritance: { key: "inheritance-v5", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], extraCap: [5, 0, 20, 1], foodPerPower: [20, 1, 50, 1] } },
+    inheritance: { key: "inheritance-v5", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], extraCap: [5, 0, 20, 1], powerFoodBase: [15, 1, 100, 1], powerFoodFrom: [100, 0, 300, 5] } },
     education: { key: "education-v1", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowPerIntel: [100, 10, 500, 10], readPerIntel: [500, 50, 2000, 50], scholarShift: [10, 0, 50, 5] } },
     resources: { key: "resources-v1", fields: { fleece: [10, 1, 50, 1], regrow: [1, 1, 10, 1], woodTarget: [10, 0, 200, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1] } },
     craft: { key: "craft-v1", fields: Object.fromEntries(CRAFTS.flatMap((it) => [[it.id + "Cost", [100, 1, 1000, 1]], [it.id + "Energy", [20, 1, 200, 1]]])) },
@@ -375,7 +375,7 @@
         $("inherit-params").innerHTML = paramRows([
           ["", "Share passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
           ["", "Coming-of-age bonus", `+${fmt(c.IH.grow)} each`], ["", "Extra food per child", `${fmt(c.IH.extraCap)} /day`],
-          ["", "Extra food per +1 Power", fmt(c.IH.foodPerPower)],
+          ["", "Extra food per +1 Power", `${fmt(c.IH.powerFoodBase)} + (Power − ${fmt(c.IH.powerFoodFrom)}) above ${fmt(c.IH.powerFoodFrom)}`],
         ]);
         $("inherit-source").hidden = c.saved.inheritance && c.saved.attribute;
         $("inherit-source").textContent = "Showing defaults. If you changed those pages and it doesn't show here, your browser keeps each local file's settings separate.";

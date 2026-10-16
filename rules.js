@@ -72,7 +72,7 @@
 
     if (at("inheritance")) add("Inheritance", "Inheritance", [
       "At birth, each attribute = <b>floor(0.7 × average of a random adult man and woman × (1 ± up to 10%))</b>, the variation drawn evenly and separately for each.",
-      "Coming of age (360 days): +30 to both, and +1 Power per 20 extra food eaten as a child.",
+      "Coming of age (360 days): +30 to both; then the extra food eaten as a child buys Power one point at a time, the next point costing <b>15 + max(0, Power − 100)</b> food. What can't buy another point is lost.",
       "Extra food: on days everyone ate their full need, food that would spoil overnight is shared evenly among the children (fractions kept), up to 5 each; it isn't need.",
     ]);
 

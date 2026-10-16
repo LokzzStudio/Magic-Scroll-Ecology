@@ -81,11 +81,16 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="fpp-num">Extra food per +1 Power</label>
-            <span class="num-wrap"><input id="fpp-num" type="number"><span class="unit">food</span></span>
+            <label for="pfb-num">Extra food per +1 Power</label>
+            <span class="num-wrap"><input id="pfb-num" type="number"><span class="unit">food</span></span>
           </div>
-          <input id="fpp-range" type="range" aria-label="Extra food a child needs for 1 more Power">
-          <p class="hint">Counted through childhood, rounded down, and added for life when they come of age, along with the bonus.</p>
+          <input id="pfb-range" type="range" aria-label="Extra food the cheapest +1 Power takes">
+          <div class="param-head">
+            <span class="hint">… plus 1 more for each Power above</span>
+            <span class="num-wrap"><input id="pff-num" type="number"></span>
+          </div>
+          <input id="pff-range" type="range" aria-label="Power above which each +1 Power costs 1 more extra food">
+          <p class="hint" id="pf-hint"></p>
         </div>
         <dl class="foods" id="inherit-compare"></dl>
       </section>
@@ -110,12 +115,18 @@ VillagePage.start({
     { id: "vary", key: "variation" },
     { id: "grow", key: "grow" },
     { id: "cap", key: "extraCap" },
-    { id: "fpp", key: "foodPerPower" },
+    { id: "pfb", key: "powerFoodBase" },
+    { id: "pff", key: "powerFoodFrom" },
   ],
   // The same villages without inheritance: everyone always has the starting attributes
   compare: (c) => { c.result.inheritCompare = { now: c.result.people.alive, flat: c.aliveWith({ inherit: null }) }; },
   drawPanel(c) {
     const { S, A, UP, $, fmt } = c, settle = S.share < 1 ? S.grow / (1 - S.share) : Infinity;
+    // What extra food buys at coming of age, for a child at the base Power and a stronger one
+    const most = S.extraCap * UP.M, buy = (power, food) => c.VM.powerFromFood(power, food, S);
+    const cost = (power) => S.powerFoodBase + Math.max(0, power - S.powerFoodFrom);
+    $("pf-hint").innerHTML = `Bought one point at a time when they come of age (after the bonus), each point dearer than the last once Power passes ${fmt(S.powerFoodFrom)}. At ${fmt(S.powerFoodFrom)} the next point costs ${fmt(cost(S.powerFoodFrom))}, at ${fmt(S.powerFoodFrom + 50)} it costs ${fmt(cost(S.powerFoodFrom + 50))}. ` +
+      `600 extra food buys <b>+${fmt(buy(S.powerFoodFrom, 600))}</b> for a child at ${fmt(S.powerFoodFrom)}; the most a child can eat (${fmt(most)}) buys <b>+${fmt(buy(S.powerFoodFrom, most))}</b>, or +${fmt(buy(S.powerFoodFrom + 70, most))} for one at ${fmt(S.powerFoodFrom + 70)}. What can't buy another point is lost.`;
     $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(A.power)}</b> and <b>Intelligence ${fmt(A.intel)}</b>. Elders work with ${fmt(A.elderPenalty)}% less.`;
     $("attr-source").hidden = c.saved.attribute;
     $("attr-source").textContent = c.NOTE;

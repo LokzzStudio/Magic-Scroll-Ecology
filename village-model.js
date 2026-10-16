@@ -8,7 +8,8 @@
 //   advisor   null (everyone eats their need), an IQ, or "scholar" (the scholar advises; with no
 //             scholar, nobody rations)
 //   attrs     starting grown-ups' { power, intel }; elderAttr: the share of both elders work with
-//   inherit   null, or { share, variation, grow, extraCap, foodPerPower }: children take after parents
+//   inherit   null, or { share, variation, grow, extraCap, powerFoodBase, powerFoodFrom }: children take
+//             after parents
 //   school    null, or { knowPerEnergy, knowPerIntel, readPerIntel, shift }: a scholar teaches the
 //             children and writes poetry (吟詩) with the energy left over
 //   travel    null, or { pasture, farm, load, dayHours } (MapModel.travelOf): round-trip hours to the
@@ -405,7 +406,17 @@
   // ---------- Inheritance ----------
   // Newborns get share × the average of a random adult man and woman, give or take the variation,
   // rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
-  // 1 Power for every foodPerPower extra food they ate as a child.
+  // Power the extra food they ate as a child buys (powerFromFood).
+  // Extra food buys Power one point at a time, the next point costing powerFoodBase + max(0, Power −
+  // powerFoodFrom) food; what can't buy another point is lost. Returns the Power gained.
+  function powerFromFood(power, food, ih) {
+    let gained = 0;
+    for (;;) {
+      const cost = ih.powerFoodBase + Math.max(0, power + gained - ih.powerFoodFrom);
+      if (food < cost - 1e-9) return gained;
+      food -= cost; gained++;
+    }
+  }
   function inheritAttrs(people, p, irand, attrs, ih) {
     let men = null, women = null;
     for (const h of people) {
@@ -424,8 +435,8 @@
         h.grown = false; h.extra = 0; h.knowledge = 0; h.learned = 0;
       } else if (!h.grown && h.age >= p.M) {
         h.grown = true;
-        h.power += ih.grow + Math.floor(h.extra / ih.foodPerPower + 1e-9);
-        h.intel += ih.grow;
+        h.power += ih.grow; h.intel += ih.grow;
+        h.power += powerFromFood(h.power, h.extra, ih);
       }
     }
   }
@@ -704,6 +715,6 @@
 
   window.VillageModel = {
     T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, TEND_DAYS, HARVEST_PER_HAND, DAY_ENERGY, MAX_HOURS,
-    DEFAULT_ORDER, dayOfYear, harvestLastOf, workDay, workCap, tripsFor, runHerd, run, scholarDay, scholarIQ, teach,
+    DEFAULT_ORDER, powerFromFood, dayOfYear, harvestLastOf, workDay, workCap, tripsFor, runHerd, run, scholarDay, scholarIQ, teach,
   };
 })();
