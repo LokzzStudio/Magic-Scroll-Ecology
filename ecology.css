@@ -233,7 +233,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 a.param-chip:hover { border-color: var(--muted); color: var(--ink); }
 @media (max-width: 900px) { .param-chip { display: none; } }
 
-.top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Settings buttons (Jobs, Reset) on the left, over the settings panel; Roll new runs on the right, over the results */
+.top-actions { width: 100%; display: flex; align-items: center; gap: 8px; }
+.top-actions .btn.roll { order: 2; margin-left: auto; }
 .btn.roll {
   font-size: 15px;
   font-weight: 600;
@@ -528,3 +530,33 @@ main { display: grid; gap: 20px; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 [id] { scroll-margin-top: calc(var(--topbar-h) + 16px); }
+
+/* Jobs and Priority dialogs (site.js): who can do which job, and the order of the day's jobs */
+.jobs-dialog {
+  max-width: min(940px, calc(100vw - 32px)); width: 100%; padding: 18px 20px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); color: var(--ink);
+}
+.jobs-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.jobs-dialog > * + * { margin-top: 12px; }
+.jobs-head h2 { font-family: var(--display); font-weight: 600; font-size: 18px; margin: 0; }
+.jobs-head p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.jobs-scroll { overflow-x: auto; }
+.jobs-table { border-collapse: collapse; font-size: 13px; }
+.jobs-table th, .jobs-table td { padding: 6px 7px; border-bottom: 1px solid var(--line); text-align: center; }
+.jobs-table th { font-weight: 600; white-space: nowrap; }
+.jobs-table th small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.jobs-table tbody th { text-align: left; }
+.jobs-table .unused { background: var(--ground); }
+.jobs-table thead .unused { color: var(--muted); }
+.jobs-table input { width: 16px; height: 16px; accent-color: var(--herd); cursor: pointer; }
+/* Priority: a reorderable list */
+.prio-dialog { max-width: min(560px, calc(100vw - 32px)); }
+.prio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.prio-list li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--ground); }
+.prio-n { font-family: var(--mono); color: var(--muted); width: 1.2em; text-align: right; }
+.prio-name { flex: 1; display: grid; }
+.prio-name .zh { font-weight: 600; }
+.prio-name small { color: var(--muted); font-size: 12px; }
+.prio-move { display: flex; gap: 4px; }
+.prio-move .btn { padding: 3px 9px; }
+.prio-move .btn:disabled { opacity: 0.35; cursor: default; }

@@ -105,3 +105,22 @@
 #workday .v { white-space: normal; }
 #pow-range { accent-color: var(--herd); }
 #int-range { accent-color: var(--allee); }
+
+/* Resources and Crafts cards: one line per store or item */
+.chart .res-line { fill: none; stroke-width: 1.6; }
+.chart .res-wool { stroke: var(--sheep); }
+.chart .res-wood { stroke: var(--herd); }
+.chart .res-stone { stroke: var(--muted); }
+.chart .craft-clothes { stroke: var(--women); }
+.chart .craft-hat { stroke: var(--allee); }
+.chart .craft-blade { stroke: var(--crash); }
+.chart .craft-fork { stroke: var(--men); }
+.chart .dot.res-stone { fill: var(--muted); stroke: none; }
+.chart .dot.craft-clothes { fill: var(--women); stroke: none; }
+.swatch.res-wool { border-color: var(--sheep); }
+.swatch.res-wood { border-color: var(--herd); }
+.swatch.res-stone { border-color: var(--muted); }
+.swatch.craft-clothes { border-color: var(--women); }
+.swatch.craft-hat { border-color: var(--allee); }
+.swatch.craft-blade { border-color: var(--crash); }
+.swatch.craft-fork { border-color: var(--men); }

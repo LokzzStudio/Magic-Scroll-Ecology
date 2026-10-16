@@ -1,12 +1,14 @@
-// Shared page code for the six village pages (Food, Advisor, Production, Attribute, Inheritance,
-// Education). It reads the settings of the pages before, draws the read-only panel sections and every
-// card in <main>, runs the villages (village-model.js) and handles the charts, the farm, the stats and
-// playback. Each page calls VillagePage.start(def) with what's its own:
-//   key        "food" | "advisor" | "production" | "attribute" | "inheritance" | "education"
-//   storeKey   where the page keeps its settings; defaults: its settings besides the dice and speed
-//   inputs     its sliders: { id, key, lo, hi, step, obj: "S" (default) | "F", round: "step" | "int" | "none" }
-//   config(c)  the simulation options for its villages (see village-model.js)
-//   setup(c), beforeRun(c), drawPanel(c), compare(c), ration(c): page hooks
+// Shared page code for the village pages (Food, Advisor, Production, Attribute, Inheritance, Education,
+// Resources, Craft). It reads the settings of the pages before, works out the simulation options from
+// the page's place in the chain, draws the read-only panel sections and every card in <main>, runs the
+// villages (village-model.js) and handles the charts, the farm, the stats and playback. Each page calls
+// VillagePage.start(def) with what's its own:
+//   key        "food" | "advisor" | "production" | "attribute" | "inheritance" | "education" | "resources" | "craft"
+//   work       "none" | "hands" | "energy"; inherit, school, resources, craft: which cards it shows
+//   inputs     its sliders: { id, key, obj: "S" (default) | "F", round: "step" | "int" | "none" }, with
+//              lo, hi and step from its settings table (SPECS), or given here
+//   storeKey, defaults: where it keeps its settings and their defaults, for pages without a SPECS table
+//   setup(c), beforeRun(c), drawPanel(c), compare(c), config(c), ration(c): page hooks
 (function () {
   const VM = VillageModel;
   const { T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, DAY_ENERGY } = VM;
@@ -22,31 +24,49 @@
     rows.map(([label, n, best]) => `<dt></dt><dd>${label}</dd><dd class="v${best ? " best" : ""}">${n}/${RUNS}</dd>`).join("");
   const NOTE = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
 
-  // Settings the Attribute and Inheritance pages keep, read by the pages after them
-  const ATTR = { key: "attribute-v4", defaults: { power: 100, intel: 100, elderPenalty: 20 }, limits: { power: [0, 300], intel: [0, 300], elderPenalty: [0, 50] } };
-  const INHERIT = {
-    key: "inheritance-v5",
-    defaults: { share: 0.7, variation: 10, grow: 30, extraCap: 5, foodPerPower: 20 },
-    limits: { share: [0, 1], variation: [0, 50], grow: [0, 100], extraCap: [0, 20], foodPerPower: [1, 50] },
+  // The crafts, for the Craft page's settings and card
+  const CRAFTS = [
+    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", material: "wool" },
+    { id: "hat", zh: "笠", en: "Hat", job: "weave", material: "wool" },
+    { id: "blade", zh: "刀", en: "Blade", job: "forge", material: "stone" },
+    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", material: "stone" },
+  ];
+  // The settings pages' own settings, by field: [default, lowest, highest, slider step]. Each page takes
+  // its defaults and slider ranges from here; the pages after it read what it saved.
+  const SPECS = {
+    attribute: { key: "attribute-v4", fields: { power: [100, 0, 300, 5], intel: [100, 0, 300, 5], elderPenalty: [20, 0, 50, 5] } },
+    inheritance: { key: "inheritance-v5", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], extraCap: [5, 0, 20, 1], foodPerPower: [20, 1, 50, 1] } },
+    education: { key: "education-v1", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowPerIntel: [100, 10, 500, 10], readPerIntel: [500, 50, 2000, 50], scholarShift: [10, 0, 50, 5] } },
+    resources: { key: "resources-v1", fields: { fleece: [10, 1, 50, 1], regrow: [1, 1, 10, 1], woodTarget: [10, 0, 200, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1] } },
+    craft: { key: "craft-v1", fields: Object.fromEntries(CRAFTS.flatMap((it) => [[it.id + "Cost", [100, 1, 1000, 1]], [it.id + "Energy", [20, 1, 200, 1]]])) },
   };
+  const defaultsOf = (spec) => Object.fromEntries(Object.entries(spec.fields).map(([k, [v]]) => [k, v]));
+  const roundTo = (v, step) => Number((Math.round(v / step) * step).toFixed(2));
+  // What a settings page last saved (clamped and rounded as its sliders would), or its defaults
   function readSaved(spec) {
-    const values = { ...spec.defaults };
+    const values = defaultsOf(spec);
     try {
       const a = JSON.parse(localStorage.getItem(spec.key) || "null");
       if (!a || typeof a !== "object") return { values, saved: false };
-      for (const [k, [lo, hi]] of Object.entries(spec.limits)) {
+      for (const [k, [, lo, hi, step]] of Object.entries(spec.fields)) {
         const v = Number(a[k]);
-        if (k in a && isFinite(v)) values[k] = k === "share" ? Math.round(clamp(v, lo, hi) * 100) / 100 : Math.round(clamp(v, lo, hi));
+        if (k in a && isFinite(v)) values[k] = roundTo(clamp(v, lo, hi), step);
       }
       return { values, saved: true };
     } catch (e) {
       return { values, saved: false };
     }
   }
+  // Simulation options from the Education, Resources and Craft pages' settings
+  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowPerIntel: E.knowPerIntel, readPerIntel: E.readPerIntel, shift: E.scholarShift });
+  const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, woodTarget: R.woodTarget, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy } });
+  const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, material: it.material, cost: C[it.id + "Cost"], energy: C[it.id + "Energy"] })) });
 
   // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
-  const CHAIN = ["herd", "humans", "food", "advisor", "production", "attribute", "inheritance", "education"];
-  const KEYS = { herd: HerdModel.STORE_KEY, humans: HumanModel.STORE_KEY, food: FoodModel.STORE_KEY, advisor: RationModel.STORE_KEY, attribute: ATTR.key, inheritance: INHERIT.key };
+  const CHAIN = ["herd", "humans", "food", "advisor", "map", "production", "attribute", "inheritance", "education", "resources", "craft"];
+  const KEYS = { herd: HerdModel.STORE_KEY, humans: HumanModel.STORE_KEY, food: FoodModel.STORE_KEY, advisor: RationModel.STORE_KEY, map: MapModel.STORE_KEY,
+    ...Object.fromEntries(Object.entries(SPECS).map(([name, spec]) => [name, spec.key])) };
+  const SHEEP_SALT = 500000;   // keeps the sheep's dice apart from the cows'
 
   function start(def) {
     const at = (name) => CHAIN.indexOf(def.key) >= CHAIN.indexOf(name);   // this page or a later one
@@ -54,9 +74,12 @@
     const HARVEST_LAST = VM.harvestLastOf(work);
     const isHarvest = (day) => day >= 1 && VM.dayOfYear(day) >= HARVEST_FIRST && VM.dayOfYear(day) <= HARVEST_LAST;
     const upstream = CHAIN.slice(0, CHAIN.indexOf(def.key)).map((k) => KEYS[k]).filter(Boolean);
-    const S_DEFAULTS = { seed: 1, speed: 180, ...def.defaults };
+    // This page's settings: from its SPECS table if it has one; sliders take their ranges from it too
+    const own = SPECS[def.key], storeKey = own ? own.key : def.storeKey;
+    const inputs = (def.inputs || []).map((inp) => (own && own.fields[inp.key] ? { lo: own.fields[inp.key][1], hi: own.fields[inp.key][2], step: own.fields[inp.key][3], ...inp } : inp));
+    const S_DEFAULTS = { seed: 1, speed: 180, ...(own ? defaultsOf(own) : def.defaults) };
     let S = { ...S_DEFAULTS };
-    try { const saved = JSON.parse(localStorage.getItem(def.storeKey) || "null"); if (saved && typeof saved === "object") S = { ...S, ...saved }; } catch (e) {}
+    try { const saved = JSON.parse(localStorage.getItem(storeKey) || "null"); if (saved && typeof saved === "object") S = { ...S, ...saved }; } catch (e) {}
     const store = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} };
 
     // c: everything the page hooks see
@@ -74,18 +97,35 @@
       c.UP = up || { ...HumanModel.DEFAULTS }; c.US = us || { ...HumanModel.START };
       if (def.key !== "food") { const fp = FoodModel.savedParams(); c.saved.food = !!fp; c.F = fp || { ...FoodModel.DEFAULTS }; }
       if (at("production")) { const rp = RationModel.savedParams(); c.saved.advisor = !!rp; c.R = rp || { ...RationModel.DEFAULTS }; }
-      if (at("inheritance")) { const a = readSaved(ATTR); c.A = a.values; c.saved.attribute = a.saved; }
-      if (at("education")) { const ih = readSaved(INHERIT); c.IH = ih.values; c.saved.inheritance = ih.saved; }
+      if (at("production")) c.roles = RolesModel.current();
+      if (at("attribute")) c.priority = RolesModel.currentPriority();
+      if (at("production")) { const mp = MapModel.savedParams(); c.saved.map = !!mp; c.M = mp || { ...MapModel.DEFAULTS }; c.travel = MapModel.travelOf(c.M); }
+      // The settings pages up to this one: this page's own (S, which its sliders keep in range), and
+      // the earlier ones as they saved them
+      c.set = {};
+      for (const name of Object.keys(SPECS)) {
+        if (!at(name)) continue;
+        if (name === def.key) { c.set[name] = S; continue; }
+        const r = readSaved(SPECS[name]);
+        c.set[name] = r.values; c.saved[name] = r.saved;
+      }
+      c.A = c.set.attribute; c.IH = c.set.inheritance; c.ED = c.set.education; c.RS = c.set.resources;
     }
-    // This page's own attribute or inheritance settings, once the sliders have clamped them
-    function ownSettings() {
-      if (def.key === "attribute") c.A = { power: S.power, intel: S.intel, elderPenalty: S.elderPenalty };
-      if (def.key === "inheritance") c.IH = { share: S.share, variation: S.variation, grow: S.grow, extraCap: S.extraCap, foodPerPower: S.foodPerPower };
+    // The simulation options this page's place in the chain switches on (see village-model.js)
+    function optionsOf() {
+      const { A, R } = c, o = { travel: c.travel || null, roles: c.roles || null, priority: c.priority || null };
+      o.advisor = !at("advisor") ? null : !R.advisor ? null : at("education") ? "scholar" : R.iq;
+      if (A) { o.attrs = { power: A.power, intel: A.intel }; o.elderAttr = 1 - A.elderPenalty / 100; }
+      if (at("inheritance")) o.inherit = c.IH;
+      if (at("education")) o.school = schoolOf(c.ED);
+      if (at("resources")) o.resources = resourcesOf(c.RS);
+      if (at("craft")) o.craft = craftOf(c.set.craft);
+      return o;
     }
 
     // ---------- Sliders ----------
     function syncInputs() {
-      for (const inp of def.inputs || []) {
+      for (const inp of inputs) {
         const obj = inp.obj === "F" ? c.F : S, { lo, hi, step } = inp;
         let v = clamp(Number(obj[inp.key]), lo, hi);
         if (!isFinite(v)) v = (inp.obj === "F" ? FoodModel.DEFAULTS : S_DEFAULTS)[inp.key];
@@ -99,7 +139,7 @@
       if (c.F) c.F.riceYear = FoodModel.riceYearOf(c.F);
     }
     let inputTimer = 0;
-    for (const inp of def.inputs || []) {
+    for (const inp of inputs) {
       const changed = (v) => {
         if (!isFinite(v)) return;
         (inp.obj === "F" ? c.F : S)[inp.key] = v;
@@ -120,31 +160,36 @@
       if (!aliveCache.has(key)) {
         const base = S.seed * 7919 + HUMAN_SALT, cowRuns = c.result.cows.runs;
         let n = 0;
-        for (let i = 0; i < RUNS; i++) if (VM.run({ ...cfg, seed: base + i, detailed: false, cowAdults: cowRuns[i].adults }).survived) n++;
+        for (let i = 0; i < RUNS; i++) if (VM.run({ ...cfg, seed: base + i, detailed: false, cowAdults: cowRuns[i].adults, sheepAdults: sheepOf(i) }).survived) n++;
         aliveCache.set(key, n);
       }
       return aliveCache.get(key);
     }
     c.aliveWith = aliveWith;
+    const sheepOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].adults : null);
 
     function recompute() {
       stop();
       loadSettings();
       syncInputs();
-      ownSettings();
       if (def.beforeRun) def.beforeRun(c);
       const herdBase = S.seed * 7919, base = herdBase + HUMAN_SALT;
       const cowRuns = [];
       for (let i = 0; i < RUNS; i++) cowRuns.push(VM.runHerd(c.HP, c.HS.N0, herdBase + i, i === 0, perIcon));
       c.result.cows = { main: cowRuns[0], runs: cowRuns, alive: cowRuns.filter((r) => r.survived).length };
-      c.cfg = { work, F: c.F, UP: c.UP, US: c.US, ...def.config(c) };
+      if (def.resources) {
+        const sheepRuns = [];
+        for (let i = 0; i < RUNS; i++) sheepRuns.push(VM.runHerd(c.HP, c.HS.N0, herdBase + SHEEP_SALT + i, i === 0, perIcon));
+        c.result.sheep = { main: sheepRuns[0], runs: sheepRuns, alive: sheepRuns.filter((r) => r.survived).length };
+      }
+      c.cfg = { work, F: c.F, UP: c.UP, US: c.US, ...optionsOf(), ...(def.config ? def.config(c) : {}) };
       const runs = [];
-      for (let i = 0; i < RUNS; i++) runs.push(VM.run({ ...c.cfg, seed: base + i, detailed: i === 0, cowAdults: cowRuns[i].adults }));
+      for (let i = 0; i < RUNS; i++) runs.push(VM.run({ ...c.cfg, seed: base + i, detailed: i === 0, cowAdults: cowRuns[i].adults, sheepAdults: sheepOf(i) }));
       c.result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
       aliveCache = new Map([[JSON.stringify([c.cfg.advisor, c.cfg.attrs, c.cfg.elderAttr, c.cfg.inherit, c.cfg.school]), c.result.people.alive]]);
       if (def.compare) def.compare(c);
 
-      store(def.storeKey, S);
+      store(storeKey, S);
       if (def.key === "food") store(FoodModel.STORE_KEY, c.F);
       if (def.key === "advisor") store(RationModel.STORE_KEY, c.R);
       syncSpeed();
@@ -154,6 +199,25 @@
       drawFrame();
     }
 
+    // ---------- The scholar as food advisor (Education page on) ----------
+    const firstScholarIQ = () => VM.scholarIQ({ intel: c.A.intel, age: c.UP.M }, c.UP, 1, schoolOf(c.ED));
+    const SCHOLAR_RATION = {
+      hint: "The scholar is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.",
+      choice: () => ({ value: "scholar", label: `The scholar (IQ ${fmt(firstScholarIQ())} at the start)` }),
+      rows: () => {
+        const iq = firstScholarIQ(), err = iqError(iq);
+        return {
+          rows: [["", "Food advisor", c.R.advisor ? "on: the scholar, if there is one" : "off"], ["", "Advisor IQ", `the scholar's Intelligence at work, ${fmt(iq)} at the start`]],
+          hint: !c.R.advisor
+            ? "The advisor is off on the Advisor page, so the scholar only teaches and everyone eats what they need until the food runs out."
+            : `The first scholar's estimates are typically off by <b>±${fmt(err * 100)}%</b>${err === 0 ? " (spot on)" : ", with a lasting lean one way"}. Each new scholar brings their own lean, and a brighter one estimates better; while there's no scholar, nobody rations. From IQ ${PERFECT_IQ} on, a scholar is spot on.`,
+        };
+      },
+    };
+    const rationHint = def.rationHint || (at("education") ? SCHOLAR_RATION.hint : null);
+    const rationRows = def.ration || (at("education") ? SCHOLAR_RATION.rows : null);
+    const advisorChoice = def.advisorChoice || (at("education") ? SCHOLAR_RATION.choice : null);
+
     // ---------- Panel sections shared by the pages ----------
     const section = (id, title, scope, body) =>
       `<section class="panel-section"${id ? ` id="${id}"` : ""}><div class="section-head"><h2>${title}</h2><p class="scope">${scope}</p></div>${body}</section>`;
@@ -161,6 +225,14 @@
     const change = (href, name) => `<div class="btn-row"><a class="btn" href="${href}">Change on ${name} →</a></div>`;
     function panelHTML() {
       let s = "";
+      if (at("craft")) s += section("resources", "Resources", from("resources.html#resources", "Resources page"),
+        `<dl class="params" id="res-params"></dl>
+        <p class="hint">Idle grown-ups keep timber at its target, then women shear and men quarry, a load at a time, once every food job is filled.</p>
+        <p class="source" id="res-source" hidden></p>${change("resources.html#resources", "Resources")}`);
+      if (at("resources")) s += section("education", "Education", from("education.html#education", "Education page"),
+        `<dl class="params" id="edu-params"></dl>
+        <p class="hint">The village's adult with the highest Intelligence becomes scholar when the others can spare them; they teach the children, spend what's left on poetry, and advise on food.</p>
+        <p class="source" id="edu-source" hidden></p>${change("education.html#education", "Education")}`);
       if (at("education")) s += section("inheritance", "Inheritance", from("inheritance.html#inheritance", "Inheritance page"),
         `<p class="start-line" id="attr-start"></p><dl class="params" id="inherit-params"></dl>
         <p class="hint">A newborn's Power and Intelligence are each h × the average of an adult man and woman drawn at random, give or take the variation.</p>
@@ -174,13 +246,15 @@
       if (!none) s += section("work", "Work", energy ? "Everyone spends their day's energy; children help when needed" : "Each grown-up does one job a day; children don't work",
         `<dl class="foods"><dt></dt><dd class="h">Needs</dd><dd class="h v">Days</dd>
           <dt>Milk</dt><dd id="milk-work"></dd><dd class="v">all year</dd>
-          <dt>Rice</dt><dd>${energy ? "adults, and children if needed" : "adults only"}: tending, then harvest</dd><dd class="v">1–270</dd></dl>
+          <dt>Rice</dt><dd><span id="rice-who">adults</span>: tending, then harvest</dd><dd class="v">1–270</dd></dl>
         <p class="hint">${energy
-          ? `Work is counted in <b>energy</b>; 10 energy is what a person with 100 Power spends in a day. Milk comes first: an adult cow gives at most <span class="milk-cap">10</span> milk, so milking it fully takes a set amount of energy, and people milk one cow after another while their energy lasts, elders first since elders can't farm. Adults put whatever energy is left into the rice. <b>Tending</b> (days 1–180): the 4 fields go to the 4 with the most energy left; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): each 10 energy brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <b>Children</b> help only when the grown-ups leave work undone, a cow not fully milked or a field unworked, strongest first: milk, then fields.${def.school ? " Whatever energy they don't need goes to class." : ""}`
-          : `Milk comes first: every adult cow gets a milker, elders before adults since elders can't farm. Adults left over go to the rice, up to 4. <b>Tending</b> (days 1–180): each hand gives 25% of the full crop, so 4 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each hand brings in 250 rice a day until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.`}</p>`);
+          ? `Work is counted in <b>energy</b>; 10 energy is what a person with 100 Power spends in a day. Milk comes first: an adult cow gives at most <span class="milk-cap">10</span> milk, so milking it fully takes a set amount of energy, and people milk one cow after another while their energy lasts, elders first since elders can't farm. Adults put whatever energy is left into the rice. <b>Tending</b> (days 1–180): the 4 fields go to the 4 with the most energy left; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): each 10 energy brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <span id="kids-work"></span> Who may do which job is set with the <b>Jobs</b> button at the top.`
+          : `Milk comes first: every adult cow gets a milker, first from those who can't farm (elders, by default). Those left who can farm go to the rice, up to 4. Who may do which job is set with the <b>Jobs</b> button at the top. <b>Tending</b> (days 1–180): each hand gives 25% of the full crop, so 4 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each hand brings in 250 rice a day until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.`}</p>`);
+      if (at("production")) s += section("map", "Map", from("map.html#map", "Map page"),
+        `<dl class="params" id="map-params"></dl><p class="hint" id="map-hint"></p><p class="source" id="map-source" hidden></p>${change("map.html#map", "Map")}`);
       if (at("production")) s += section("advice", "Rationing", from("advisor.html#advice", "Advisor page"),
         `<dl class="params" id="ration-params"></dl>
-        <p class="hint">${def.rationHint || "Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out."}</p>
+        <p class="hint">${rationHint || "Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out."}</p>
         <p class="hint" id="iq-hint"></p><p class="source" id="ration-source" hidden></p>
         ${change("advisor.html#advice", "Advisor")}<dl class="foods" id="advisor-compare"></dl>`);
       s += section("", "Cows", from("index.html#shared", "Herd page"),
@@ -228,13 +302,43 @@
           ? `Harvested evenly over the ${days} harvest days: <b>${milkText(F.riceYear / days)}</b> rice a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`
           : `Each of the ${FULL_CREW} fields gives up to <b>${fmt(F.fieldCap)}</b> rice a year, so at most <b>${fmt(most)}</b>; a field is full at ${fmt(FoodModel.fieldEnergyOf(F), 1)} energy of tending a day. Four standard workers (10 energy each) grow ${milkText(F.riceYear)}. At harvest, every 10 energy brings in 250 rice. A grown-up eats <b>${milkText(eats)}</b> food a year (a child half), so a full ${fmt(most)} feeds about <b>${fmt(most / eats, 1)}</b> grown-ups for a year.`;
       }
+      if ($("kids-work") && c.roles) {
+        const k = c.roles.child, jobs = [k.milk && "milking", (k.tend || k.harvest) && "the fields"].filter(Boolean);
+        $("kids-work").innerHTML = (jobs.length
+          ? `<b>Children</b> help only when the grown-ups leave work undone (${jobs.join(" and ")}), strongest first.`
+          : "<b>Children</b> don't do food work.") +
+          (def.school ? (k.teach ? " Whatever energy they don't need goes to class." : " They don't go to class.") : "");
+      }
+      if ($("rice-who") && c.roles) {
+        const who = [["man", "men"], ["woman", "women"], ["elder", "elders"], ...(energy ? [["child", "children if needed"]] : [])]
+          .filter(([r]) => c.roles[r].tend || c.roles[r].harvest).map(([, n]) => n);
+        $("rice-who").textContent = who.length ? who.join(", ") : "nobody";
+      }
       if ($("milk-work")) $("milk-work").textContent = energy
         ? `each adult cow: ${fmt(cowE, Number.isInteger(cowE) ? 0 : 1)} energy for its ${fmt(F.milkCap)} milk`
         : `1 adult or elder per adult cow (${milkText(milkPerCow)} milk a day)`;
       for (const el of document.querySelectorAll(".milk-cap")) el.textContent = fmt(F.milkCap);
 
+      if ($("map-params")) {
+        const M = c.M, d = MapModel.distances(M.tiles), tv = c.travel;
+        const place = (k) => (isFinite(d[k]) ? `${fmt(d[k])} tiles · ${fmt(MapModel.tripHours(d[k], M), 1)} h there and back` : "none on the map");
+        $("map-params").innerHTML = paramRows([
+          ["", "Pasture (milking)", place("P")], ["", "Farm (rice)", place("F")],
+          ["", "Mine (stone)", place("M")], ["", "Forest (timber)", place("T")],
+          ["", "Walking", `${fmt(M.minPerTile)} min a tile`, "sep"], ["", "Carried home every", `${fmt(M.load)} energy of collecting`],
+          ["", "Day", `${fmt(M.dayHours)} h for work (at most 10) and walking`],
+        ]);
+        // A standard worker's day (10 energy at 1 energy an hour) at each place
+        const std = (trip, collect) => {
+          if (!isFinite(trip)) return "can't get there";
+          const done = VM.workCap(DAY_ENERGY, 1, M.dayHours, trip, M.load, collect), walkH = VM.tripsFor(done, M.load, collect) * trip;
+          return `${fmt(walkH, 1)} h walking, ${done >= DAY_ENERGY ? "all 10 energy of work" : `only <b>${fmt(done)}</b> of 10 energy of work`}`;
+        };
+        $("map-hint").innerHTML = `A standard worker (10 energy a day) milking: ${std(tv.pasture, true)}. Harvesting: ${std(tv.farm, true)}. Tending (one trip a day): ${std(tv.farm, false)}. Collecting means a trip home for every ${fmt(M.load)} energy; once work and walking pass ${fmt(M.dayHours)} hours, walking cuts the work, and idle grown-ups take up what's left undone.`;
+        source("map-source", c.saved.map);
+      }
       if ($("ration-params")) {
-        const r = def.ration ? def.ration(c) : {
+        const r = rationRows ? rationRows(c) : {
           rows: [["", "Food advisor", c.R.advisor ? "on" : "off"], ["", "Advisor IQ", fmt(c.R.iq)]],
           hint: !c.R.advisor ? "The advisor is off on the Advisor page, so everyone eats what they need until the food runs out."
             : iqError(c.R.iq) === 0 ? "Spot on: the advisor counts the food exactly, assuming today's workers keep working."
@@ -246,10 +350,25 @@
       }
       // The advisor policies side by side, on every page with an advisor
       if ($("advisor-compare")) {
-        const choice = def.advisorChoice ? def.advisorChoice(c) : { value: c.R.iq, label: `Advisor, IQ ${c.R.iq}` };
+        const choice = advisorChoice ? advisorChoice(c) : { value: c.R.iq, label: `Advisor, IQ ${c.R.iq}` };
         const n = [aliveWith({ advisor: null }), aliveWith({ advisor: choice.value }), aliveWith({ advisor: PERFECT_IQ })], best = Math.max(...n);
         $("advisor-compare").innerHTML = compareRows(`Villages alive at day ${fmt(T)}`,
           [["No advisor", n[0], n[0] === best], [choice.label, n[1], n[1] === best], [`Perfect advisor (IQ ${PERFECT_IQ})`, n[2], n[2] === best]]);
+      }
+      if ($("res-params")) {
+        const R = c.RS;
+        $("res-params").innerHTML = paramRows([
+          ["", "Wool per sheep", `${fmt(R.fleece)}, regrows ${fmt(R.regrow)} a day`], ["", "Keep timber at", fmt(R.woodTarget)],
+          ["", "1 energy collects", `${fmtNum(R.woolPerEnergy)} wool · ${fmtNum(R.woodPerEnergy)} timber · ${fmtNum(R.stonePerEnergy)} stone`],
+        ]);
+        source("res-source", c.saved.resources);
+      }
+      if ($("edu-params")) {
+        $("edu-params").innerHTML = paramRows([
+          ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", fmt(c.ED.knowPerIntel)],
+          ["", "Poetry per +1 Intelligence", fmt(c.ED.readPerIntel)], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
+        ]);
+        source("edu-source", c.saved.education);
       }
       if (at("education")) {
         $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(c.A.power)}</b> and <b>Intelligence ${fmt(c.A.intel)}</b>, from the Attribute page.`;
@@ -289,6 +408,14 @@
         `<svg class="chart" id="food-chart" height="190" role="img" aria-label="Milk, rice and starting food in store over 3600 days"></svg>` +
         legend([["rice", "Rice in store"], ["milk", "Milk in store"], ["start-food", "Starting food left (never spoils)"], ["harvest", `Harvest (days 181–${HARVEST_LAST})`]]) +
         `<div class="food-rows"><dl class="rows" id="food-day"></dl><dl class="rows" id="food-run"></dl></div>`);
+      if (def.resources) s += card("Resources", "Resources in store", "Wool, timber and stone the idle grown-ups bring home. Nothing uses them yet: wool and stone pile up, and timber stays at its target.",
+        `<svg class="chart" id="res-chart" height="190" role="img" aria-label="Wool, timber and stone in store over 3600 days"></svg>` +
+        legend([["res-wool", "Wool"], ["res-wood", "Timber"], ["res-stone", "Stone"]]) +
+        `<div class="food-rows"><dl class="rows" id="res-day"></dl><dl class="rows" id="res-run"></dl></div>`);
+      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house. Nothing uses them yet, so they only pile up.",
+        `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over 3600 days"></svg>` +
+        legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
+        `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>`);
       if (!none) s += card("Workers", "Workers", "What the adults and elders of this run do each day. Shaded bands are harvests.",
         `<svg class="chart" id="work-chart" height="190" role="img" aria-label="Adults and elders milking and farming over 3600 days"></svg>` +
         legend([["work-milk", "Milking"], ["work-rice", "On the rice"], ...(energy ? [["work-kids", "Children helping"]] : []),
@@ -459,10 +586,55 @@
       scales.attr = f;
     }
 
+    // Several of the main run's series as lines (series: [[css class, array]]), with a cursor dot on the
+    // one in dotClass; minTop: the least the y-axis reaches
+    function drawLines(name, series, dotClass, minTop) {
+      const pm = c.result.people.main;
+      let yMax = minTop;
+      for (const [, arr] of series) for (let i = 0; i <= pm.last; i++) yMax = Math.max(yMax, arr[i]);
+      const f = frame(name + "-chart", 190, yMax * 1.1), { x, y, step } = f;
+      f.svg.innerHTML = f.s + series.map(([cls, arr]) => {
+        let d = "";
+        for (let i = 0; i <= pm.last; i += step) d += (i ? "L" : "M") + x(i).toFixed(1) + " " + y(arr[i]).toFixed(1);
+        return `<path class="res-line ${cls}" d="${d}"/>`;
+      }).join("") + cursorLine(name + "-line", f) + `<circle class="dot ${dotClass}" id="${name}-dot" r="4"/>`;
+      scales[name] = f;
+    }
+    function drawResRows() {
+      const pm = c.result.people.main, day = currentDay(), i = Math.min(day, pm.last), sh = c.result.sheep.main;
+      let wool = 0, stone = 0, wood = 0, work = 0;
+      for (let k = 1; k <= pm.last; k++) { wool += pm.woolMade[k]; stone += pm.stoneMade[k]; wood += pm.woodMade[k]; work += pm.resWork[k]; }
+      $("res-day").innerHTML = `<dt class="sub">Day ${fmt(day)}</dt>
+        <dt>Adult sheep / wool on them</dt><dd>${fmt(sh.adults[day])} / ${day <= pm.last && pm.counts[i] > 0 ? fmt(pm.woolOnSheep[i]) : "—"}</dd>
+        <dt>Energy on resources</dt><dd>${fmt(pm.resWork[i])}</dd>
+        <dt>Brought in: wool / timber / stone</dt><dd>${fmt(pm.woolMade[i])} / ${fmt(pm.woodMade[i])} / ${fmt(pm.stoneMade[i])}</dd>
+        <dt>In store: wool / timber / stone</dt><dd>${fmt(pm.wool[i])} / ${fmt(pm.wood[i])} / ${fmt(pm.stone[i])}</dd>`;
+      $("res-run").innerHTML = `<dt class="sub">Whole run</dt>
+        <dt>Energy on resources</dt><dd>${fmt(work)}</dd>
+        <dt>Wool / timber / stone</dt><dd>${fmt(wool)} / ${fmt(wood)} / ${fmt(stone)}</dd>
+        <dt>Sheep herds surviving</dt><dd>${c.result.sheep.alive}/${RUNS}</dd>`;
+    }
+    function drawCraftRows() {
+      const pm = c.result.people.main, day = currentDay(), i = Math.min(day, pm.last);
+      let work = 0, done = 0;
+      for (let k = 1; k <= pm.last; k++) { work += pm.craftWork[k]; done += pm.craftDone[k]; }
+      const items = (pick) => CRAFTS.map((it, k) => `${it.zh} ${fmt(pick(k))}`).join(" · ");
+      $("craft-day").innerHTML = `<dt class="sub">Day ${fmt(day)}</dt>
+        <dt>Crafters at work</dt><dd>${fmt(pm.crafting[i])}</dd>
+        <dt>Energy on crafts</dt><dd>${fmt(pm.craftWork[i])}</dd>
+        <dt>Finished today</dt><dd>${fmt(pm.craftDone[i])}</dd>
+        <dt>In store</dt><dd>${items((k) => pm.crafts[k][i])}</dd>`;
+      $("craft-run").innerHTML = `<dt class="sub">Whole run</dt>
+        <dt>Energy on crafts</dt><dd>${fmt(work)}</dd>
+        <dt>Items finished</dt><dd>${fmt(done)}</dd>`;
+    }
     function drawStatics() {
       drawVerdict();
       drawTimeChart();
       drawFoodChart();
+      const pm = c.result.people.main;
+      if (def.resources) drawLines("res", [["res-wool", pm.wool], ["res-wood", pm.wood], ["res-stone", pm.stone]], "res-stone", 50);
+      if (def.craft) drawLines("craft", CRAFTS.map((it, k) => [`craft-${it.id}`, pm.crafts[k]]), "craft-clothes", 5);
       if (!none) drawWorkChart();
       if (def.inherit) drawAttrChart();
     }
@@ -488,6 +660,8 @@
         }
       }
       moveCursor("food", "food-line", "food-dot", pm.riceStored[i]);
+      if (def.resources) moveCursor("res", "res-line", "res-dot", pm.stone[i]);
+      if (def.craft) moveCursor("craft", "craft-line", "craft-dot", pm.crafts[0][i]);
       if (!none) moveCursor("work", "work-line", "work-dot", pm.adults[day]);
       if (def.inherit) moveCursor("attr", "attr-line", "attr-dot", pm.counts[i] > 0 ? pm.pow[i] : null);
     }
@@ -516,8 +690,9 @@
         `<dt>Milking / on the rice / idle</dt><dd>${fmt(pm.milkers[i])} / ${fmt(pm.farm[i])} / ${fmt(idle)}</dd>` + (energy
           ? `<dt>Children helping</dt><dd>${fmt(pm.kidsWork[i])}</dd>
              <dt>Work done: milking / rice</dt><dd>${fmt(pm.milkWork[i] * DAY_ENERGY)} / ${fmt(pm.farmWork[i] * DAY_ENERGY)} energy</dd>
+             <dt>Walking, all workers</dt><dd>${fmt(pm.walk[i], 1)} h</dd>
              <dt>Cows not fully milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - Math.floor((pm.milkWork[i] * DAY_ENERGY) / cowE + 1e-6)))} of ${fmt(pm.cows[i])}</dd>`
-          : `<dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - pm.milkers[i]))} of ${fmt(pm.cows[i])}</dd>`)) +
+          : `<dt>Walking, all workers</dt><dd>${fmt(pm.walk[i], 1)} h</dd><dt>Cows not milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - pm.milkers[i]))} of ${fmt(pm.cows[i])}</dd>`)) +
         `<dt>Milk ${made} / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>` + (none ? "" :
           `<dt>${energy ? "This year's crop, of the most" : "This year's rice crop"}</dt><dd>${crop}</dd><dt>Rice still in the field</dt><dd>${milkText(pm.field[i])}</dd>`) +
         `<dt>Rice harvested / eaten</dt><dd>${milkText(pm.riceMade[i])} / ${milkText(pm.riceEaten[i])}</dd>
@@ -548,11 +723,11 @@
         <dt>Lesson</dt><dd>${has && pm.kids[i] ? fmt(pm.lesson[i], 1) + " h" : "—"}</dd>
         <dt>Knowledge taken home</dt><dd>${fmt(pm.taught[i])}</dd>
         <dt>Intelligence gained</dt><dd>+${fmt(pm.gained[i])}</dd>
-        <dt>Scholar's reading</dt><dd>${has ? `${fmt(pm.read[i])} knowledge${pm.readGained[i] ? `, +${fmt(pm.readGained[i])} Intelligence` : ""}` : "—"}</dd>`;
+        <dt>Scholar's poetry</dt><dd>${has ? `${fmt(pm.read[i])} knowledge${pm.readGained[i] ? `, +${fmt(pm.readGained[i])} Intelligence` : ""}` : "—"}</dd>`;
       $("school-run").innerHTML = `<dt class="sub">Whole run</dt>
         <dt>Scholars picked</dt><dd>${fmt(picked)}</dd><dt>Days with a scholar</dt><dd>${fmt(schoolDays)}</dd>
         <dt>Knowledge taken home</dt><dd>${fmt(taught)}</dd><dt>Intelligence gained, all children</dt><dd>+${fmt(gained)}</dd>
-        <dt>Scholars' reading</dt><dd>${fmt(read)} knowledge, +${fmt(readGained)} Intelligence</dd>`;
+        <dt>Scholars' poetry</dt><dd>${fmt(read)} knowledge, +${fmt(readGained)} Intelligence</dd>`;
     }
 
     // ---------- Farm drawing ----------
@@ -574,6 +749,15 @@
       ctx.fillStyle = col.body; ctx.beginPath(); ctx.ellipse(14, -4, 4.6, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = col.muzzle; ctx.beginPath(); ctx.ellipse(17, -2.5, 2.2, 1.8, 0, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.moveTo(11, -7); ctx.lineTo(9, -10); ctx.moveTo(-12, -1); ctx.quadraticCurveTo(-15, 3, -14, 7); ctx.stroke();
+      ctx.restore();
+    }
+    function drawSheep(ctx, cx, cy, s, face, col) {
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(face * s, s);
+      ctx.lineWidth = 1.3 / s; ctx.strokeStyle = col.woolEdge;
+      ctx.beginPath(); for (const lx of [-5, -2, 3, 6]) { ctx.moveTo(lx, 3); ctx.lineTo(lx, 9); } ctx.strokeStyle = col.sheepFace; ctx.stroke();
+      ctx.strokeStyle = col.woolEdge; ctx.fillStyle = col.wool;
+      for (const [bx, by, r] of [[-6, 0, 4.5], [-1, -2.5, 5], [4, 0, 4.5], [0, 2, 5]]) { ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = col.sheepFace; ctx.beginPath(); ctx.ellipse(10, -2, 3.2, 2.6, 0.2, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
     // Men wear a straight tunic, women a flared dress. Elders have white hair and a stick.
@@ -604,22 +788,26 @@
       const col = {
         body: cssVar("--cow-body"), spot: cssVar("--cow-spot"), muzzle: cssVar("--cow-muzzle"),
         ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), skin: cssVar("--skin"), hair: cssVar("--wool"),
+        wool: cssVar("--wool"), woolEdge: cssVar("--wool-edge"), sheepFace: cssVar("--sheep-face"),
       };
       const base = clamp(w / 700, 0.75, 1.15), all = [];
       const place = (key, age, kind, extra) => all.push({ kind, age, ...extra, x: 0.03 + hash01(key) * 0.94, y: 0.3 + hash01(key + 1) * 0.62, face: hash01(key + 2) < 0.5 ? 1 : -1, spot: hash01(key + 3) });
       const csnap = cows.snaps[day];
       for (let i = 0; i < csnap.length; i += 2) place(csnap[i] * 16, csnap[i + 1], "cows");
+      const ssnap = c.result.sheep ? c.result.sheep.main.snaps[day] : null;
+      if (ssnap) for (let i = 0; i < ssnap.length; i += 2) place(ssnap[i] * 16 + 4, ssnap[i + 1], "sheep");
       const psnap = pm.snaps[pi] || new Int32Array(0);
       for (let i = 0; i < psnap.length; i += 3) place(psnap[i] * 16 + 8, psnap[i + 1], "people", { male: psnap[i + 2] === HumanModel.MALE, elder: psnap[i + 1] >= c.UP.E });
       all.sort((a, b) => a.y - b.y);
       for (const a of all) {
-        const grown = 0.55 + 0.45 * Math.min(1, a.age / (a.kind === "people" ? c.UP.M : c.HP.M));
+        const grown = 0.55 + 0.45 * Math.min(1, a.age / (a.kind === "people" ? c.UP.M : c.HP.M));   // cows and sheep share the herd's adult age
         const s = base * (0.7 + a.y * 0.45) * grown;
         if (a.kind === "cows") drawCow(ctx, a.x * w, a.y * h, s, a.face, a.spot, col);
+        else if (a.kind === "sheep") drawSheep(ctx, a.x * w, a.y * h, s * 0.85, a.face, col);
         else drawPerson(ctx, a.x * w, a.y * h, s * 1.05, a.male, col, a.elder);
       }
       const milk = none ? `${fmt(Math.floor(cows.adults[day] * FoodModel.milkPerDay(c.F)))} milk` : `${milkText(pm.made[pi])} milk collected`;
-      $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows · ${fmt(pm.counts[pi])} people · ${milk} · ${milkText(pm.riceStored[pi])} rice stored${pm.foodStored[pi] > 0 ? ` · ${milkText(pm.foodStored[pi])} starting food` : ""}`;
+      $("readout").textContent = `Day ${fmt(day)} (year ${fmt(day / YEAR, 1)}) · ${fmt(cows.counts[day])} cows${c.result.sheep ? ` · ${fmt(c.result.sheep.main.counts[day])} sheep` : ""} · ${fmt(pm.counts[pi])} people · ${milk} · ${milkText(pm.riceStored[pi])} rice stored${pm.foodStored[pi] > 0 ? ` · ${milkText(pm.foodStored[pi])} starting food` : ""}`;
       const people = () => {
         if (day > pm.last) return "<b>People</b> run stopped";
         const hungry = pm.hungry[pi] ? ` (${fmt(pm.hungry[pi])} from hunger)` : "";
@@ -668,6 +856,8 @@
       drawCursors();
       if (def.school) drawSchoolRows();
       drawFoodRows();
+      if (def.resources) drawResRows();
+      if (def.craft) drawCraftRows();
       drawFarm();
       drawStats();
       const day = currentDay();
@@ -724,7 +914,8 @@
       recompute();
     });
     // Follow the other pages when they're changed in another tab
-    window.addEventListener("storage", (e) => { if (upstream.includes(e.key)) recompute(); });
+    window.addEventListener("storage", (e) => { if (upstream.includes(e.key) || (at("production") && (e.key === RolesModel.STORE_KEY || e.key === RolesModel.PRIORITY_KEY))) recompute(); });
+    if (at("production")) window.addEventListener("roles-change", () => recompute());
     let resizeTimer = 0;
     new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawStatics(); drawFrame(); }, 60); }).observe(document.querySelector("main"));
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -736,5 +927,5 @@
     return c;
   }
 
-  window.VillagePage = { start, ATTR, INHERIT, readSaved };
+  window.VillagePage = { start, SPECS, CRAFTS, readSaved, schoolOf };
 })();

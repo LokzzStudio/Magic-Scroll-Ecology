@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resources</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<link rel="stylesheet" href="village.css">
+</head>
+<body>
+<nav class="sidenav" aria-label="Pages" data-page="resources.html"></nav>
+<script src="roles-model.js"></script>
+<script src="site.js"></script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="top-actions">
+      <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Resources</h1>
+    <p class="lede">The Education page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b> and a <b>mine</b>. Once every food job is filled, grown-ups with energy to spare go out a load at a time: while timber is short, one of them <b>cuts wood (伐木)</b>; the rest go to their own jobs, women <b>shearing wool (採羊毛)</b> and men <b>quarrying stone (採石)</b>. Nothing uses these yet, so wool and stone pile up and timber stays at its target; food and school work just as on the Education page.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>Wool per sheep, how fast it regrows, the timber to keep, and what 1 energy collects</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> (cows and sheep alike) · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a>, and the Jobs table</dd>
+        <dt>Used by</dt><dd><a href="craft.html">Craft</a> builds on it</dd>
+      </dl>
+    </aside>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="resources">
+        <div class="section-head">
+          <h2>Resources</h2>
+          <p class="scope">Sheep, forest and mine; this page only</p>
+        </div>
+        <p class="hint">Sheep follow the cows' herd rules exactly (same settings, their own luck) and live on the pasture. Only energy left after every food job is filled goes to resources, so resources never cost food. While timber is under its target, the first idle grown-up who may cut wood goes to the forest. The others: women shear first and men quarry first; anyone whose first job isn't possible (no wool left on the sheep, or barred in the <b>Jobs</b> table) turns to the other.</p>
+        <div class="param">
+          <div class="param-head">
+            <label for="fl-num">Wool per sheep</label>
+            <span class="num-wrap"><input id="fl-num" type="number"><span class="unit">wool</span></span>
+          </div>
+          <input id="fl-range" type="range" aria-label="Most wool one adult sheep carries">
+          <p class="hint">A full fleece. Sheep come of age with one.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="rg-num">Wool regrows</label>
+            <span class="num-wrap"><input id="rg-num" type="number"><span class="unit">a day</span></span>
+          </div>
+          <input id="rg-range" type="range" aria-label="Wool each sheep grows back a day">
+          <p class="hint" id="rg-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head eq">
+            <label for="wpe-num">Shearing</label>
+            <span class="num-wrap"><span class="unit">1 energy =</span><input id="wpe-num" type="number"><span class="unit">wool</span></span>
+          </div>
+          <input id="wpe-range" type="range" aria-label="Wool 1 energy of shearing collects">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wt-num">Keep timber at</label>
+            <span class="num-wrap"><input id="wt-num" type="number"><span class="unit">timber</span></span>
+          </div>
+          <input id="wt-range" type="range" aria-label="Timber to keep in store">
+          <p class="hint">While there's less in store, one idle grown-up at a time cuts wood, before any shearing or quarrying.</p>
+        </div>
+        <div class="param">
+          <div class="param-head eq">
+            <label for="tpe-num">Woodcutting</label>
+            <span class="num-wrap"><span class="unit">1 energy =</span><input id="tpe-num" type="number"><span class="unit">timber</span></span>
+          </div>
+          <input id="tpe-range" type="range" aria-label="Timber 1 energy of woodcutting collects">
+        </div>
+        <div class="param">
+          <div class="param-head eq">
+            <label for="spe-num">Quarrying</label>
+            <span class="num-wrap"><span class="unit">1 energy =</span><input id="spe-num" type="number"><span class="unit">stone</span></span>
+          </div>
+          <input id="spe-range" type="range" aria-label="Stone 1 energy of quarrying collects">
+          <p class="hint">The forest and the mine never run out.</p>
+        </div>
+        <p class="hint" id="assign-hint"></p>
+      </section>
+    </aside>
+    <main></main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script src="food-model.js"></script>
+<script src="ration-model.js"></script>
+<script src="map-model.js"></script>
+<script src="village-model.js"></script>
+<script src="village-page.js"></script>
+<script>
+// Resources: the Education page, plus sheep, a forest and a mine
+VillagePage.start({
+  key: "resources", work: "energy", inherit: true, school: true, resources: true,
+  inputs: [
+    { id: "fl", key: "fleece" },
+    { id: "rg", key: "regrow" },
+    { id: "wpe", key: "woolPerEnergy" },
+    { id: "wt", key: "woodTarget" },
+    { id: "tpe", key: "woodPerEnergy" },
+    { id: "spe", key: "stonePerEnergy" },
+  ],
+  drawPanel(c) {
+    const { S, $, fmt } = c;
+    $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
+    $("assign-hint").innerHTML = `<b>Who collects what.</b> Idle grown-ups carry ${fmt(c.M.load)} energy's worth home at a time, then set off again. Each time, if timber is under ${fmt(S.woodTarget)}, the first of them who may cut wood goes to the forest; the rest go to their own jobs: women to the sheep, men to the mine. When the sheep are bare, women turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them.`;
+  },
+});
+</script>
+<script src="rules.js"></script>
+</body>
+</html>

@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="farm.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -113,6 +114,7 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
@@ -129,7 +131,6 @@ VillagePage.start({
     { id: "eff", key: "milkPerEnergy", obj: "F", ...lim("milkPerEnergy"), step: 0.1, round: "none" },
     { id: "mcap", key: "milkCap", obj: "F", ...lim("milkCap"), step: 1, round: "int" },
   ],
-  config: () => ({ advisor: null }),
   drawPanel(c) {
     const { F, UP, US, fmt, milkText, $, YEAR } = c, HARVEST_FIRST = 181, HARVEST_LAST = 210, HARVEST_DAYS = 30;
     const milkPerCow = FoodModel.milkPerDay(F), cowE = FoodModel.cowEnergyOf(F), fieldE = FoodModel.fieldEnergyOf(F), eats = YEAR * UP.c;

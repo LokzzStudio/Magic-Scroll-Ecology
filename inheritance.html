@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="inheritance.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -29,7 +30,7 @@
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Share passed on, variation at birth, coming-of-age bonus and the children's extra food</dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="attribute.html">Attribute</a> (starting Power and Intelligence), with the <a href="production.html">Production</a> page's work rules</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> (starting Power and Intelligence), with the <a href="production.html">Production</a> page's work rules</dd>
         <dt>Used by</dt><dd><a href="education.html">Education</a></dd>
       </dl>
     </aside>
@@ -97,21 +98,20 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Inheritance: children take after their parents; the settings here are shared with the Education page
 VillagePage.start({
-  key: "inheritance", storeKey: "inheritance-v5", work: "energy", inherit: true,
-  defaults: VillagePage.INHERIT.defaults,
+  key: "inheritance", work: "energy", inherit: true,
   inputs: [
-    { id: "share", key: "share", lo: 0, hi: 1, step: 0.05 },
-    { id: "vary", key: "variation", lo: 0, hi: 50, step: 1 },
-    { id: "grow", key: "grow", lo: 0, hi: 100, step: 5 },
-    { id: "cap", key: "extraCap", lo: 0, hi: 20, step: 1 },
-    { id: "fpp", key: "foodPerPower", lo: 1, hi: 50, step: 1 },
+    { id: "share", key: "share" },
+    { id: "vary", key: "variation" },
+    { id: "grow", key: "grow" },
+    { id: "cap", key: "extraCap" },
+    { id: "fpp", key: "foodPerPower" },
   ],
-  config: (c) => ({ advisor: c.R.advisor ? c.R.iq : null, attrs: { power: c.A.power, intel: c.A.intel }, elderAttr: 1 - c.A.elderPenalty / 100, inherit: c.IH }),
   // The same villages without inheritance: everyone always has the starting attributes
   compare: (c) => { c.result.inheritCompare = { now: c.result.people.alive, flat: c.aliveWith({ inherit: null }) }; },
   drawPanel(c) {

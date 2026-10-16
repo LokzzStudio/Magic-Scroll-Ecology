@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="attribute.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -29,7 +30,7 @@
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a>, with the <a href="production.html">Production Model</a>'s work rules</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a> · <a href="map.html">Map</a>, with the <a href="production.html">Production Model</a>'s work rules</dd>
         <dt>Used by</dt><dd><a href="inheritance.html">Inheritance</a>, for its starting grown-ups</dd>
       </dl>
     </aside>
@@ -83,19 +84,18 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Attribute: everyone works with their own Power and Intelligence, set here
 VillagePage.start({
-  key: "attribute", storeKey: "attribute-v4", work: "energy",
-  defaults: { power: 100, intel: 100, elderPenalty: 20 },
+  key: "attribute", work: "energy",
   inputs: [
-    { id: "pow", key: "power", lo: 0, hi: 300, step: 5 },
-    { id: "int", key: "intel", lo: 0, hi: 300, step: 5 },
-    { id: "eld", key: "elderPenalty", lo: 0, hi: 50, step: 5 },
+    { id: "pow", key: "power" },
+    { id: "int", key: "intel" },
+    { id: "eld", key: "elderPenalty" },
   ],
-  config: (c) => ({ advisor: c.R.advisor ? c.R.iq : null, attrs: { power: c.S.power, intel: c.S.intel }, elderAttr: 1 - c.S.elderPenalty / 100 }),
   // The same villages with everyone at a standard 100 and 100
   compare: (c) => {
     const isDefault = c.S.power === 100 && c.S.intel === 100;

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Craft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<link rel="stylesheet" href="village.css">
+</head>
+<body>
+<nav class="sidenav" aria-label="Pages" data-page="craft.html"></nav>
+<script src="roles-model.js"></script>
+<script src="site.js"></script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="top-actions">
+      <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Craft</h1>
+    <p class="lede">The Resources page, with crafts. Once every food job is filled, idle women <b>weave (紡織)</b> wool into <b>衣 clothes</b> or <b>笠 hats</b>, and idle men <b>forge (鍛造)</b> stone into <b>刀 blades</b> or <b>叉 hayforks</b>, at the house. A craft takes its materials up front and is worked until it's done; there's one loom and one forge, so one weaver and one smith at a time. Nothing uses the crafts yet, so they only pile up; food and school work just as on the Education page.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>What each craft costs in materials and energy</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="resources.html">Resources</a>, and the Jobs table</dd>
+        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+      </dl>
+    </aside>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="craft">
+        <div class="section-head">
+          <h2>Craft</h2>
+          <p class="scope">What each craft takes; this page only</p>
+        </div>
+        <p class="hint">Crafting is at the house, so there's no walking. Who may weave or forge is set with the <b>Jobs</b> button (by default: women weave, men forge).</p>
+        <div class="param">
+          <div class="param-head">
+            <label for="clc-num">衣 Clothes <small class="unit">紡織</small></label>
+            <span class="num-wrap"><input id="clc-num" type="number"><span class="unit">wool</span></span>
+          </div>
+          <input id="clc-range" type="range" aria-label="wool one clothes takes">
+          <div class="param-head">
+            <span class="hint">Energy to make one</span>
+            <span class="num-wrap"><input id="cle-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="cle-range" type="range" aria-label="Energy one clothes takes">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="htc-num">笠 Hat <small class="unit">紡織</small></label>
+            <span class="num-wrap"><input id="htc-num" type="number"><span class="unit">wool</span></span>
+          </div>
+          <input id="htc-range" type="range" aria-label="wool one hat takes">
+          <div class="param-head">
+            <span class="hint">Energy to make one</span>
+            <span class="num-wrap"><input id="hte-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="hte-range" type="range" aria-label="Energy one hat takes">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="blc-num">刀 Blade <small class="unit">鍛造</small></label>
+            <span class="num-wrap"><input id="blc-num" type="number"><span class="unit">stone</span></span>
+          </div>
+          <input id="blc-range" type="range" aria-label="stone one blade takes">
+          <div class="param-head">
+            <span class="hint">Energy to make one</span>
+            <span class="num-wrap"><input id="ble-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="ble-range" type="range" aria-label="Energy one blade takes">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="fkc-num">叉 Hayfork <small class="unit">鍛造</small></label>
+            <span class="num-wrap"><input id="fkc-num" type="number"><span class="unit">stone</span></span>
+          </div>
+          <input id="fkc-range" type="range" aria-label="stone one hayfork takes">
+          <div class="param-head">
+            <span class="hint">Energy to make one</span>
+            <span class="num-wrap"><input id="fke-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="fke-range" type="range" aria-label="Energy one hayfork takes">
+        </div>
+        <p class="hint" id="craft-hint"></p>
+      </section>
+    </aside>
+    <main></main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script src="food-model.js"></script>
+<script src="ration-model.js"></script>
+<script src="map-model.js"></script>
+<script src="village-model.js"></script>
+<script src="village-page.js"></script>
+<script>
+// Craft: the Resources page, plus weaving and forging at the house
+const IDS = { clothes: "cl", hat: "ht", blade: "bl", fork: "fk" };
+VillagePage.start({
+  key: "craft", work: "energy", inherit: true, school: true, resources: true, craft: true,
+  inputs: VillagePage.CRAFTS.flatMap((it) => [
+    { id: IDS[it.id] + "c", key: it.id + "Cost" },
+    { id: IDS[it.id] + "e", key: it.id + "Energy" },
+  ]),
+  drawPanel(c) {
+    const { S, $, fmt } = c;
+    $("craft-hint").innerHTML = `<b>One loom and one forge:</b> one person weaves and one forges a day. A craft takes its materials up front and is worked until it's done, even across days: by its crafter if they have energy left after the jobs above crafts in the <b>Priority</b> order, otherwise by the next idle grown-up who may. With nothing under way, a station starts the item the village has started fewest of, if the materials are in store. A standard worker (10 energy a day) with nothing else to do finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / 10))} days.`;
+  },
+});
+</script>
+<script src="rules.js"></script>
+</body>
+</html>

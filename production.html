@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="production.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -29,7 +30,7 @@
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd><span class="none">Nothing to tune; the work rules are fixed</span></dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a></dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a> · <a href="map.html">Map</a></dd>
         <dt>Used by</dt><dd><a href="attribute.html">Attribute Model</a> builds on its work rules</dd>
       </dl>
     </aside>
@@ -47,13 +48,13 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Production: one job a day per grown-up, each a standard day's work
 VillagePage.start({
   key: "production", storeKey: "production-v1", work: "hands",
-  config: (c) => ({ advisor: c.R.advisor ? c.R.iq : null }),
 });
 </script>
 <script src="rules.js"></script>

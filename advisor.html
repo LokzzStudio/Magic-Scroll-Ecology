@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="advisor.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -74,13 +75,13 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Advisor: nobody works; the advisor settings here are shared with every page after this one
 VillagePage.start({
   key: "advisor", storeKey: "advisor-v1", work: "none",
-  config: (c) => ({ advisor: c.R.advisor ? c.R.iq : null }),
   beforeRun: (c) => { c.R.iq = Math.round(c.clamp(Number(c.R.iq) || RationModel.DEFAULTS.iq, ...RationModel.IQ_RANGE)); },
   setup(c) {
     const { $ } = c;

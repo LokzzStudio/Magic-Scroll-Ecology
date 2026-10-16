@@ -12,6 +12,7 @@
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="education.html"></nav>
+<script src="roles-model.js"></script>
 <script src="site.js"></script>
 <header class="topbar">
   <div class="topbar-inner">
@@ -25,12 +26,12 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Education</h1>
-    <p class="lede">The Inheritance page, with a school. The village picks its adult with the highest <b>Intelligence (智力)</b> as <b>Scholar (文人)</b>, but only when it can spare them from the food work, and the scholar does no food work until they become an elder: they teach the children, and read (讀書) with any energy the lessons leave. A child takes home a share of what's taught, by how much energy they keep up with, and every 100 knowledge is +1 Intelligence for life. The scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
+    <p class="lede">The Inheritance page, with a school. The village picks its adult with the highest <b>Intelligence (智力)</b> as <b>Scholar (文人)</b>, but only when it can spare them from the food work, and the scholar does no food work until they become an elder: they teach the children, and spend any energy the lessons leave on poetry (吟詩). A child takes home a share of what's taught, by how much energy they keep up with, and every 100 knowledge is +1 Intelligence for life. The scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Knowledge effectiveness, knowledge per Intelligence for children and for the scholar's reading</dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a>, with the <a href="production.html">Production</a> page's work rules</dd>
-        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+        <dt>Set here</dt><dd>Knowledge effectiveness, knowledge per Intelligence for children and for the scholar's poetry</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a>, with the <a href="production.html">Production</a> page's work rules</dd>
+        <dt>Used by</dt><dd><a href="resources.html">Resources</a> builds on it</dd>
       </dl>
     </aside>
   </header>
@@ -42,14 +43,14 @@
           <h2>Education</h2>
           <p class="scope">One scholar teaches the children; this page only</p>
         </div>
-        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>. The village only appoints one when it can spare them: the grown-ups left must still fill every cow and all the fields, without the children. Once appointed, the scholar stays, even if food work later runs short, until they become an elder (then they're like any other elder) or die. The scholar does no other work: any energy the lessons leave, they spend reading. In the job, they works with more Intelligence and less Power (the scholar adjustment). Every child comes to class. The scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
+        <p class="hint">The village picks its adult with the highest Intelligence as <b>Scholar (文人)</b>. The village only appoints one when it can spare them: the grown-ups left must still fill every cow and all the fields, without the children. Once appointed, the scholar stays, even if food work later runs short, until they become an elder (then they're like any other elder) or die. The scholar does no other work: any energy the lessons leave, they spend on poetry. In the job, they work with more Intelligence and less Power (the scholar adjustment). Every child comes to class. The scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
         <div class="param">
           <div class="param-head eq">
             <label for="kpe-num">Knowledge effectiveness</label>
             <span class="num-wrap"><span class="unit">1 energy =</span><input id="kpe-num" type="number"><span class="unit">knowledge</span></span>
           </div>
           <input id="kpe-range" type="range" aria-label="Knowledge 1 energy of teaching gives">
-          <p class="hint">The knowledge each energy the scholar spends teaching or reading gives. A child's lesson lasts until the earlier of them or the scholar runs out of energy; the child takes home the share of it their own energy keeps up with (child's energy ÷ scholar's energy, at most all of it).</p>
+          <p class="hint">The knowledge each energy the scholar spends teaching or on poetry gives. A child's lesson lasts until the earlier of them or the scholar runs out of energy; the child takes home the share of it their own energy keeps up with (child's energy ÷ scholar's energy, at most all of it).</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -61,11 +62,11 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="rpi-num">Scholar's reading per +1 Intelligence</label>
+            <label for="rpi-num">Scholar's poetry per +1 Intelligence</label>
             <span class="num-wrap"><input id="rpi-num" type="number"><span class="unit">knowledge</span></span>
           </div>
-          <input id="rpi-range" type="range" aria-label="Knowledge the scholar reads for 1 more Intelligence">
-          <p class="hint">When no child is left in class (or none came), the scholar reads (讀書) with their remaining energy, at the same knowledge per energy. Their reading counts separately from what they learned as a child.</p>
+          <input id="rpi-range" type="range" aria-label="Knowledge from the scholar's poetry for 1 more Intelligence">
+          <p class="hint">When no child is left in class (or none came), the scholar spends their remaining energy on poetry (吟詩), at the same knowledge per energy. It counts separately from what they learned as a child.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -88,40 +89,23 @@
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
+<script src="map-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Education: a scholar teaches the children and advises on food
-const schoolOf = (S) => ({ knowPerEnergy: S.knowPerEnergy, knowPerIntel: S.knowPerIntel, readPerIntel: S.readPerIntel, shift: S.scholarShift });
-const firstScholarIQ = (c) => c.VM.scholarIQ({ intel: c.A.intel, age: c.UP.M }, c.UP, 1, schoolOf(c.S));
 VillagePage.start({
-  key: "education", storeKey: "education-v1", work: "energy", inherit: true, school: true,
-  defaults: { knowPerEnergy: 1, knowPerIntel: 100, readPerIntel: 500, scholarShift: 10 },
+  key: "education", work: "energy", inherit: true, school: true,
   inputs: [
-    { id: "kpe", key: "knowPerEnergy", lo: 0.1, hi: 5, step: 0.1 },
-    { id: "kpi", key: "knowPerIntel", lo: 10, hi: 500, step: 10 },
-    { id: "rpi", key: "readPerIntel", lo: 50, hi: 2000, step: 50 },
-    { id: "sch", key: "scholarShift", lo: 0, hi: 50, step: 5 },
+    { id: "kpe", key: "knowPerEnergy" },
+    { id: "kpi", key: "knowPerIntel" },
+    { id: "rpi", key: "readPerIntel" },
+    { id: "sch", key: "scholarShift" },
   ],
-  config: (c) => ({
-    advisor: c.R.advisor ? "scholar" : null, attrs: { power: c.A.power, intel: c.A.intel }, elderAttr: 1 - c.A.elderPenalty / 100,
-    inherit: c.IH, school: schoolOf(c.S),
-  }),
   // The same villages without a school, so without a scholar to advise on food
   compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: null }) }; },
-  rationHint: "The scholar is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor sets a ration: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest. Off means everyone eats what they need until it runs out.",
-  advisorChoice: (c) => ({ value: "scholar", label: `The scholar (IQ ${c.fmt(firstScholarIQ(c))} at the start)` }),
-  ration: (c) => {
-    const iq = firstScholarIQ(c), err = RationModel.iqError(iq), { fmt, PERFECT_IQ } = c;
-    return {
-      rows: [["", "Food advisor", c.R.advisor ? "on: the scholar, if there is one" : "off"], ["", "Advisor IQ", `the scholar's Intelligence at work, ${fmt(iq)} at the start`]],
-      hint: !c.R.advisor
-        ? "The advisor is off on the Advisor page, so the scholar only teaches and everyone eats what they need until the food runs out."
-        : `The first scholar's estimates are typically off by <b>±${fmt(err * 100)}%</b>${err === 0 ? " (spot on)" : ", with a lasting lean one way"}. Each new scholar brings their own lean, and a brighter one estimates better; while there's no scholar, nobody rations. From IQ ${PERFECT_IQ} on, a scholar is spot on.`,
-    };
-  },
   drawPanel(c) {
-    const { S, A, IH, UP, $, fmt, VM } = c, school = schoolOf(S), p = { M: UP.M, E: UP.E };
+    const { S, A, IH, UP, $, fmt, VM } = c, school = VillagePage.schoolOf(S), p = { M: UP.M, E: UP.E };
     $("sch-hint").innerHTML = `In the job, the scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>. It isn't passed on to their children.`;
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const scholar = { power: A.power, intel: A.intel, age: UP.M };
@@ -136,10 +120,10 @@ VillagePage.start({
       `<dt></dt><dd>Child at ${fmt(child.power)} / ${fmt(child.intel)}</dd><dd class="v">${fmt(w.energy)} energy, ${hoursText(w.rate > 0 ? w.energy / w.rate : 0)}</dd>` +
       `<dt></dt><dd>Lesson</dd><dd class="v">${hoursText(t.hours)}, ${fmt(t.knowledge)} knowledge</dd>` +
       `<dt></dt><dd>A year at that rate</dd><dd class="v">+${fmt(Math.floor((t.knowledge * c.YEAR) / S.knowPerIntel))} Intelligence</dd>` +
-      `<dt></dt><dd>Scholar reads, after class</dd><dd class="v">${fmt(readAfter)} knowledge a day</dd>` +
+      `<dt></dt><dd>Scholar's poetry, after class</dd><dd class="v">${fmt(readAfter)} knowledge a day</dd>` +
       `<dt></dt><dd>A year with no class</dd><dd class="v">+${fmt(Math.floor((readAlone * c.YEAR) / S.readPerIntel))} Intelligence</dd>`;
     const scholarFirst = sc.rate > 0 && w.rate > 0 && sc.energy / sc.rate < w.energy / w.rate;
-    $("class-hint").innerHTML = `${scholarFirst ? `Here the scholar runs out first, after ${hoursText(t.hours)}, so the child spends only part of their energy and the scholar has none left to read.` : `Here the child runs out first, after ${hoursText(t.hours)}, and the scholar reads with the rest.`} Children who learn grow brighter and keep up for longer, so they learn faster as they go. The scholar is taken off the food work until they become an elder, so a small village is a worker short.`;
+    $("class-hint").innerHTML = `${scholarFirst ? `Here the scholar runs out first, after ${hoursText(t.hours)}, so the child spends only part of their energy and the scholar has none left for poetry.` : `Here the child runs out first, after ${hoursText(t.hours)}, and the scholar spends the rest on poetry.`} Children who learn grow brighter and keep up for longer, so they learn faster as they go. The scholar is taken off the food work until they become an elder, so a small village is a worker short.`;
     const k = c.result.schoolCompare;
     $("school-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With a scholar", k.now, k.now >= k.none], ["No school, so no food advisor", k.none, k.none >= k.now]]);
   },

@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<link rel="stylesheet" href="village.css">
+<style>
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tools button {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; font: inherit; font-size: 13px;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; cursor: pointer;
+  }
+  .tools button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .tools .sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
+  .map-wrap { display: grid; justify-items: center; }
+  .map-grid {
+    display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; width: 100%; max-width: 560px;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  .tile {
+    aspect-ratio: 1; border-radius: 3px; background: var(--ground); border: 1px solid var(--line);
+    display: grid; place-items: center; font-size: clamp(9px, 2.1vw, 14px); line-height: 1; cursor: crosshair; color: var(--surface);
+  }
+  .tile.H, .sw.H { background: var(--ink); border-color: var(--ink); }
+  .tile.F, .sw.F { background: var(--allee); border-color: var(--allee); }
+  .tile.P, .sw.P { background: var(--pasture-far); border-color: var(--herd); }
+  .tile.P { color: var(--herd); }
+  .tile.T, .sw.T { background: var(--herd); border-color: var(--herd); }
+  .tile.M, .sw.M { background: var(--muted); border-color: var(--muted); }
+  .sw.E { background: var(--ground); }
+  .tile.near { outline: 2px solid var(--crash); outline-offset: -2px; font-family: var(--mono); font-weight: 500; }
+  .dist-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .dist-table th, .dist-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .dist-table th { font-weight: 600; color: var(--muted); font-size: 12.5px; }
+  .dist-table td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dist-table .lost { color: var(--crash); font-weight: 600; }
+  .table-scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<nav class="sidenav" aria-label="Pages" data-page="map.html"></nav>
+<script src="roles-model.js"></script>
+<script src="site.js"></script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="top-actions">
+      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Map</h1>
+    <p class="lede">Where the village's places are. Workers walk from the house to the pasture and the farm, and carry what they collect home every few energy of work. A day has 16 hours: up to 10 of work, and the rest for walking. When walking runs past that, the work gets cut, and idle grown-ups step in to finish it.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>The map, walking speed, how much a worker carries, and the day's hours</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> (for Reset only)</dd>
+        <dt>Used by</dt><dd><a href="production.html">Production</a> and every page after it</dd>
+      </dl>
+    </aside>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="map">
+        <div class="section-head">
+          <h2>Map</h2>
+          <p class="scope">Used by Production and every page after it</p>
+        </div>
+        <div class="tools" role="group" aria-label="What to place" id="tools"></div>
+        <p class="hint">Pick a place, then click or drag on the map. Distance is counted in steps (no diagonals) from the nearest house to the nearest tile of each kind, so extra tiles further away don't matter. The forest (timber) and the mine (stone) are worked on the Resources page.</p>
+        <div class="btn-row"><button type="button" class="btn" id="default-map">Default map</button><button type="button" class="btn" id="clear-map">Clear map</button></div>
+      </section>
+      <section class="panel-section" id="walking">
+        <div class="section-head">
+          <h2>Walking</h2>
+          <p class="scope">How far a day's walking goes</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="mpt-num">Walking one tile</label>
+            <span class="num-wrap"><input id="mpt-num" type="number"><span class="unit">min</span></span>
+          </div>
+          <input id="mpt-range" type="range" aria-label="Minutes to walk one tile">
+          <p class="hint" id="mpt-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="load-num">Carried home every</label>
+            <span class="num-wrap"><input id="load-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="load-range" type="range" aria-label="Energy of collecting before carrying it home">
+          <p class="hint">After this much collecting (milking or harvest), a worker walks home with it and back. A part load at the end of the day counts as a trip. Tending the rice has nothing to carry: one trip a day.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="day-num">Hours in a day</label>
+            <span class="num-wrap"><input id="day-num" type="number"><span class="unit">h</span></span>
+          </div>
+          <input id="day-range" type="range" aria-label="Hours a day for work and walking">
+          <p class="hint" id="day-hint"></p>
+        </div>
+      </section>
+    </aside>
+
+    <main>
+      <section class="card" aria-label="Map">
+        <div class="card-head"><h2>Map</h2><p>The red-outlined tiles are each kind's nearest to a house, with their distance.</p></div>
+        <div class="map-wrap"><div class="map-grid" id="grid" role="grid" aria-label="Village map, 16 by 16 tiles"></div></div>
+      </section>
+      <section class="card" aria-label="Distances">
+        <div class="card-head"><h2>Distances and a worker's day</h2><p>How much of a day's work fits once the walking is counted.</p></div>
+        <div class="table-scroll"><table class="dist-table" id="dist"></table></div>
+        <p class="hint" id="dist-hint"></p>
+      </section>
+      <section class="card impl" id="rules" data-page="map" aria-label="Implementation details"><div class="card-head"><h2>Implementation details</h2><p>Every rule this page sets, for building it into the game. Numbers are the defaults.</p></div><div class="rules-body"></div></section>
+    </main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script src="food-model.js"></script>
+<script src="ration-model.js"></script>
+<script src="map-model.js"></script>
+<script src="village-model.js"></script>
+<script>
+(() => {
+  const { W, H, TYPES, DEFAULTS, LIMITS, STORE_KEY } = MapModel;
+  const VM = VillageModel;
+  const $ = (id) => document.getElementById(id);
+  const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+  const GLYPH = { H: "屋", F: "田", P: "牧", T: "林", M: "礦" };
+  // The pages this one follows, cleared by Reset with it
+  const UPSTREAM = [HerdModel.STORE_KEY, HumanModel.STORE_KEY, FoodModel.STORE_KEY, RationModel.STORE_KEY];
+
+  let M = MapModel.savedParams() || { ...DEFAULTS };
+  let tool = "H";
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(M)); } catch (e) {} };
+
+  // ---------- Tools ----------
+  $("tools").innerHTML = [...TYPES, { id: ".", name: "Erase" }].map((t) =>
+    `<button type="button" data-tool="${t.id}" aria-pressed="${t.id === tool}"><span class="sw ${t.id === "." ? "E" : t.id}"></span>${t.name}</button>`).join("");
+  $("tools").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-tool]");
+    if (!b) return;
+    tool = b.dataset.tool;
+    for (const x of $("tools").querySelectorAll("button")) x.setAttribute("aria-pressed", x === b);
+  });
+
+  // ---------- Grid ----------
+  const grid = $("grid");
+  grid.innerHTML = Array.from({ length: W * H }, (_, i) => `<div class="tile" role="gridcell" data-i="${i}"></div>`).join("");
+  const cells = [...grid.children];
+  let painting = false;
+  const paint = (cell) => {
+    if (!cell || cell.dataset.i === undefined) return;
+    const i = Number(cell.dataset.i);
+    if (M.tiles[i] === tool) return;
+    M.tiles = M.tiles.slice(0, i) + tool + M.tiles.slice(i + 1);
+    draw();
+  };
+  grid.addEventListener("pointerdown", (e) => { painting = true; grid.setPointerCapture(e.pointerId); paint(e.target.closest(".tile")); });
+  grid.addEventListener("pointermove", (e) => { if (painting) paint(document.elementFromPoint(e.clientX, e.clientY)?.closest(".tile")); });
+  const stopPaint = () => { if (painting) { painting = false; save(); } };
+  grid.addEventListener("pointerup", stopPaint);
+  grid.addEventListener("pointercancel", stopPaint);
+
+  // ---------- Sliders ----------
+  const INPUTS = [["mpt", "minPerTile", 1], ["load", "load", 1], ["day", "dayHours", 1]];
+  function syncInputs() {
+    for (const [id, key, step] of INPUTS) {
+      const [lo, hi] = LIMITS[key];
+      const v = Number(M[key]);
+      M[key] = isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v / step) * step)) : DEFAULTS[key];
+      const range = $(id + "-range"), num = $(id + "-num");
+      range.min = num.min = lo; range.max = num.max = hi; range.step = num.step = step;
+      range.value = M[key];
+      if (document.activeElement !== num) num.value = M[key];
+    }
+  }
+  for (const [id, key] of INPUTS) {
+    const changed = (v) => { if (isFinite(v) && v !== "") { M[key] = Number(v); draw(); save(); } };
+    $(id + "-range").addEventListener("input", (e) => { $(id + "-num").value = e.target.value; changed(e.target.value); });
+    $(id + "-num").addEventListener("input", (e) => changed(e.target.value));
+    $(id + "-num").addEventListener("change", () => { syncInputs(); draw(); save(); });
+  }
+
+  // ---------- Drawing ----------
+  // A worker's day at a place `trip` hours there and back: [work done, walking hours]
+  const dayAt = (energy, rate, trip, collect) => {
+    if (!isFinite(trip)) return null;
+    const done = VM.workCap(energy, rate, M.dayHours, trip, M.load, collect);
+    return [done, VM.tripsFor(done, M.load, collect) * trip];
+  };
+  const dayText = (energy, rate, trip, collect) => {
+    const r = dayAt(energy, rate, trip, collect);
+    if (!r) return "—";
+    const [done, walk] = r;
+    return `${fmt(walk, 1)} h walking · ${done >= energy ? `all ${fmt(energy)} energy` : `<span class="lost">${fmt(done)} of ${fmt(energy)} energy</span>`}`;
+  };
+  // The furthest a place can be before walking cuts a worker's collecting
+  const freeUpTo = (energy, rate) => {
+    let d = 0;
+    while (d < 100 && VM.workCap(energy, rate, M.dayHours, MapModel.tripHours(d + 1, M), M.load, true) >= energy) d++;
+    return d;
+  };
+
+  function draw() {
+    syncInputs();
+    const d = MapModel.distances(M.tiles);
+    // Each kind's nearest tile to a house, outlined with its distance
+    const near = {};
+    const houses = [];
+    for (let i = 0; i < M.tiles.length; i++) if (M.tiles[i] === "H") houses.push([i % W, Math.floor(i / W)]);
+    for (const c of MapModel.PLACES) {
+      for (let i = 0; i < M.tiles.length && isFinite(d[c]); i++) {
+        if (M.tiles[i] !== c) continue;
+        const x = i % W, y = Math.floor(i / W);
+        if (houses.some(([hx, hy]) => Math.abs(x - hx) + Math.abs(y - hy) === d[c])) { near[i] = d[c]; break; }
+      }
+    }
+    cells.forEach((el, i) => {
+      const c = M.tiles[i];
+      el.className = "tile" + (c !== "." ? " " + c : "") + (i in near ? " near" : "");
+      el.textContent = i in near ? near[i] : c !== "." ? GLYPH[c] : "";
+      const name = c === "." ? "empty" : TYPES.find((t) => t.id === c).name;
+      el.setAttribute("aria-label", `${name}, column ${(i % W) + 1}, row ${Math.floor(i / W) + 1}`);
+    });
+
+    const trip = (c) => MapModel.tripHours(d[c], M);
+    const distText = (c) => (isFinite(d[c]) ? `${fmt(d[c])} tiles` : houses.length ? "none placed" : "no house");
+    const tripText = (c) => (isFinite(d[c]) ? `${fmt(trip(c), 1)} h` : "—");
+    const row = (label, c, collect) => `<tr><td>${label}</td><td class="n">${distText(c)}</td><td class="n">${tripText(c)}</td>` +
+      `<td class="n">${collect === null ? "no use yet" : dayText(10, 1, trip(c), collect)}</td><td class="n">${collect === null ? "" : dayText(16, 1.6, trip(c), collect)}</td></tr>`;
+    $("dist").innerHTML = `<thead><tr><th>Place</th><th>Distance</th><th>There and back</th><th>Standard worker (100/100)</th><th>Strong worker (160/160)</th></tr></thead><tbody>` +
+      row("Pasture: milking", "P", true) + row("Farm: harvest", "F", true) + row("Farm: tending", "F", false) +
+      row("Forest: timber", "T", true) + row("Mine: stone", "M", true) + `</tbody>`;
+    $("dist-hint").innerHTML = `A standard worker collects at full pace up to <b>${fmt(freeUpTo(10, 1))}</b> tiles from a house; one with 160/160 (16 energy, 1.6 an hour) up to <b>${fmt(freeUpTo(16, 1.6))}</b>, since they carry more loads. ` +
+      `Work lost to walking is taken up by idle grown-ups on the Production page and after, if there are any.`;
+    $("mpt-hint").innerHTML = `A tile ${fmt(d.P === Infinity ? 0 : d.P)} away (the pasture) is <b>${fmt(isFinite(d.P) ? trip("P") * 60 : 0)}</b> minutes there and back.`;
+    $("day-hint").innerHTML = `Work takes at most 10 of these hours, so <b>${fmt(Math.max(0, M.dayHours - 10))}</b> are left for walking before it cuts into work.`;
+  }
+
+  // ---------- Buttons ----------
+  $("default-map").addEventListener("click", () => { M.tiles = MapModel.defaultTiles(); draw(); save(); });
+  $("clear-map").addEventListener("click", () => { M.tiles = ".".repeat(W * H); draw(); save(); });
+  let resetTimer = 0;
+  const disarmReset = () => { clearTimeout(resetTimer); $("reset").classList.remove("confirm"); $("reset").textContent = "Reset to defaults"; };
+  $("reset").addEventListener("click", () => {
+    const b = $("reset");
+    if (!b.classList.contains("confirm")) {
+      b.classList.add("confirm");
+      b.textContent = "Click again to also reset the pages it follows";
+      resetTimer = setTimeout(disarmReset, 4000);
+      return;
+    }
+    disarmReset();
+    try { for (const k of UPSTREAM) localStorage.removeItem(k); localStorage.removeItem(STORE_KEY); } catch (e) {}
+    M = { ...DEFAULTS };
+    draw();
+  });
+
+  draw();
+})();
+</script>
+<script src="rules.js"></script>
+</body>
+</html>
