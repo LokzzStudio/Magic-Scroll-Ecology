@@ -50,7 +50,7 @@
             <span class="num-wrap"><span class="unit">1 energy =</span><input id="kpe-num" type="number"><span class="unit">knowledge</span></span>
           </div>
           <input id="kpe-range" type="range" aria-label="Knowledge 1 energy of teaching gives">
-          <p class="hint">The knowledge each energy the scholar spends teaching or on poetry gives. A child's lesson lasts until the earlier of them or the scholar runs out of energy; the child takes home the share of it their own energy keeps up with (child's energy ÷ scholar's energy, at most all of it).</p>
+          <p class="hint">The knowledge each energy the scholar spends teaching or on poetry gives. A child learns while both are in class (each wakes and goes home for lunch on their own clock), until either runs out of energy. The child takes home the smaller of the two's energy spent over that time, as knowledge at this rate.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -66,7 +66,7 @@
             <span class="num-wrap"><input id="rpi-num" type="number"><span class="unit">knowledge</span></span>
           </div>
           <input id="rpi-range" type="range" aria-label="Knowledge from the scholar's poetry for 1 more Intelligence">
-          <p class="hint">When no child is left in class (or none came), the scholar spends their remaining energy on poetry (吟詩), at the same knowledge per energy. It counts separately from what they learned as a child.</p>
+          <p class="hint">Whenever no child is in class, the scholar spends their energy on poetry (吟詩), at the same knowledge per energy. It counts separately from what they learned as a child.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -90,7 +90,10 @@
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
 <script src="map-model.js"></script>
+<script src="day-model.js"></script>
 <script src="village-model.js"></script>
+<script src="micro-model.js"></script>
+<script src="micro-view.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Education: a scholar teaches the children and advises on food
@@ -110,7 +113,9 @@ VillagePage.start({
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const scholar = { power: A.power, intel: A.intel, age: UP.M };
     const child = { power: Math.floor(IH.share * A.power + 1e-9), intel: Math.floor(IH.share * A.intel + 1e-9), age: 0, knowledge: 0, learned: 0 };
-    const sc = VM.scholarDay(scholar, p, 1, school), w = VM.workDay(child.power, child.intel), t = VM.teach(scholar, [child], p, 1, school);
+    const sc = VM.scholarDay(scholar, p, 1, school), w = VM.workDay(child.power, child.intel);
+    // On average over wake-up times (the Map page's day), and if the two woke together
+    const t = VM.teach({ ...scholar }, [{ ...child }], p, 1, school, c.travel), together = VM.teach({ ...scholar }, [{ ...child }], p, 1, school);
     const readAlone = Math.floor(sc.energy * S.knowPerEnergy + 1e-9), readAfter = Math.floor((sc.energy - t.spent) * S.knowPerEnergy + 1e-9);
     const hoursText = (h) => `${fmt(h, Number.isInteger(Math.round(h * 10) / 10) ? 0 : 1)} h`;
     const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
@@ -118,12 +123,13 @@ VillagePage.start({
       `<dt></dt><dd class="h">The first class</dd><dd class="h v">Power / Intelligence</dd>` +
       `<dt></dt><dd>Scholar at ${attrText(A.power * (1 - S.scholarShift / 100))} / ${attrText(A.intel * (1 + S.scholarShift / 100))}</dd><dd class="v">${fmt(sc.energy)} energy, ${hoursText(sc.rate > 0 ? sc.energy / sc.rate : 0)}</dd>` +
       `<dt></dt><dd>Child at ${fmt(child.power)} / ${fmt(child.intel)}</dd><dd class="v">${fmt(w.energy)} energy, ${hoursText(w.rate > 0 ? w.energy / w.rate : 0)}</dd>` +
-      `<dt></dt><dd>Lesson</dd><dd class="v">${hoursText(t.hours)}, ${fmt(t.knowledge)} knowledge</dd>` +
+      `<dt></dt><dd>Lesson, on average</dd><dd class="v">${hoursText(t.hours)}, ${fmt(t.knowledge)} knowledge</dd>` +
+      `<dt></dt><dd>If they woke together</dd><dd class="v">${hoursText(together.hours)}, ${fmt(together.knowledge)} knowledge</dd>` +
       `<dt></dt><dd>A year at that rate</dd><dd class="v">+${fmt(Math.floor((t.knowledge * c.YEAR) / S.knowPerIntel))} Intelligence</dd>` +
       `<dt></dt><dd>Scholar's poetry, after class</dd><dd class="v">${fmt(readAfter)} knowledge a day</dd>` +
       `<dt></dt><dd>A year with no class</dd><dd class="v">+${fmt(Math.floor((readAlone * c.YEAR) / S.readPerIntel))} Intelligence</dd>`;
     const scholarFirst = sc.rate > 0 && w.rate > 0 && sc.energy / sc.rate < w.energy / w.rate;
-    $("class-hint").innerHTML = `${scholarFirst ? `Here the scholar runs out first, after ${hoursText(t.hours)}, so the child spends only part of their energy and the scholar has none left for poetry.` : `Here the child runs out first, after ${hoursText(t.hours)}, and the scholar spends the rest on poetry.`} Children who learn grow brighter and keep up for longer, so they learn faster as they go. The scholar is taken off the food work until they become an elder, so a small village is a worker short.`;
+    $("class-hint").innerHTML = `${scholarFirst ? "Here the scholar's energy runs out first, so the child doesn't spend all of theirs." : "Here the child's energy runs out first, and the scholar spends the rest on poetry."} Each wakes at their own time and goes home for lunch on their own clock, so on average they share <b>${hoursText(t.hours)}</b> of class, not the ${hoursText(together.hours)} they would if they woke together. Children who learn grow brighter and keep up for longer, so they learn faster as they go. The scholar is taken off the food work until they become an elder, so a small village is a worker short.`;
     const k = c.result.schoolCompare;
     $("school-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With a scholar", k.now, k.now >= k.none], ["No school, so no food advisor", k.none, k.none >= k.now]]);
   },

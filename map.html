@@ -39,6 +39,7 @@
   .dist-table th { font-weight: 600; color: var(--muted); font-size: 12.5px; }
   .dist-table td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .dist-table .lost { color: var(--crash); font-weight: 600; }
+  .dist-table td.day { white-space: normal; font-size: 12.5px; }
   .table-scroll { overflow-x: auto; }
 </style>
 </head>
@@ -57,10 +58,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Map</h1>
-    <p class="lede">Where the village's places are. Workers walk from the house to the pasture and the farm, and carry what they collect home every few energy of work. A day has 16 hours: up to 10 of work, and the rest for walking. When walking runs past that, the work gets cut, and idle grown-ups step in to finish it.</p>
+    <p class="lede">Where the village's places are, and the shape of everyone's day. People wake between 4 and 8 o'clock and are out of the house for 12 hours. They eat breakfast by the house, walk out to work, and, from 5½ hours after waking, come home for lunch once the energy they're on is done. Whatever they collect they carry home (搬運) after every energy of it, then walk back out. At the end of the 12 hours they finish the energy they're on and walk home. Walking eats into the working day, and a meal keeps them full for only so long, so a late walk home is a hungry one.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>The map, walking speed, how much a worker carries, and the day's hours</dd>
+        <dt>Set here</dt><dd>The map, walking speed, carrying, and the day: waking, hours out, lunch and meals</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> (for Reset only)</dd>
         <dt>Used by</dt><dd><a href="production.html">Production</a> and every page after it</dd>
       </dl>
@@ -75,13 +76,13 @@
           <p class="scope">Used by Production and every page after it</p>
         </div>
         <div class="tools" role="group" aria-label="What to place" id="tools"></div>
-        <p class="hint">Pick a place, then click or drag on the map. Distance is counted in steps (no diagonals) from the nearest house to the nearest tile of each kind, so extra tiles further away don't matter. The forest (timber) and the mine (stone) are worked on the Resources page.</p>
+        <p class="hint">Pick a place, then click or drag on the map. Distance is counted in steps (no diagonals) from the nearest house to the nearest tile of each kind, so extra tiles further away don't matter. Going from one place straight to another counts the steps between their nearest tiles. The forest (timber) and the mine (stone) are worked on the Resources page.</p>
         <div class="btn-row"><button type="button" class="btn" id="default-map">Default map</button><button type="button" class="btn" id="clear-map">Clear map</button></div>
       </section>
       <section class="panel-section" id="walking">
         <div class="section-head">
-          <h2>Walking</h2>
-          <p class="scope">How far a day's walking goes</p>
+          <h2>Walking and the day</h2>
+          <p class="scope">Used by Production and every page after it</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -93,19 +94,51 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="load-num">Carried home every</label>
-            <span class="num-wrap"><input id="load-num" type="number"><span class="unit">energy</span></span>
+            <label for="act-num">Out of the house</label>
+            <span class="num-wrap"><input id="act-num" type="number"><span class="unit">h</span></span>
           </div>
-          <input id="load-range" type="range" aria-label="Energy of collecting before carrying it home">
-          <p class="hint">After this much collecting (milking or harvest), a worker walks home with it and back. A part load at the end of the day counts as a trip. Tending the rice has nothing to carry: one trip a day.</p>
+          <input id="act-range" type="range" aria-label="Hours a day everyone is out of the house">
+          <p class="hint" id="act-hint"></p>
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="day-num">Hours in a day</label>
-            <span class="num-wrap"><input id="day-num" type="number"><span class="unit">h</span></span>
+            <label for="lunch-num">Home for lunch from</label>
+            <span class="num-wrap"><input id="lunch-num" type="number"><span class="unit">h</span></span>
           </div>
-          <input id="day-range" type="range" aria-label="Hours a day for work and walking">
-          <p class="hint" id="day-hint"></p>
+          <input id="lunch-range" type="range" aria-label="Hours after waking from which everyone heads home for lunch">
+          <p class="hint">From this hour, anyone idle goes straight home; anyone working goes home as soon as the energy they're on is done (and carried home). They eat lunch by the house and go back out. A full breakfast keeps someone full for half the day out, 6 hours, so lunch after that is a hungry one.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="meal-num">A meal takes</label>
+            <span class="num-wrap"><input id="meal-num" type="number"><span class="unit">min</span></span>
+          </div>
+          <input id="meal-range" type="range" aria-label="Minutes to eat breakfast or lunch">
+          <p class="hint">Breakfast and lunch are eaten by the house. Each is half the day's ration.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="load-num">Carried home every (搬運)</label>
+            <span class="num-wrap"><input id="load-num" type="number"><span class="unit">energy</span></span>
+          </div>
+          <input id="load-range" type="range" aria-label="Energy of collecting before carrying it home">
+          <p class="hint">After this much collecting (milking, harvest, timber, wool, stone), a worker walks home with it and back out; whatever's left at the end of the job goes home too. Tending, crafts and class carry nothing.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wake0-num">Up from</label>
+            <span class="num-wrap"><input id="wake0-num" type="number"><span class="unit">o'clock</span></span>
+          </div>
+          <input id="wake0-range" type="range" aria-label="Earliest waking hour">
+          <p class="hint">Everyone wakes between these two hours at random, spread evenly. The day out is the same length for everyone, whenever they wake.</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wake1-num">Up by</label>
+            <span class="num-wrap"><input id="wake1-num" type="number"><span class="unit">o'clock</span></span>
+          </div>
+          <input id="wake1-range" type="range" aria-label="Latest waking hour">
+          <p class="hint" id="wake-hint"></p>
         </div>
       </section>
     </aside>
@@ -116,7 +149,7 @@
         <div class="map-wrap"><div class="map-grid" id="grid" role="grid" aria-label="Village map, 16 by 16 tiles"></div></div>
       </section>
       <section class="card" aria-label="Distances">
-        <div class="card-head"><h2>Distances and a worker's day</h2><p>How much of a day's work fits once the walking is counted.</p></div>
+        <div class="card-head"><h2>Distances and a worker's day</h2><p>One worker spending the whole day at one place, fully fed: how much of their energy fits, and when they get home.</p></div>
         <div class="table-scroll"><table class="dist-table" id="dist"></table></div>
         <p class="hint" id="dist-hint"></p>
       </section>
@@ -130,11 +163,12 @@
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
 <script src="map-model.js"></script>
+<script src="day-model.js"></script>
 <script src="village-model.js"></script>
 <script>
 (() => {
   const { W, H, TYPES, DEFAULTS, LIMITS, STORE_KEY } = MapModel;
-  const VM = VillageModel;
+  const VM = VillageModel, DM = DayModel;
   const $ = (id) => document.getElementById(id);
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const GLYPH = { H: "屋", F: "田", P: "牧", T: "林", M: "礦" };
@@ -174,7 +208,7 @@
   grid.addEventListener("pointercancel", stopPaint);
 
   // ---------- Sliders ----------
-  const INPUTS = [["mpt", "minPerTile", 1], ["load", "load", 1], ["day", "dayHours", 1]];
+  const INPUTS = [["mpt", "minPerTile", 1], ["act", "activeHours", 0.5], ["lunch", "lunchAfter", 0.5], ["meal", "mealMin", 1], ["load", "load", 1], ["wake0", "wakeFrom", 0.5], ["wake1", "wakeTo", 0.5]];
   function syncInputs() {
     for (const [id, key, step] of INPUTS) {
       const [lo, hi] = LIMITS[key];
@@ -194,22 +228,30 @@
   }
 
   // ---------- Drawing ----------
-  // A worker's day at a place `trip` hours there and back: [work done, walking hours]
-  const dayAt = (energy, rate, trip, collect) => {
-    if (!isFinite(trip)) return null;
-    const done = VM.workCap(energy, rate, M.dayHours, trip, M.load, collect);
-    return [done, VM.tripsFor(done, M.load, collect) * trip];
+  const hText = (h) => `${fmt(h, 1)} h`;
+  // A worker's day at one place (energy e, r an hour), fully fed: work done, walking, timeline, hunger
+  const dayAt = (place, e, r, collect) => {
+    const S = MapModel.travelOf(M), c = DM.newClock(S);
+    if (!isFinite(S.between("H", place))) return null;
+    const done = DM.workAt(c, place, DM.canAt(c, place, e, r, S, collect), r, S, collect), tl = DM.dayEnd(c, S, done >= e - 1e-9);
+    return { done, walk: c.walked, tl, hunger: DM.hungerOf(1, tl, S, HumanModel.DEFAULTS.k, HumanModel.DEFAULTS.c) };
   };
-  const dayText = (energy, rate, trip, collect) => {
-    const r = dayAt(energy, rate, trip, collect);
-    if (!r) return "—";
-    const [done, walk] = r;
-    return `${fmt(walk, 1)} h walking · ${done >= energy ? `all ${fmt(energy)} energy` : `<span class="lost">${fmt(done)} of ${fmt(energy)} energy</span>`}`;
+  const dayText = (place, e, r, collect) => {
+    const d = dayAt(place, e, r, collect);
+    if (!d) return "—";
+    const work = d.done >= e ? `all ${fmt(e)} energy` : `<span class="lost">${fmt(d.done)} of ${fmt(e)} energy</span>`;
+    const hungry = d.hunger > 0.005 ? `<br><span class="lost">hungry: −${fmt(d.hunger, 2)} days of life</span>` : "";
+    return `${work}<br>${hText(d.walk)} walking · home at +${hText(d.tl.E)}${hungry}`;
   };
-  // The furthest a place can be before walking cuts a worker's collecting
-  const freeUpTo = (energy, rate) => {
+  // The furthest a place can be before walking cuts a worker's day
+  const freeUpTo = (e, r) => {
+    const S0 = MapModel.travelOf(M);
     let d = 0;
-    while (d < 100 && VM.workCap(energy, rate, M.dayHours, MapModel.tripHours(d + 1, M), M.load, true) >= energy) d++;
+    while (d < 100) {
+      const S = { ...S0, between: (a, b) => (a === b ? 0 : ((d + 1) * M.minPerTile) / 60) }, c = DM.newClock(S);
+      if (DM.canAt(c, "P", e, r, S, true) < e) break;
+      d++;
+    }
     return d;
   };
 
@@ -235,18 +277,19 @@
       el.setAttribute("aria-label", `${name}, column ${(i % W) + 1}, row ${Math.floor(i / W) + 1}`);
     });
 
-    const trip = (c) => MapModel.tripHours(d[c], M);
+    const S = MapModel.travelOf(M), oneWay = (c) => S.between("H", c);
     const distText = (c) => (isFinite(d[c]) ? `${fmt(d[c])} tiles` : houses.length ? "none placed" : "no house");
-    const tripText = (c) => (isFinite(d[c]) ? `${fmt(trip(c), 1)} h` : "—");
-    const row = (label, c, collect) => `<tr><td>${label}</td><td class="n">${distText(c)}</td><td class="n">${tripText(c)}</td>` +
-      `<td class="n">${collect === null ? "no use yet" : dayText(10, 1, trip(c), collect)}</td><td class="n">${collect === null ? "" : dayText(16, 1.6, trip(c), collect)}</td></tr>`;
-    $("dist").innerHTML = `<thead><tr><th>Place</th><th>Distance</th><th>There and back</th><th>Standard worker (100/100)</th><th>Strong worker (160/160)</th></tr></thead><tbody>` +
-      row("Pasture: milking", "P", true) + row("Farm: harvest", "F", true) + row("Farm: tending", "F", false) +
-      row("Forest: timber", "T", true) + row("Mine: stone", "M", true) + `</tbody>`;
-    $("dist-hint").innerHTML = `A standard worker collects at full pace up to <b>${fmt(freeUpTo(10, 1))}</b> tiles from a house; one with 160/160 (16 energy, 1.6 an hour) up to <b>${fmt(freeUpTo(16, 1.6))}</b>, since they carry more loads. ` +
-      `Work lost to walking is taken up by idle grown-ups on the Production page and after, if there are any.`;
-    $("mpt-hint").innerHTML = `A tile ${fmt(d.P === Infinity ? 0 : d.P)} away (the pasture) is <b>${fmt(isFinite(d.P) ? trip("P") * 60 : 0)}</b> minutes there and back.`;
-    $("day-hint").innerHTML = `Work takes at most 10 of these hours, so <b>${fmt(Math.max(0, M.dayHours - 10))}</b> are left for walking before it cuts into work.`;
+    const walkText = (c) => (isFinite(d[c]) ? `${fmt(oneWay(c) * 60)} min` : "—");
+    const row = (label, c, collect) => `<tr><td>${label}</td><td class="n">${distText(c)}</td><td class="n">${walkText(c)}</td>` +
+      `<td class="n day">${dayText(c, 10, 1, collect)}</td><td class="n day">${dayText(c, 16, 1.6, collect)}</td></tr>`;
+    $("dist").innerHTML = `<thead><tr><th>Place</th><th>Distance</th><th>Walk one way</th><th>Standard worker (100/100: 10 energy, 1 an hour)</th><th>Strong worker (160/160: 16 energy, 1.6 an hour)</th></tr></thead><tbody>` +
+      row("Pasture: milking, shearing", "P", true) + row("Farm: tending", "F", false) + row("Farm: harvest", "F", true) + row("Forest: timber", "T", true) + row("Mine: stone", "M", true) + `</tbody>`;
+    const work = Math.max(0, M.activeHours - (2 * M.mealMin) / 60);
+    $("dist-hint").innerHTML = `A day out has <b>${hText(work)}</b> for work and walking once both meals are eaten. A worker walks out, carries home what they collect every ${fmt(M.load)} energy, comes home for lunch and goes back out, all within the day; the walk home at night comes after it. A standard worker milking still gets all 10 energy done up to <b>${fmt(freeUpTo(10, 1))}</b> tiles from a house. ` +
+      `A meal keeps someone full for half the day's hours, so anyone still out after that (home late for lunch, or working on at night) goes hungry, even on a full ration. The table shows that hunger toll for one day.`;
+    $("mpt-hint").innerHTML = `The pasture, ${fmt(isFinite(d.P) ? d.P : 0)} tiles from a house, is <b>${fmt(isFinite(d.P) ? oneWay("P") * 60 : 0)}</b> minutes' walk each way.`;
+    $("act-hint").innerHTML = `Breakfast to bedtime. A full ration keeps someone full for exactly these hours, so one food lasts <b>${fmt((M.activeHours / HumanModel.DEFAULTS.c) * 60)}</b> minutes (${fmt(M.activeHours, 1)} h ÷ ${fmt(HumanModel.DEFAULTS.c)} food). Out longer, or eating less, and they go hungry; each hungry hour costs more life than the last.`;
+    $("wake-hint").innerHTML = `In real time, 5 minutes of play is 2 hours of the game, so a ${fmt(M.activeHours, 1)}-hour day out is <b>${fmt((M.activeHours * 60) / 24)}</b> minutes of play.`;
   }
 
   // ---------- Buttons ----------

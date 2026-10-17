@@ -57,7 +57,7 @@
             <span class="num-wrap"><input id="int-num" type="number"></span>
           </div>
           <input id="int-range" type="range" aria-label="Intelligence">
-          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 1 energy an hour. Nobody works more than 10 hours a day.</p>
+          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 1 energy an hour, for as long as the day out allows (the Map page: about 11 hours once meals are eaten, less the walking).</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -85,7 +85,10 @@
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
 <script src="map-model.js"></script>
+<script src="day-model.js"></script>
 <script src="village-model.js"></script>
+<script src="micro-model.js"></script>
+<script src="micro-view.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Attribute: everyone works with their own Power and Intelligence, set here
@@ -104,29 +107,30 @@ VillagePage.start({
   drawPanel(c) {
     const { S, F, UP, $, fmt, VM } = c, elder = 1 - S.elderPenalty / 100;
     const w = VM.workDay(S.power, S.intel), we = VM.workDay(S.power * elder, S.intel * elder);
+    // A day milking at the pasture, as the Map page's day allows: energy done, hours worked
+    const DM = DayModel, tv = c.travel, cl = DM.newClock(tv), done = DM.workAt(cl, "P", DM.canAt(cl, "P", w.energy, w.rate, tv, true), w.rate, tv, true);
+    const worked = w.rate > 0 ? done / w.rate : 0, left = w.energy - done;
     const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
     const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;
     // A day spent at the cows: as many as the energy fully milks, and the energy left for the fields
-    const cowE = FoodModel.cowEnergyOf(F), cows = Math.floor(w.energy / cowE + 1e-9);
-    const lo = FoodModel.wholeFood(w.energy, F.milkPerEnergy), hi = Math.ceil(w.energy * F.milkPerEnergy - 1e-7);
+    const cowE = FoodModel.cowEnergyOf(F), cows = Math.floor(done / cowE + 1e-9);
+    const lo = FoodModel.wholeFood(done, F.milkPerEnergy), hi = Math.ceil(done * F.milkPerEnergy - 1e-7);
     const milking = cows === 0 ? { text: `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} milk`, rest: 0 }
-      : { text: `${cows} cow${cows === 1 ? "" : "s"}, ${fmt(cows * F.milkCap)} milk`, rest: Math.round((w.energy - cows * cowE) * 10) / 10 };
+      : { text: `${cows} cow${cows === 1 ? "" : "s"}, ${fmt(cows * F.milkCap)} milk`, rest: Math.round((done - cows * cowE) * 10) / 10 };
     $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(elder * 100)}%</b> of their Power and Intelligence. It isn't passed on to their children.`;
     $("eff-text").textContent = `1 energy = ${c.fmtNum(F.milkPerEnergy)} milk`;
     $("workday").innerHTML =
       `<dt></dt><dd class="h">One person's working day</dd><dd class="h v"></dd>` +
       `<dt></dt><dd>Durability</dd><dd class="v">${fmt(w.durability)} energy</dd>` +
       `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} energy/h</dd>` +
-      `<dt></dt><dd>Time worked</dd><dd class="v">${hoursText(w.hours)} of ${VM.MAX_HOURS}</dd>` +
-      `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(w.energy)} / ${fmt(w.energyLeft)}</dd>` +
+      `<dt></dt><dd>Time worked, milking</dd><dd class="v">${hoursText(Math.round(worked * 10) / 10)}</dd>` +
+      `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(done)} / ${fmt(left)}</dd>` +
       `<dt></dt><dd>Milking</dd><dd class="v">${milking.text}</dd>` +
       `<dt></dt><dd>Left for the fields</dd><dd class="v">${fmt(milking.rest, Number.isInteger(milking.rest) ? 0 : 1)} energy</dd>` +
       `<dt></dt><dd>An elder (${attrText(S.power * elder)} / ${attrText(S.intel * elder)})</dd><dd class="v">${fmt(we.energy)} energy</dd>`;
-    $("attr-hint").innerHTML = S.power === S.intel
-      ? "Balanced: the energy runs out right at the end of the 10-hour day, so nothing is wasted."
-      : w.energyLeft > 1e-9
-        ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the 10-hour day ends with <b>${fmt(w.energyLeft)}</b> energy unspent. Raising Power alone won't help.`
-        : `Power is the limit: the energy runs out after <b>${hoursText(w.hours)}</b>. Raising Intelligence alone won't help.`;
+    $("attr-hint").innerHTML = left > 1e-9
+      ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the day out ends with <b>${fmt(left)}</b> energy unspent. Raising Power alone won't help.`
+      : `Power is the limit: the energy runs out after <b>${hoursText(Math.round(worked * 10) / 10)}</b> of work, before the day out is over. Raising Intelligence alone won't help.`;
     const k = c.result.attrCompare;
     $("attr-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [[`Power ${S.power}, Intelligence ${S.intel}`, k.now, k.now >= k.base], ...(k.isDefault ? [] : [["Standard, 100 and 100", k.base, k.base >= k.now]])]);
   },

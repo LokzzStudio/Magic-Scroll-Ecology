@@ -1,16 +1,21 @@
 // Shared page code for the village pages (Food, Advisor, Production, Attribute, Inheritance, Education,
-// Resources, Craft). It reads the settings of the pages before, works out the simulation options from
+// Resources, Craft, Happiness). It reads the settings of the pages before, works out the simulation options from
 // the page's place in the chain, draws the read-only panel sections and every card in <main>, runs the
 // villages (village-model.js) and handles the charts, the farm, the stats and playback. Each page calls
 // VillagePage.start(def) with what's its own:
-//   key        "food" | "advisor" | "production" | "attribute" | "inheritance" | "education" | "resources" | "craft"
-//   work       "none" | "hands" | "energy"; inherit, school, resources, craft: which cards it shows
+//   key        "food" | "advisor" | "production" | "attribute" | "inheritance" | "education" | "resources" | "craft" | "happiness"
+//   work       "none" | "hands" | "energy"; inherit, school, resources, craft, happiness: which cards it shows
 //   inputs     its sliders: { id, key, obj: "S" (default) | "F", round: "step" | "int" | "none" }, with
 //              lo, hi and step from its settings table (SPECS), or given here
 //   storeKey, defaults: where it keeps its settings and their defaults, for pages without a SPECS table
 //   setup(c), beforeRun(c), drawPanel(c), compare(c), config(c), ration(c): page hooks
+// From the Production page on, the top bar switches between Macro mode (each day worked out for the
+// village as a whole) and Micro mode (person by person, micro-model.js). Micro mode runs the same 20
+// villages both ways, draws Micro's, and adds a day viewer (micro-view.js) and a comparison of the two.
+// Micro is slow, so it runs only when its button is pressed: opening a page, rolling new runs or
+// changing a setting goes back to Macro.
 (function () {
-  const VM = VillageModel;
+  const VM = VillageModel, DM = DayModel;
   const { T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, DAY_ENERGY } = VM;
   const { PERFECT_IQ, iqError } = RationModel;
   const $ = (id) => document.getElementById(id);
@@ -20,8 +25,12 @@
   const milkText = (v) => { const r = Math.round(v * 10) / 10; return fmt(r, r % 1 ? 1 : 0); };
   const paramRows = (rows) => rows.map(([s, label, v, cls = ""]) =>
     `<dt class="${cls}">${s}</dt><dd class="${cls}">${label}</dd><dd class="v ${cls}">${v}</dd>`).join("");
-  const compareRows = (title, rows) => `<dt></dt><dd class="h">${title}</dd><dd class="h v"></dd>` +
-    rows.map(([label, n, best]) => `<dt></dt><dd>${label}</dd><dd class="v${best ? " best" : ""}">${n}/${RUNS}</dd>`).join("");
+  // n null: still being run (aliveWith), shown as "…", with nothing marked best until all are in
+  const compareRows = (title, rows) => {
+    const ready = rows.every(([, n]) => n !== null);
+    return `<dt></dt><dd class="h">${title}</dd><dd class="h v"></dd>` +
+      rows.map(([label, n, best]) => `<dt></dt><dd>${label}</dd><dd class="v${ready && best ? " best" : ""}">${n !== null ? `${n}/${RUNS}` : "…"}</dd>`).join("");
+  };
   const NOTE = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
 
   // The crafts, for the Craft page's settings and card
@@ -39,6 +48,7 @@
     education: { key: "education-v1", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowPerIntel: [100, 10, 500, 10], readPerIntel: [500, 50, 2000, 50], scholarShift: [10, 0, 50, 5] } },
     resources: { key: "resources-v1", fields: { fleece: [10, 1, 50, 1], regrow: [1, 1, 10, 1], woodTarget: [10, 0, 200, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1] } },
     craft: { key: "craft-v1", fields: Object.fromEntries(CRAFTS.flatMap((it) => [[it.id + "Cost", [100, 1, 1000, 1]], [it.id + "Energy", [20, 1, 200, 1]]])) },
+    happiness: { key: "happiness-v1", fields: { iqStep: [20, 5, 100, 5], perEnergy: [1, 1, 10, 1] } },
   };
   const defaultsOf = (spec) => Object.fromEntries(Object.entries(spec.fields).map(([k, [v]]) => [k, v]));
   const roundTo = (v, step) => Number((Math.round(v / step) * step).toFixed(2));
@@ -60,10 +70,11 @@
   // Simulation options from the Education, Resources and Craft pages' settings
   const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowPerIntel: E.knowPerIntel, readPerIntel: E.readPerIntel, shift: E.scholarShift });
   const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, woodTarget: R.woodTarget, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy } });
+  const happinessOf = (H) => ({ iqStep: H.iqStep, perEnergy: H.perEnergy });
   const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, material: it.material, cost: C[it.id + "Cost"], energy: C[it.id + "Energy"] })) });
 
   // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
-  const CHAIN = ["herd", "humans", "food", "advisor", "map", "production", "attribute", "inheritance", "education", "resources", "craft"];
+  const CHAIN = ["herd", "humans", "food", "advisor", "map", "production", "attribute", "inheritance", "education", "resources", "craft", "happiness"];
   const KEYS = { herd: HerdModel.STORE_KEY, humans: HumanModel.STORE_KEY, food: FoodModel.STORE_KEY, advisor: RationModel.STORE_KEY, map: MapModel.STORE_KEY,
     ...Object.fromEntries(Object.entries(SPECS).map(([name, spec]) => [name, spec.key])) };
   const SHEEP_SALT = 500000;   // keeps the sheep's dice apart from the cows'
@@ -87,6 +98,12 @@
     if (def.key === "food") c.F = FoodModel.savedParams() || { ...FoodModel.DEFAULTS };
     if (def.key === "advisor") c.R = RationModel.savedParams() || { ...RationModel.DEFAULTS };
     let perIcon = 1, cursor = null, playing = false, rafId = 0;
+    // Macro or Micro mode, from the Production page on
+    const hasModes = at("production");
+    let mode = "macro";
+    // Micro for the next recompute only: pressing Micro (or ?mode=micro in the address) asks for it
+    let microAsked = hasModes && new URLSearchParams(location.search).get("mode") === "micro";
+    const syncMode = () => { for (const b of document.querySelectorAll(".mode-seg button")) b.setAttribute("aria-pressed", b.dataset.mode === mode); document.body.dataset.mode = mode; };
 
     function loadSettings() {
       const hp = HerdModel.savedParams(), hs = HerdModel.savedStart(), up = HumanModel.savedParams(), us = HumanModel.savedStart();
@@ -120,6 +137,7 @@
       if (at("education")) o.school = schoolOf(c.ED);
       if (at("resources")) o.resources = resourcesOf(c.RS);
       if (at("craft")) o.craft = craftOf(c.set.craft);
+      if (at("happiness")) o.happiness = happinessOf(c.set.happiness);
       return o;
     }
 
@@ -152,51 +170,108 @@
     }
 
     // ---------- Running the villages ----------
-    // Survivors among this page's 20 villages with some options changed; cached per set of options
-    let aliveCache = new Map();
+    // Survivors among this page's 20 villages with some options changed; cached per set of options. A set
+    // not run yet comes back null and waits in `queued`: once the page is drawn, runQueued runs them a
+    // slice at a time and draws the panels again as each set comes in.
+    let aliveCache = new Map(), queued = new Map();
     function aliveWith(over) {
       const cfg = { ...c.cfg, ...over };
-      const key = JSON.stringify([cfg.advisor, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school]);
-      if (!aliveCache.has(key)) {
-        const base = S.seed * 7919 + HUMAN_SALT, cowRuns = c.result.cows.runs;
-        let n = 0;
-        for (let i = 0; i < RUNS; i++) if (VM.run({ ...cfg, seed: base + i, detailed: false, cowAdults: cowRuns[i].adults, sheepAdults: sheepOf(i) }).survived) n++;
-        aliveCache.set(key, n);
-      }
-      return aliveCache.get(key);
+      const key = cacheKey(cfg);
+      if (aliveCache.has(key)) return aliveCache.get(key);
+      if (!queued.has(key)) queued.set(key, cfg);
+      return null;
     }
     c.aliveWith = aliveWith;
+    function runQueued(token) {
+      let cur = null, i = 0, n = 0;
+      const step = () => {
+        if (token !== job) return;
+        const until = performance.now() + SLICE_MS;
+        let got = false;
+        while (performance.now() < until) {
+          if (!cur) { const next = queued.entries().next(); if (next.done) break; cur = next.value; i = 0; n = 0; }
+          if (VM.run({ ...cur[1], seed: c.base + i, detailed: false, cowAdults: c.result.cows.runs[i].adults, sheepAdults: sheepOf(i) }).survived) n++;
+          if (++i === RUNS) { aliveCache.set(cur[0], n); queued.delete(cur[0]); cur = null; got = true; }
+        }
+        if (got) drawPanelsAll();
+        if (queued.size) setTimeout(step, 0);
+      };
+      if (queued.size) setTimeout(step, 0);
+    }
     const sheepOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].adults : null);
 
+    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school]);
+    let job = 0;   // each recompute's number, so a computation still under way stops once it's stale
+    const SLICE_MS = 50;   // how long the villages run before the page gets a turn
     function recompute() {
       stop();
       loadSettings();
       syncInputs();
       if (def.beforeRun) def.beforeRun(c);
+      if (hasModes) { mode = microAsked ? "micro" : "macro"; microAsked = false; syncMode(); }
       const herdBase = S.seed * 7919, base = herdBase + HUMAN_SALT;
-      const cowRuns = [];
-      for (let i = 0; i < RUNS; i++) cowRuns.push(VM.runHerd(c.HP, c.HS.N0, herdBase + i, i === 0, perIcon));
-      c.result.cows = { main: cowRuns[0], runs: cowRuns, alive: cowRuns.filter((r) => r.survived).length };
-      if (def.resources) {
-        const sheepRuns = [];
-        for (let i = 0; i < RUNS; i++) sheepRuns.push(VM.runHerd(c.HP, c.HS.N0, herdBase + SHEEP_SALT + i, i === 0, perIcon));
-        c.result.sheep = { main: sheepRuns[0], runs: sheepRuns, alive: sheepRuns.filter((r) => r.survived).length };
-      }
-      c.cfg = { work, F: c.F, UP: c.UP, US: c.US, ...optionsOf(), ...(def.config ? def.config(c) : {}) };
-      const runs = [];
-      for (let i = 0; i < RUNS; i++) runs.push(VM.run({ ...c.cfg, seed: base + i, detailed: i === 0, cowAdults: cowRuns[i].adults, sheepAdults: sheepOf(i) }));
-      c.result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
-      aliveCache = new Map([[JSON.stringify([c.cfg.advisor, c.cfg.attrs, c.cfg.elderAttr, c.cfg.inherit, c.cfg.school]), c.result.people.alive]]);
-      if (def.compare) def.compare(c);
-
+      const herd = (salt) => {
+        const runs = [];
+        for (let i = 0; i < RUNS; i++) runs.push(VM.runHerd(c.HP, c.HS.N0, herdBase + salt + i, i === 0, perIcon));
+        return { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
+      };
+      const herds = { cows: herd(0), sheep: def.resources ? herd(SHEEP_SALT) : null };
+      const cfg = { work, F: c.F, UP: c.UP, US: c.US, ...optionsOf(), ...(def.config ? def.config(c) : {}) };
       store(storeKey, S);
       if (def.key === "food") store(FoodModel.STORE_KEY, c.F);
       if (def.key === "advisor") store(RationModel.STORE_KEY, c.R);
+      runVillages(++job, herds, cfg, base);
+    }
+    // The 20 villages, a slice at a time so the page stays responsive (the last results stay up until
+    // they're done). Micro mode runs each village person by person, with the same village in Macro mode
+    // alongside for the comparison.
+    function runVillages(token, herds, cfg, base) {
+      const isMicro = mode === "micro", runs = [], macro = [];
+      const step = () => {
+        if (token !== job) return;
+        const until = performance.now() + SLICE_MS;
+        while (runs.length < RUNS && performance.now() < until) {
+          const i = runs.length, one = { ...cfg, seed: base + i, cowAdults: herds.cows.runs[i].adults, sheepAdults: herds.sheep ? herds.sheep.runs[i].adults : null };
+          runs.push(VM.run({ ...one, mode: isMicro ? "micro" : "macro", detailed: i === 0 }));
+          if (isMicro) macro.push(VM.run({ ...one, mode: "macro", detailed: false }));
+        }
+        if (runs.length < RUNS) { showProgress(runs.length, isMicro); setTimeout(step, 0); return; }
+        c.cfg = cfg; c.base = base;
+        c.result.cows = herds.cows;
+        if (herds.sheep) c.result.sheep = herds.sheep;
+        c.result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
+        c.result.compare = isMicro ? { macro, micro: runs } : null;
+        finish(isMicro ? macro.filter((r) => r.survived).length : c.result.people.alive, token);
+      };
+      setTimeout(step, 0);
+    }
+    // Once the villages are run: the page, with the comparisons (always in Macro mode) as they come in
+    let macroAlive = 0;
+    function finish(alive, token) {
+      macroAlive = alive;
+      aliveCache = new Map([[cacheKey(c.cfg), alive]]); queued = new Map();
       syncSpeed();
-      drawPanels();
-      if (def.drawPanel) def.drawPanel(c);
+      drawPanelsAll();
       drawStatics();
       drawFrame();
+      drawModes();
+      runQueued(token);
+    }
+    // The panels, and the page's comparisons (with Macro mode's survivors)
+    function drawPanelsAll() {
+      if (def.compare) {
+        const own = c.result.people.alive;
+        c.result.people.alive = macroAlive;
+        def.compare(c);
+        c.result.people.alive = own;
+      }
+      drawPanels();
+      if (def.drawPanel) def.drawPanel(c);
+    }
+    function showProgress(n, micro) {
+      const pill = $("pill-people");
+      pill.className = "pill";
+      pill.innerHTML = `<span class="dot-key people"></span>${micro ? "Micro mode: running the villages person by person…" : "Running the villages…"} ${n}/${RUNS}`;
     }
 
     // ---------- The scholar as food advisor (Education page on) ----------
@@ -225,9 +300,13 @@
     const change = (href, name) => `<div class="btn-row"><a class="btn" href="${href}">Change on ${name} →</a></div>`;
     function panelHTML() {
       let s = "";
+      if (at("happiness")) s += section("craft", "Craft", from("craft.html#craft", "Craft page"),
+        `<dl class="params" id="craft-params"></dl>
+        <p class="hint">Once every food job is filled, idle women weave and idle men forge at the house, one at the loom and one at the forge.</p>
+        <p class="source" id="craft-source" hidden></p>${change("craft.html#craft", "Craft")}`);
       if (at("craft")) s += section("resources", "Resources", from("resources.html#resources", "Resources page"),
         `<dl class="params" id="res-params"></dl>
-        <p class="hint">Idle grown-ups keep timber at its target, then women shear and men quarry, a load at a time, once every food job is filled.</p>
+        <p class="hint">Once every food job is filled, idle grown-ups keep timber at its target, then women shear and men quarry.</p>
         <p class="source" id="res-source" hidden></p>${change("resources.html#resources", "Resources")}`);
       if (at("resources")) s += section("education", "Education", from("education.html#education", "Education page"),
         `<dl class="params" id="edu-params"></dl>
@@ -248,7 +327,7 @@
           <dt>Milk</dt><dd id="milk-work"></dd><dd class="v">all year</dd>
           <dt>Rice</dt><dd><span id="rice-who">adults</span>: tending, then harvest</dd><dd class="v">1–270</dd></dl>
         <p class="hint">${energy
-          ? `Work is counted in <b>energy</b>; 10 energy is what a person with 100 Power spends in a day. Milk comes first: an adult cow gives at most <span class="milk-cap">10</span> milk, so milking it fully takes a set amount of energy, and people milk one cow after another while their energy lasts, elders first since elders can't farm. Adults put whatever energy is left into the rice. <b>Tending</b> (days 1–180): the 4 fields go to the 4 with the most energy left; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): each 10 energy brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <span id="kids-work"></span> Who may do which job is set with the <b>Jobs</b> button at the top.`
+          ? `Work is counted in <b>energy</b>; 10 energy is what a person with 100 Power spends in a day. Milk comes first: an adult cow gives at most <span class="milk-cap">10</span> milk, so milking it fully takes a set amount of energy, and people milk one cow after another while their energy lasts, elders first since elders can't farm. Adults put whatever energy is left into the rice. <b>Tending</b> (days 1–180): the 4 fields take up to their daily limit each, from whoever has energy left, most first; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): each 10 energy brings in 250 rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <span id="kids-work"></span> Who may do which job is set with the <b>Jobs</b> button at the top.`
           : `Milk comes first: every adult cow gets a milker, first from those who can't farm (elders, by default). Those left who can farm go to the rice, up to 4. Who may do which job is set with the <b>Jobs</b> button at the top. <b>Tending</b> (days 1–180): each hand gives 25% of the full crop, so 4 give 100%, and the crop is the average crew. <b>Harvest</b> (days 181–270): each hand brings in 250 rice a day until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work.`}</p>`);
       if (at("production")) s += section("map", "Map", from("map.html#map", "Map page"),
         `<dl class="params" id="map-params"></dl><p class="hint" id="map-hint"></p><p class="source" id="map-source" hidden></p>${change("map.html#map", "Map")}`);
@@ -321,20 +400,24 @@
 
       if ($("map-params")) {
         const M = c.M, d = MapModel.distances(M.tiles), tv = c.travel;
-        const place = (k) => (isFinite(d[k]) ? `${fmt(d[k])} tiles · ${fmt(MapModel.tripHours(d[k], M), 1)} h there and back` : "none on the map");
+        const place = (k) => (isFinite(d[k]) ? `${fmt(d[k])} tiles · ${fmt(tv.between("H", k) * 60)} min each way` : "none on the map");
+        const wake = (h) => `${fmt(Math.floor(h))}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
         $("map-params").innerHTML = paramRows([
           ["", "Pasture (milking)", place("P")], ["", "Farm (rice)", place("F")],
           ["", "Mine (stone)", place("M")], ["", "Forest (timber)", place("T")],
-          ["", "Walking", `${fmt(M.minPerTile)} min a tile`, "sep"], ["", "Carried home every", `${fmt(M.load)} energy of collecting`],
-          ["", "Day", `${fmt(M.dayHours)} h for work (at most 10) and walking`],
+          ["", "Walking", `${fmt(M.minPerTile)} min a tile`, "sep"], ["", "Carried home (搬運)", `every ${fmt(tv.load)} energy of collecting`],
+          ["", "Up", `between ${wake(tv.wake0)} and ${wake(tv.wake1)}, at random`],
+          ["", "Out of the house", `${fmt(tv.active, 1)} h; home for lunch after ${fmt(tv.lunch, 1)} h`],
+          ["", "Each meal", `${fmt(tv.meal * 60)} min by the house`],
         ]);
-        // A standard worker's day (10 energy at 1 energy an hour) at each place
-        const std = (trip, collect) => {
-          if (!isFinite(trip)) return "can't get there";
-          const done = VM.workCap(DAY_ENERGY, 1, M.dayHours, trip, M.load, collect), walkH = VM.tripsFor(done, M.load, collect) * trip;
-          return `${fmt(walkH, 1)} h walking, ${done >= DAY_ENERGY ? "all 10 energy of work" : `only <b>${fmt(done)}</b> of 10 energy of work`}`;
+        // A standard worker's day (10 energy at 1 an hour) at each place, fully fed
+        const std = (k, collect) => {
+          if (!isFinite(d[k])) return "can't get there";
+          const cl = DM.newClock(tv), done = DM.workAt(cl, k, DM.canAt(cl, k, DAY_ENERGY, 1, tv, collect), 1, tv, collect), tl = DM.dayEnd(cl, tv, done >= DAY_ENERGY - 1e-9);
+          const lost = DM.hungerOf(1, tl, tv, c.UP.k, c.UP.c);
+          return `${done >= DAY_ENERGY ? "all 10 energy" : `only <b>${fmt(done)}</b> of 10 energy`}, ${fmt(cl.walked, 1)} h walking${lost > 0.005 ? `, home late and hungry (−${fmt(lost, 2)} days of life)` : ""}`;
         };
-        $("map-hint").innerHTML = `A standard worker (10 energy a day) milking: ${std(tv.pasture, true)}. Harvesting: ${std(tv.farm, true)}. Tending (one trip a day): ${std(tv.farm, false)}. Collecting means a trip home for every ${fmt(M.load)} energy; once work and walking pass ${fmt(M.dayHours)} hours, walking cuts the work, and idle grown-ups take up what's left undone.`;
+        $("map-hint").innerHTML = `A standard worker (10 energy, 1 an hour) spending the day milking: ${std("P", true)}. Tending the fields: ${std("F", false)}. Everyone walks out, carries home what they collect every ${fmt(tv.load)} energy, comes home for lunch and goes back out, and works until their energy runs out or the day is over, finishing the energy they're on. A meal keeps someone full for half the day, so whoever is out longer goes hungry; anyone hungry with no energy left goes in early.`;
         source("map-source", c.saved.map);
       }
       if ($("ration-params")) {
@@ -363,6 +446,11 @@
         ]);
         source("res-source", c.saved.resources);
       }
+      if ($("craft-params")) {
+        const C = c.set.craft;
+        $("craft-params").innerHTML = paramRows(CRAFTS.map((it) => ["", `${it.zh} ${it.en}`, `${fmt(C[it.id + "Cost"])} ${it.material} · ${fmt(C[it.id + "Energy"])} energy`]));
+        source("craft-source", c.saved.craft);
+      }
       if ($("edu-params")) {
         $("edu-params").innerHTML = paramRows([
           ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", fmt(c.ED.knowPerIntel)],
@@ -385,9 +473,15 @@
     // ---------- Cards in <main> ----------
     const inherit = () => !!c.cfg && !!c.cfg.inherit;
     function mainHTML() {
-      const card = (label, title, sub, body) => `<section class="card" aria-label="${label}"><div class="card-head"><h2>${title}</h2><p>${sub}</p></div>${body}</section>`;
+      const card = (label, title, sub, body, cls = "") => `<section class="card${cls ? " " + cls : ""}" aria-label="${label}"><div class="card-head"><h2>${title}</h2><p>${sub}</p></div>${body}</section>`;
       const legend = (items) => `<div class="legend">${items.map(([cls, text]) => `<span><i class="swatch${cls ? " " + cls : ""}"></i>${text}</span>`).join("")}</div>`;
       let s = `<div class="status"><span class="pill" id="pill-cows">—</span><span class="pill" id="pill-people">—</span></div>`;
+      if (hasModes) {
+        s += card("A day, person by person", "A day, person by person", "Micro mode: run 1 on one day. Everyone wakes, eats, walks out and works on their own clock. Pick a day and press Play; click a row to find that person on the map.",
+          `<div class="mv-pick"><button type="button" class="btn" id="mv-prev" aria-label="Day before">←</button><label for="mv-day">Day</label><input type="number" id="mv-day" min="1" max="${T}" step="1"><button type="button" class="btn" id="mv-next" aria-label="Day after">→</button><button type="button" class="btn" id="mv-farm" title="The day the Farm card is on">Farm's day</button><span class="mv-note" id="mv-note"></span></div><div id="micro-view" class="micro-view"></div>`, "micro-only");
+        s += card("Macro and Micro", "Macro and Micro", "The same 20 villages, worked out for the village as a whole (Macro) and person by person (Micro). Macro is what the other mode draws.",
+          `<div class="table-scroll"><table class="mm-table" id="mm-table"></table></div><p class="hint" id="mm-hint"></p>`, "micro-only");
+      }
       s += card("Farm", "Farm", "Press Play or drag the slider. Young animals and children are drawn smaller.",
         `<div class="pasture"><canvas id="pasture"></canvas><div class="tag-box readout" id="readout">Day 0</div></div>
         <div class="playbar"><button type="button" class="btn primary play" id="play">Play</button>
@@ -416,6 +510,10 @@
         `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over 3600 days"></svg>` +
         legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
         `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>`);
+      if (def.happiness) s += card("Happiness", "Happiness", "Average happiness (0–10) of this run's adults and children. An adult's happiness sets their chance of a child; children's is shown for interest.",
+        `<svg class="chart" id="happy-chart" height="190" role="img" aria-label="Adults' and children's average happiness over 3600 days"></svg>` +
+        legend([["happy-adults", "Adults"], ["happy-kids", "Children"]]) +
+        `<div class="food-rows"><dl class="rows" id="happy-day"></dl><dl class="rows" id="happy-run"></dl></div>`);
       if (!none) s += card("Workers", "Workers", "What the adults and elders of this run do each day. Shaded bands are harvests.",
         `<svg class="chart" id="work-chart" height="190" role="img" aria-label="Adults and elders milking and farming over 3600 days"></svg>` +
         legend([["work-milk", "Milking"], ["work-rice", "On the rice"], ...(energy ? [["work-kids", "Children helping"]] : []),
@@ -433,7 +531,7 @@
         else if (m.extinctDay !== null) { pill.className = "pill crash"; text = `${g.name} die out, day ${fmt(m.extinctDay)} · ${odds}`; }
         else if (m.capped) { pill.className = "pill ok"; text = `${g.name} pass ${fmt(MAX_PEOPLE)} by day ${fmt(m.last)} · ${odds}`; }
         else { pill.className = "pill ok"; text = `${g.name}: ${fmt(m.counts[T])} left · ${odds}`; }
-        pill.innerHTML = `<span class="dot-key ${g.key}"></span>${text}`;
+        pill.innerHTML = `<span class="dot-key ${g.key}"></span>${mode === "micro" && g.key === "people" ? "Micro · " : ""}${text}`;
       }
     }
 
@@ -586,6 +684,23 @@
       scales.attr = f;
     }
 
+    // Adults' and children's average happiness, 0 to 10, with gaps where there are none
+    function drawHappyChart() {
+      const pm = c.result.people.main, f = frame("happy-chart", 190, VM.MAX_HAPPY, { ticks: 5 }), { x, y, step } = f;
+      const path = (arr) => {
+        let d = "", pen = false;
+        for (let i = 1; i <= pm.last; i += step) {
+          const v = arr[i];
+          if (!isFinite(v)) { pen = false; continue; }
+          d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1);
+          pen = true;
+        }
+        return d;
+      };
+      f.svg.innerHTML = f.s + `<path class="res-line happy-kids" d="${path(pm.happyKids)}"/><path class="res-line happy-adults" d="${path(pm.happy)}"/>` +
+        cursorLine("happy-line", f) + `<circle class="dot happy-adults" id="happy-dot" r="4"/>`;
+      scales.happy = f;
+    }
     // Several of the main run's series as lines (series: [[css class, array]]), with a cursor dot on the
     // one in dotClass; minTop: the least the y-axis reaches
     function drawLines(name, series, dotClass, minTop) {
@@ -614,6 +729,23 @@
         <dt>Wool / timber / stone</dt><dd>${fmt(wool)} / ${fmt(wood)} / ${fmt(stone)}</dd>
         <dt>Sheep herds surviving</dt><dd>${c.result.sheep.alive}/${RUNS}</dd>`;
     }
+    function drawHappyRows() {
+      const pm = c.result.people.main, day = currentDay(), i = Math.min(day, pm.last), has = day > 0 && day <= pm.last;
+      const num = (v, d) => (has && isFinite(v) ? fmt(v, d) : "—");
+      let born = 0, happy = 0, n = 0, couples = 0;
+      for (let k = 1; k <= pm.last; k++) { born += pm.born[k]; couples += pm.couples[k]; if (isFinite(pm.happy[k])) { happy += pm.happy[k]; n++; } }
+      $("happy-day").innerHTML = `<dt class="sub">Day ${fmt(day)}</dt>
+        <dt>Adults' happiness, on average</dt><dd>${num(pm.happy[i], 2)}</dd>
+        <dt>Of it, from yesterday's energy left</dt><dd>${has && isFinite(pm.joyAdults[i]) ? "+" + fmt(pm.joyAdults[i], 2) : "—"}</dd>
+        <dt>Children's happiness, on average</dt><dd>${num(pm.happyKids[i], 2)}</dd>
+        <dt>Couples</dt><dd>${has ? fmt(pm.couples[i]) : "—"}</dd>
+        <dt>Chance of a child, all couples</dt><dd>${has ? fmt(pm.chance[i], 4) : "—"}</dd>
+        <dt>Born today</dt><dd>${has ? fmt(pm.born[i]) : "—"}</dd>`;
+      $("happy-run").innerHTML = `<dt class="sub">Whole run</dt>
+        <dt>Adults' happiness, on average</dt><dd>${n ? fmt(happy / n, 2) : "—"}</dd>
+        <dt>Children born</dt><dd>${fmt(born)}</dd>
+        <dt>Born per couple a year</dt><dd>${couples ? fmt((born / couples) * YEAR, 2) : "—"} <small>(${fmt(c.UP.p * YEAR, 2)} at happiness 5)</small></dd>`;
+    }
     function drawCraftRows() {
       const pm = c.result.people.main, day = currentDay(), i = Math.min(day, pm.last);
       let work = 0, done = 0;
@@ -629,6 +761,7 @@
         <dt>Items finished</dt><dd>${fmt(done)}</dd>`;
     }
     function drawStatics() {
+      if (!c.result.people) return;
       drawVerdict();
       drawTimeChart();
       drawFoodChart();
@@ -637,6 +770,7 @@
       if (def.craft) drawLines("craft", CRAFTS.map((it, k) => [`craft-${it.id}`, pm.crafts[k]]), "craft-clothes", 5);
       if (!none) drawWorkChart();
       if (def.inherit) drawAttrChart();
+      if (def.happiness) drawHappyChart();
     }
 
     function moveCursor(name, lineId, dotId, val) {
@@ -664,6 +798,7 @@
       if (def.craft) moveCursor("craft", "craft-line", "craft-dot", pm.crafts[0][i]);
       if (!none) moveCursor("work", "work-line", "work-dot", pm.adults[day]);
       if (def.inherit) moveCursor("attr", "attr-line", "attr-dot", pm.counts[i] > 0 ? pm.pow[i] : null);
+      if (def.happiness) moveCursor("happy", "happy-line", "happy-dot", day > 0 && isFinite(pm.happy[i]) ? pm.happy[i] : null);
     }
 
     // ---------- Rows under the charts ----------
@@ -779,6 +914,7 @@
       ctx.restore();
     }
     function drawFarm() {
+      if (!c.result.people) return;
       const canvas = $("pasture"), w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
       const ctx = canvas.getContext("2d");
@@ -853,11 +989,13 @@
     // ---------- Playback ----------
     const currentDay = () => clamp(Math.floor(cursor === null ? T : cursor), 0, T);
     function drawFrame() {
+      if (!c.result.people) return;
       drawCursors();
       if (def.school) drawSchoolRows();
       drawFoodRows();
       if (def.resources) drawResRows();
       if (def.craft) drawCraftRows();
+      if (def.happiness) drawHappyRows();
       drawFarm();
       drawStats();
       const day = currentDay();
@@ -870,9 +1008,76 @@
     }
     const syncSpeed = () => { for (const b of document.querySelectorAll("[data-speed]")) b.setAttribute("aria-pressed", Number(b.dataset.speed) === S.speed); };
 
+    // ---------- Micro mode: the day viewer and the comparison ----------
+    let view = null;
+    function drawModes() {
+      document.body.dataset.mode = hasModes ? mode : "macro";
+      if (!hasModes || mode !== "micro" || !c.result.compare) return;
+      drawCompare();
+      showDay(S.microDay || 100);
+    }
+    // Run 1 again in Micro mode up to `day`, keeping that day's record, and show it
+    function showDay(day) {
+      day = clamp(Math.round(Number(day) || 1), 1, T);
+      S.microDay = day; store(storeKey, S);
+      $("mv-day").value = day;
+      const cfg = { ...c.cfg, mode: "micro", seed: c.base, cowAdults: c.result.cows.runs[0].adults, sheepAdults: sheepOf(0), detailed: false, traceDay: day, stopAfter: day };
+      VM.run(cfg);
+      view = view || MicroView.mount($("micro-view"));
+      const doy = VM.dayOfYear(day), when = `Day ${doy} of year ${Math.floor((day - 1) / YEAR) + 1}${doy < HARVEST_FIRST ? ", tending" : isHarvest(day) ? ", harvest" : ""}`;
+      if (!cfg.trace || !cfg.trace.people) { view.show(null, { day }); $("mv-note").textContent = `${when}: nobody left in run 1.`; return; }
+      $("mv-note").textContent = when;
+      view.show(cfg.trace, { day, k: c.UP.k });
+    }
+    function drawCompare() {
+      const { macro, micro } = c.result.compare;
+      const lived = (r) => { let n = 0; for (let d = 1; d <= r.last; d++) if (r.counts[d - 1] > 0) n++; return n; };
+      // Totals over all 20 runs, per day lived (or per person-day, or per run)
+      const per = (runs, key, by) => { let a = 0, b = 0; for (const r of runs) { a += r.tally[key]; b += by === "people" ? r.tally.peopleDays : by === "run" ? 1 : lived(r); } return b ? a / b : NaN; };
+      const attrs = (runs) => { let pw = 0, it = 0, n = 0; for (const r of runs) if (r.tally.attrDays) { pw += r.tally.pow / r.tally.attrDays; it += r.tally.int / r.tally.attrDays; n++; } return n ? [pw / n, it / n] : [NaN, NaN]; };
+      const rows = [
+        ["Villages alive at day " + fmt(T), (runs) => runs.filter((r) => r.survived).length, 0, ""],
+        ["People on the last day, on average", (runs) => runs.reduce((t, r) => t + r.counts[r.last], 0) / runs.length, 1, ""],
+        ...(energy ? [["Adults' Power, last year", (runs) => attrs(runs)[0], 0, ""], ["Adults' Intelligence, last year", (runs) => attrs(runs)[1], 0, ""]] : []),
+        ["Milk collected a day", (runs) => per(runs, "milk"), 1, ""],
+        ["Rice harvested a year", (runs) => per(runs, "rice") * YEAR, 0, ""],
+        ["Hunger toll, days of life a person a day", (runs) => per(runs, "hunger", "people"), 3, ""],
+        ["Walking a day, everyone together", (runs) => per(runs, "walk"), 1, " h"],
+        ...(def.resources ? [["Wool brought in a day", (runs) => per(runs, "wool"), 2, ""], ["Stone brought in a day", (runs) => per(runs, "stone"), 2, ""]] : []),
+        ...(def.craft ? [["Crafts finished in a run", (runs) => per(runs, "crafts", "run"), 1, ""]] : []),
+        ...(def.school ? [["Knowledge children take home a day", (runs) => per(runs, "taught"), 2, ""], ["Intelligence children gain in a run", (runs) => per(runs, "gained", "run"), 1, ""]] : []),
+        ...(def.happiness ? [["Children born in a run", (runs) => per(runs, "born", "run"), 1, ""],
+          ["Adults' happiness, on average", (runs) => { let t = 0, n = 0; for (const r of runs) if (r.tally.happyDays) { t += r.tally.happy / r.tally.happyDays; n++; } return n ? t / n : NaN; }, 2, ""]] : []),
+      ];
+      $("mm-table").innerHTML = `<thead><tr><th></th><th>Macro</th><th>Micro</th><th>Micro vs Macro</th></tr></thead><tbody>` + rows.map(([label, fn, dp, unit]) => {
+        const a = fn(macro), b = fn(micro), diff = isFinite(a) && isFinite(b) ? (Math.abs(a) > 1e-9 ? `${b >= a ? "+" : "−"}${fmt((Math.abs(b - a) / Math.abs(a)) * 100)}%` : b === a ? "same" : "—") : "—";
+        const show = (v) => (isFinite(v) ? fmt(v, dp) + unit : "—");
+        return `<tr><td>${label}</td><td class="n">${show(a)}</td><td class="n">${show(b)}</td><td class="n">${diff}</td></tr>`;
+      }).join("") + "</tbody>";
+      $("mm-hint").innerHTML = `Micro follows each person: random waking, walking to each job and back for lunch, a job board in priority order, class only while both are there. Macro works the day out for the village as a whole and copies what that does on average. It takes the grown-ups in a new random order each day, gives each of them their own day's clock (walking, lunch, the end of the day), counts each person's hunger from when they get home, and teaches each child for the hours they'd share with the scholar on average over wake-up times. With 20 villages, a few villages either way in "alive" is luck. The other side-by-side counts on this page are from Macro mode.`;
+    }
+
     // ---------- Build the page and wire it up ----------
     document.querySelector("aside.panel").insertAdjacentHTML("beforeend", panelHTML());
     document.querySelector("main").innerHTML = mainHTML();
+    if (hasModes) {
+      // Macro | Micro, next to Roll new runs
+      const seg = document.createElement("div");
+      seg.className = "seg mode-seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Simulation mode");
+      seg.innerHTML = `<button type="button" data-mode="macro" title="The village worked out as a whole each day: quick">Macro</button><button type="button" data-mode="micro" title="Person by person through the day, with a day viewer: slower">Micro</button>`;
+      document.querySelector(".top-actions").insertBefore(seg, $("reroll"));
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-mode]");
+        if (!b || b.dataset.mode === mode) return;
+        microAsked = b.dataset.mode === "micro";
+        recompute();
+      });
+      syncMode();
+      $("mv-day").addEventListener("change", (e) => showDay(e.target.value));
+      $("mv-prev").addEventListener("click", () => showDay((S.microDay || 100) - 1));
+      $("mv-next").addEventListener("click", () => showDay((S.microDay || 100) + 1));
+      $("mv-farm").addEventListener("click", () => showDay(currentDay() || 1));
+    }
     $("play").addEventListener("click", () => {
       if (playing) { stop(); return; }
       playing = true;

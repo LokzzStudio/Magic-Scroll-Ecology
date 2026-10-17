@@ -236,6 +236,11 @@ a.param-chip:hover { border-color: var(--muted); color: var(--ink); }
 /* Settings buttons (Jobs, Reset) on the left, over the settings panel; Roll new runs on the right, over the results */
 .top-actions { width: 100%; display: flex; align-items: center; gap: 8px; }
 .top-actions .btn.roll { order: 2; margin-left: auto; }
+/* Macro | Micro, from the Production page on, just before Roll new runs */
+.top-actions .mode-seg { order: 2; margin-left: auto; }
+.top-actions .mode-seg button { padding: 6px 12px; font-size: 13px; }
+.top-actions .mode-seg + .btn.roll { order: 3; margin-left: 0; }
+body[data-mode="macro"] .micro-only { display: none; }
 .btn.roll {
   font-size: 15px;
   font-weight: 600;
@@ -253,7 +258,12 @@ a.param-chip:hover { border-color: var(--muted); color: var(--ink); }
   .top-actions { width: 100%; }
   .btn.roll { flex: 1; justify-content: center; }
 }
-@media (max-width: 600px) { .topbar-inner { padding: 0 12px; } }
+@media (max-width: 600px) {
+  /* Two rows on a phone: the settings buttons, then Macro | Micro and Roll new runs */
+  .topbar-inner { padding: 8px 12px; height: auto; min-height: var(--topbar-h); }
+  .top-actions { flex-wrap: wrap; row-gap: 8px; }
+  .top-actions .mode-seg { margin-left: 0; }
+}
 
 /* ---------- Page ---------- */
 .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }

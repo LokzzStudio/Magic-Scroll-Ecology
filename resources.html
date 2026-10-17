@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Resources</h1>
-    <p class="lede">The Education page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b> and a <b>mine</b>. Once every food job is filled, grown-ups with energy to spare go out a load at a time: while timber is short, one of them <b>cuts wood (伐木)</b>; the rest go to their own jobs, women <b>shearing wool (採羊毛)</b> and men <b>quarrying stone (採石)</b>. Nothing uses these yet, so wool and stone pile up and timber stays at its target; food and school work just as on the Education page.</p>
+    <p class="lede">The Education page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b> and a <b>mine</b>. Once every food job is filled, grown-ups with energy to spare go out to collect: while timber is short, one of them <b>cuts wood (伐木)</b>; the rest go to their own jobs, women <b>shearing wool (採羊毛)</b> and men <b>quarrying stone (採石)</b>. Nothing uses these yet, so wool and stone pile up and timber stays at its target; food and school work just as on the Education page.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Wool per sheep, how fast it regrows, the timber to keep, and what 1 energy collects</dd>
@@ -102,7 +102,10 @@
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
 <script src="map-model.js"></script>
+<script src="day-model.js"></script>
 <script src="village-model.js"></script>
+<script src="micro-model.js"></script>
+<script src="micro-view.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Resources: the Education page, plus sheep, a forest and a mine
@@ -119,7 +122,7 @@ VillagePage.start({
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
-    $("assign-hint").innerHTML = `<b>Who collects what.</b> Idle grown-ups carry ${fmt(c.M.load)} energy's worth home at a time, then set off again. Each time, if timber is under ${fmt(S.woodTarget)}, the first of them who may cut wood goes to the forest; the rest go to their own jobs: women to the sheep, men to the mine. When the sheep are bare, women turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them.`;
+    $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. If timber is under ${fmt(S.woodTarget)}, the first of them who may cut wood goes to the forest; the rest go to their own jobs: women to the sheep, men to the mine. When the sheep are bare, women turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
   },
 });
 </script>

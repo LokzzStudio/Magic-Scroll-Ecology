@@ -13,6 +13,7 @@
     ["education.html", "Education", "A scholar teaches children"],
     ["resources.html", "Resources", "Sheep, timber &amp; stone"],
     ["craft.html", "Craft", "Weaving &amp; forging"],
+    ["happiness.html", "Happiness", "Happy couples have children"],
   ];
   const nav = document.querySelector("nav.sidenav");
   const here = nav.dataset.page;

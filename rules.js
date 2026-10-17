@@ -3,20 +3,29 @@
 // with the groups that page uses, then a footer of simulation notes (how the page runs, not game rules).
 // Numbers are the defaults. Keep this in step with the models; worked examples belong in page hints.
 (function () {
-  const ORDER = ["herd", "humans", "food", "advisor", "map", "production", "attribute", "inheritance", "education", "resources", "craft"];
+  const ORDER = ["herd", "humans", "food", "advisor", "map", "production", "attribute", "inheritance", "education", "resources", "craft", "happiness"];
 
   function groups(page) {
     const at = (name) => ORDER.indexOf(page) >= ORDER.indexOf(name);   // this page or a later one
     const is = (...names) => names.includes(page);
-    const working = at("production"), energy = at("attribute"), school = at("education"), resources = at("resources"), crafts = is("craft");
+    const working = at("production"), energy = at("attribute"), school = at("education"), resources = at("resources"), crafts = at("craft"), happiness = at("happiness");
     const out = [];
     const add = (title, where, items, opts = {}) => out.push({ title, where, items, ...opts });
-    const walking = () => add("Map and walking", "Map", [
-      "A 16 × 16 grid of house, farm, pasture, forest and mine tiles. A place's distance = steps (no diagonals) from the nearest house to its nearest tile; a round trip takes 2 × distance × 2 minutes.",
-      "A day has 16 hours for work and walking; work itself takes energy ÷ (Intelligence ÷ 100) hours, at most 10 (a standard worker: 10 energy in 10 hours).",
-      "Collecting (milking, harvest) takes a round trip home for every 2 energy of work, a part load counting; tending takes one round trip a day. If work and walking would pass 16 hours, the worker does what fits, in whole energy.",
-      "Work left undone by walking is taken up by idle grown-ups" + (is("map") ? " (Production page and after)." : energy ? ": milking passes on to the next worker as usual, and adults without a field top up the fields." : ": each idle hand does what a standard hand can, elders only the milking.") + (resources ? " The forest (timber) and the mine (stone) are worked like any other place." : " Forest and mine are used on the Resources page."),
-    ]);
+    const walking = () => {
+      add("Map and walking", "Map", [
+        "A 16 × 16 grid of house, farm, pasture, forest and mine tiles. A place's distance = steps (no diagonals) from the nearest house to its nearest tile; walking there takes distance × 1 minute. From one place straight to another: the steps between their nearest tiles.",
+        "Everyone wakes between 4:00 and 8:00, as a Poisson process at λ = N ÷ 4 an hour for N people, held to the window (N + 1 exponential gaps, scaled to 4 hours, in a random order). That's the same as each person drawing an even time between 4 and 8.",
+        "From waking, everyone is out of the house for 12 hours. Breakfast first, by the house (24 min). From 5½ hours: anyone idle goes home at once; anyone working goes home as soon as the energy they're on is done (and carried home). Lunch is picked up at home and eaten by the house (24 min), then back out. At 12 hours: the same, for the night (anyone still working may get home late).",
+        "Collecting (milking, harvest, timber, wool, stone) is carried home (搬運) after every 1 energy, and whatever's in hand at the end of the job: a walk home and back out each time. Tending, crafts and class carry nothing.",
+        "Work takes 1 ÷ (Intelligence ÷ 100) hours per energy, a whole energy at a time, for as long as the day allows: there's no other limit on hours. Anyone with nothing left to do waits by the house." + (resources ? " The forest (timber) and the mine (stone) are worked like any other place." : " Forest and mine are used on the Resources page."),
+      ]);
+      add("Meals and hunger", "Map", [
+        "Breakfast and lunch are each half the day's ration: on a full ration a grown-up gets 5 and 5, at 80% 4 and 4 (a child half). A meal keeps them full for share × 12 ÷ 2 hours (one food lasts u = 12 ÷ 10 = 1.2 hours); what's left of breakfast carries over into lunch.",
+        "Once someone is out of the house and empty, they lose <b>2k × t ÷ u²</b> days of life an hour, t hours into the hungry spell (k = 10 from the Humans page): a spell of s hours costs <b>k × (s ÷ u)²</b>. It ends when they eat or go into the house; hunger doesn't count inside.",
+        "Fullness = the food still in them as a share of a full day's: 50% after a full breakfast, falling 1 ÷ 12 an hour. At 20% or less they're hungry (Micro mode shows it). They keep working while they have energy; once they have none left and are back at the house, they may go in early, whatever the hour.",
+        "So a full breakfast lasts 6 hours: anyone home later than that for lunch, or out after 12 hours, goes hungry for that long. On 80% with lunch at 5½ hours, spells of 0.7 h and 1.7 h cost 10 × (0.7 ÷ 1.2)² + 10 × (1.7 ÷ 1.2)² ≈ 23 days, against 40 for eating 8 of 10 all at once.",
+      ]);
+    };
     if (is("map")) { walking(); return out; }
 
     if (!is("humans")) add("Cows", "Herd", [
@@ -27,8 +36,10 @@
 
     if (at("humans")) add("People", "Humans", [
       "Lifespan 3,600 days ± 10%, drawn evenly. Child under 360 days, adult from 360, elder from 2,880; adults and elders are grown-ups. Start: 5 men and 5 women, each at a random age from 360 up to their lifespan.",
-      "Couples = min(adult men, adult women); elders have no children. Each couple has a child at 0.002 a day, boy or girl 50/50.",
-      "Need: 10 food a day per grown-up, 5 per child. Everyone gets the same share = eaten ÷ need; each person then loses <b>5 × (their missing food)²</b> days of life (an adult eating 6 of 10: 5 × 4² = 80 days).",
+      happiness
+        ? "Couples = min(adult men, adult women), paired at random afresh every day; elders have no children. Each couple's chance of a child is set by the two partners' happiness (see Happiness); boy or girl 50/50."
+        : "Couples = min(adult men, adult women); elders have no children. Each couple has a child at 0.002 a day, boy or girl 50/50.",
+      "Need: 10 food a day per grown-up, 5 per child. Everyone gets the same share = eaten ÷ need" + (working ? "; the hunger toll follows each person's day (see Meals and hunger)." : "; each person then loses <b>10 × (their missing food)²</b> days of life (an adult eating 6 of 10: 10 × 4² = 160 days)."),
       is("humans") && "Each day: hunger, then ageing and deaths, then births. Food here is a fixed 200 a day, never stored.",
     ]);
 
@@ -54,8 +65,8 @@
     ]);
 
     if (working) add("Work", "", energy ? [
-      "Everyone spends their day's energy. Milking first: a cow's 10 milk takes 10 energy; people milk cow after cow, elders first, then adults, each in the order they joined the village. Adults put what's left into the rice; elders don't farm.",
-      "Tending (days 1–180): the 4 fields go to the 4 adults with the most left (ties: who joined first); the rest idle, and a field uses at most 13.9 energy a day. Harvest (days 181–270): 25 rice per energy; adults, most left first, join with all they have left until they bring min(40, field ÷ 25) energy.",
+      "Everyone spends their day's energy, each as far as their own day allows (walking, lunch, the end of the day). Milking first: a cow's 10 milk takes 10 energy; people milk cow after cow, elders first, then adults. Adults put what's left into the rice; elders don't farm. Grown-ups come to the jobs in the order they wake: a new random order each day.",
+      "Tending (days 1–180): each of the 4 fields takes up to 13.9 energy a day, from whoever has energy left, most first, one after another. Harvest (days 181–270): 25 rice per energy; adults, most left first, join until they bring min(40, field ÷ 25) energy.",
       "Children fill what grown-ups leave undone in the jobs they may do (by default only milking: a cow not fully milked), most energy first" + (school ? "; leftover energy goes to class." : "."),
       "The crop is ripe on day 181: this year's tending energy × 2. Rice left after day 270 is lost.",
     ] : [
@@ -66,7 +77,7 @@
     if (working) walking();
 
     if (energy) add("Power and Intelligence", "Attribute", [
-      "Energy a day = <b>floor(min(Power, Intelligence) ÷ 10)</b>: Power is durability (耐力), Intelligence efficiency (效率, Intelligence ÷ 100 energy an hour, 10 hours at most).",
+      "Energy a day = <b>floor(Power ÷ 10)</b>: Power is durability (耐力). Intelligence is efficiency (效率): Intelligence ÷ 100 energy an hour, for as long as the day allows. A standard worker spends 10 energy in 10 hours; one with 200 Power and 100 Intelligence has 20 energy but only about 11 hours.",
       is("attribute") ? "Everyone has 100 / 100; elders work at 80%." : "Starting grown-ups have 100 / 100; later ones inherit theirs. Elders work at 80%.",
     ]);
 
@@ -79,25 +90,32 @@
     if (resources) add("Sheep and resources", "Resources", [
       "Sheep: the cows' herd model exactly (same settings, their own dice), on the pasture. Each sheep carries up to 10 wool and grows 1 a day back, shorn or part-shorn; sheep come of age full. Shearers take the fullest sheep first.",
       "1 energy cuts 1 timber (forest), shears 1 wool or quarries 1 stone (mine); forest and mine never run out. Stores start at 0 and never spoil.",
-      "Only energy left after every food job is filled goes to resources; while tending, a field holder stops at the field's daily limit. Children don't collect.",
-      "Collecting goes a 2-energy load at a time, coming home after each. Woodcutting: while timber in store (with today's) is under 10, the first idle grown-up who may cuts a load" + (crafts ? ", preferring anyone not in the middle of a craft" : "") + ". Shearing and quarrying: in village order until nobody has the energy or hours for another load; women shear first, men quarry first, or take the other if theirs isn't possible (no wool left on the sheep, or barred by the jobs table).",
+      "Only energy left after every food job is filled goes to resources. Children don't collect.",
+      "Woodcutting: while timber in store (with today's) is under 10, the first idle grown-up who may cuts what's short, as far as their day allows" + (crafts ? ", preferring anyone not in the middle of a craft" : "") + ". Shearing and quarrying: each grown-up with energy left goes until their energy or the day runs out; women shear first, men quarry first, or take the other if theirs isn't possible (no wool left on the sheep, or barred by the jobs table).",
     ]);
 
     if (crafts) add("Crafts", "Craft", [
       "Women weave (紡織) 衣 clothes or 笠 hats, 100 wool each; men forge (鍛造) 刀 blades or 叉 hayforks, 100 stone each. Each takes 20 energy, at the house (no walking). Finished items pile up; nothing uses them yet.",
-      "One loom and one forge: one person weaves and one forges a day. A craft takes its materials up front and is worked until done, over as many days as it takes, by its crafter if they have energy left, otherwise by the first idle grown-up who may.",
+      "One loom and one forge, one person at each at a time. A craft takes its materials up front and is worked until done, over as many days as it takes, by its crafter if they have energy left, otherwise by the first idle grown-up who may; when they run out, the next who may takes over.",
       "With nothing under way, a station starts the item of its trade the village has started fewest of (衣 before 笠, 刀 before 叉 on a tie), if the materials are in store.",
+    ]);
+
+    if (happiness) add("Happiness", "Happiness", [
+      "Everyone has a happiness from 0 to 10: a base of <b>10 − ⌊Intelligence ÷ 20⌋</b> (at least 0), plus 1 for every 1 energy they left unspent the day before (up to 10 in all). Intelligence 100: base 5; 80–99: 6; 200 or more: 0.",
+      "Energy left unspent: what a person had left at the end of the day, after every job (and, for a child, class). A scholar who writes poetry spends all of theirs. On day 1, nobody has any from the day before.",
+      "Each person's own chance of a child a day = <b>0.002 × happiness ÷ 5</b> (0.002 is the Humans page's chance): 0 at happiness 0, 0.002 at 5, 0.004 at 10. A couple's chance is the average of the two partners'.",
     ]);
 
     if (school) add("Scholar and school", "Education", [
       "With no scholar, the village appoints its adult with the highest Intelligence only if it can spare them: without them and the children, the grown-ups must fully milk every adult cow and still have 4 adults with energy left for the 4 fields (as at tending time). Ties: who joined first. They serve until they become an elder or die.",
       "The scholar does no other work, advises on food, and works at Intelligence × 1.1, Power × 0.9.",
-      "Each child learns until they or the scholar run out of energy; with S and K energy spent by then, the child takes home <b>floor(S × min(1, K ÷ S))</b> knowledge. Every 100 is +1 Intelligence for life.",
-      "Once the last child leaves (or on a day with none), the scholar spends the energy left on poetry (吟詩): 1 knowledge per energy, every 500 of it +1 Intelligence for life, counted apart from what they learned as a child.",
+      "School is at the house. The scholar works through their day, teaching whenever a child is in class and writing poetry (吟詩) otherwise. A child is in class once their food work is done, except at lunch, and spends energy only while the scholar teaches. Over the hours both are there, the child takes home <b>min(scholar's, child's energy an hour) × hours</b> knowledge: the smaller of the two's energy spent, fractions kept. Every 100 is +1 Intelligence for life.",
+      "Each person keeps their own clock, so a child who wakes after the scholar misses the start, and each one's lunch breaks the lesson. In Macro mode, the hours a child shares with the scholar are the average over the difference in their wake-up times (a triangle over ±4 hours).",
+      "Poetry: 1 knowledge per energy the scholar doesn't spend teaching, every 500 of it +1 Intelligence for life, counted apart from what they learned as a child.",
     ]);
 
     if (at("food")) add("Whole numbers", "", [
-      `Energy, food made${at("inheritance") ? ", attributes and knowledge are" : " are"} rounded down; food from energy keeps its fraction in a running total (2.5 per energy: 2, 3, 2, 3, …). The food eaten each day rounds to the nearest unit.`,
+      `Energy, food made${at("inheritance") ? " and attributes are" : " are"} rounded down; food from energy keeps its fraction in a running total (2.5 per energy: 2, 3, 2, 3, …). The food eaten each day rounds to the nearest unit.${school ? " Knowledge keeps its fractions; Intelligence goes up at each whole 100." : ""}`,
     ]);
 
     if (at("food")) add("One day, in order", "", working ? [
@@ -105,7 +123,7 @@
       "Day 1: tending restarts. Day 181: the crop is ripe." + (school ? " The scholar steps down at elder age or death; a new one is appointed if the village can spare them." : ""),
       "Work, for yesterday's adult cows" + (energy ? "; children fill gaps" : "") + (school ? "; the scholar teaches, then writes poetry" : "") + (crafts ? "; idle grown-ups craft, then" : "") + (resources ? (crafts ? " cut wood, shear and quarry" : "; idle grown-ups cut wood, shear and quarry") : "") + ". Milk and rice go into store; on day 270 the field's rice is lost.",
       "The advisor sets the share; everyone eats" + (at("inheritance") ? "; children get spare food" : "") + ".",
-      "Hunger, ageing and deaths, births" + (at("inheritance") ? "; newborns inherit, and those coming of age get their bonus" : "") + ".",
+      "Hunger, ageing and deaths, " + (happiness ? "the day's random couples, births (each couple at its own chance)" : "births") + (at("inheritance") ? "; newborns inherit, and those coming of age get their bonus" : "") + "." + (happiness ? " Then today's energy left unspent becomes tomorrow's happiness." : ""),
     ] : [
       "Stored food ages and spoils; today's milk and rice go into store.",
       (is("advisor") ? "The advisor sets the share; everyone eats." : "Everyone eats.") + " Hunger, ageing and deaths, births.",
@@ -114,9 +132,10 @@
     add("Simulation notes", "", [
       is("herd") ? "Runs last 1,000 days by default." : is("humans") ? "Runs last 10,000 days by default." : "Runs last 3,600 days (10 years of 360; day of the year = ((day − 1) mod 360) + 1).",
       "Each page plays 20 runs and draws the first; a run survives if anyone is alive at the end. Dice are seeded (mulberry32)" +
-        (at("food") ? `, with separate dice for the cows, ${resources ? "the sheep, " : ""}the people${at("advisor") ? ", the advisor" : ""}${at("inheritance") ? " and the birth draws" : ""}, so each policy faces the same luck.` : "."),
+        (at("food") ? `, with separate dice for the cows, ${resources ? "the sheep, " : ""}the people${at("advisor") ? ", the advisor" : ""}${at("inheritance") ? " and the birth draws" : ""}${happiness ? ", and the pairing of couples" : ""}, so each policy faces the same luck.` : "."),
       at("humans") && "A run stops early past 2,000 people (counted as surviving). A death counts as hunger's if hunger took at least half a day off that life.",
       at("food") && "These rules give the same model, but not the identical runs: those also depend on the order the dice are drawn in, which only the code sets.",
+      working && "Two modes (the switch at the top): Macro works each day out for the village as a whole, which is quick; Micro plays it person by person on their own clocks, with a job board in priority order (taking a job reserves the energy that person can give it today). Micro is the game's rules; Macro copies what they do on average, and Micro mode shows both side by side. Micro is slow, so pages open in Macro and Micro runs only when picked; rolling new runs or changing a setting goes back to Macro.",
       "Lifespans are at least 1 day." + (!is("humans") ? " Births stop at 10 × K cows." : "") + (at("food") ? " The cows carry on after the people are gone." : ""),
     ], { note: true });
 

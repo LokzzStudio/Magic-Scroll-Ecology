@@ -31,7 +31,7 @@
       <dl>
         <dt>Set here</dt><dd>What each craft costs in materials and energy</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="advisor.html">Advisor</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="resources.html">Resources</a>, and the Jobs table</dd>
-        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+        <dt>Used by</dt><dd><a href="happiness.html">Happiness</a> builds on it</dd>
       </dl>
     </aside>
   </header>
@@ -104,7 +104,10 @@
 <script src="food-model.js"></script>
 <script src="ration-model.js"></script>
 <script src="map-model.js"></script>
+<script src="day-model.js"></script>
 <script src="village-model.js"></script>
+<script src="micro-model.js"></script>
+<script src="micro-view.js"></script>
 <script src="village-page.js"></script>
 <script>
 // Craft: the Resources page, plus weaving and forging at the house
@@ -117,7 +120,7 @@ VillagePage.start({
   ]),
   drawPanel(c) {
     const { S, $, fmt } = c;
-    $("craft-hint").innerHTML = `<b>One loom and one forge:</b> one person weaves and one forges a day. A craft takes its materials up front and is worked until it's done, even across days: by its crafter if they have energy left after the jobs above crafts in the <b>Priority</b> order, otherwise by the next idle grown-up who may. With nothing under way, a station starts the item the village has started fewest of, if the materials are in store. A standard worker (10 energy a day) with nothing else to do finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / 10))} days.`;
+    $("craft-hint").innerHTML = `<b>One loom and one forge:</b> one person at each at a time. A craft takes its materials up front and is worked until it's done, even across days: by its crafter if they have energy left after the jobs above crafts in the <b>Priority</b> order, otherwise by the next idle grown-up who may; when one runs out, the next takes over. With nothing under way, a station starts the item the village has started fewest of, if the materials are in store. A standard worker (10 energy a day) on their own finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / 10))} days.`;
   },
 });
 </script>

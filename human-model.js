@@ -10,11 +10,17 @@
     S: 10,     // lifespan spread, ± percent of L
     F: 200,    // food produced per day, shared by everyone in proportion to need
     c: 10,     // food one grown-up needs per day; a child needs half
-    k: 5,      // hunger toll: days of lifespan lost per (missing food)², per person per day
+    k: 10,     // hunger toll: days of lifespan lost per (missing food)², per person per day
   };
 
-  // Where the Humans page saves its sliders
-  const STORE_KEY = "human-params-v9";
+  // Where the Humans page saves its sliders. Settings saved before k became 10 (v9) come over without k.
+  const STORE_KEY = "human-params-v10", OLD_KEY = "human-params-v9";
+  try {
+    if (!localStorage.getItem(STORE_KEY)) {
+      const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+      if (old && typeof old === "object") { delete old.k; localStorage.setItem(STORE_KEY, JSON.stringify(old)); }
+    }
+  } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
 
@@ -75,17 +81,21 @@
   //    person's lifespan shrinks by hungerLoss of their own missing food (g × their need).
   // 2. everyone ages a day; those reaching their lifespan die
   // 3. each fertile couple has a child with chance p; each child is a boy or girl at random
+  // lossOf(h), if given, is each person's hunger toll instead (the village pages with a day schedule);
+  // chancesOf(people), if given, returns the day's couples as each one's chance of a child instead
+  // (the Happiness page: the day's random couples, each with their own chance), called with the survivors.
   // Updates state in place and returns the day's counts.
-  function stepPeople(state, p, rand) {
+  function stepPeople(state, p, rand, lossOf, chancesOf) {
     const need = foodNeed(state.people, p);
     const ration = rationFor(need, p);
     const gap = Math.max(0, 1 - ration);
     const lost = hungerLoss(gap * p.c, p), childLost = hungerLoss(gap * p.c * CHILD_FOOD, p);   // a grown-up's, a child's
 
-    let died = 0, hungry = 0;
+    let died = 0, hungry = 0, lostAll = 0;
     const people = [];
     for (const h of state.people) {
-      h.life -= h.age < p.M ? childLost : lost;
+      const loss = lossOf ? lossOf(h) : h.age < p.M ? childLost : lost;
+      h.life -= loss; lostAll += loss;
       h.age += 1;
       if (h.age >= h.life) {
         died++;
@@ -95,17 +105,17 @@
       }
     }
 
-    const { couples } = census(people, p);
+    const chances = chancesOf ? chancesOf(people) : null, couples = chances ? chances.length : census(people, p).couples;
     let born = 0;
     for (let i = 0; i < couples; i++) {
-      if (rand() < p.p) {
+      if (rand() < (chances ? chances[i] : p.p)) {
         const life = lifespan(p, rand);
         people.push({ id: state.nextId++, sex: rand() < 0.5 ? MALE : FEMALE, age: 0, life, life0: life });
         born++;
       }
     }
     state.people = people;
-    return { born, died, hungry, couples, need, ration, lost };
+    return { born, died, hungry, couples, need, ration, lost, lostAll };
   }
 
   // Children a couple can expect if both live out their adult years well fed

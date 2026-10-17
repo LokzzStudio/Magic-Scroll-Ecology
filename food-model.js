@@ -76,7 +76,10 @@
     want = Math.round(want);
     let milkEaten = 0, riceEaten = 0;
     let i = milk.length - 1, j = rice.length - 1;   // oldest batches first
-    while (want > 1e-9 && (i >= 0 || j >= 0)) {
+    while (want > 1e-9) {
+      while (i >= 0 && !(milk[i] > 0)) i--;   // empty batches have nothing to give
+      while (j >= 0 && !(rice[j] > 0)) j--;
+      if (i < 0 && j < 0) break;
       const fromMilk = j < 0 || (i >= 0 && milk.length - i <= rice.length - j);
       const store = fromMilk ? milk : rice, a = fromMilk ? i : j;
       const take = Math.min(store[a], want);
