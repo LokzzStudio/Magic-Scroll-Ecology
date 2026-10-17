@@ -125,7 +125,7 @@
     const schedule = (a, t, k) => { a.ver++; q.push({ t, s: seq++, a, v: a.ver, k }); };
     const rel = (a) => now - a.w;
     // A person's day so far as a clock (day-model.js), for working out what they could still do
-    const clockOf = (a) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, lunched: a.lunched });
+    const clockOf = (a) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, load: a.load, lunched: a.lunched, Lh: a.Lh || 0, walked: 0 });
     const est = (a, place, collect) => DayModel.canAt(clockOf(a), place, a.e, a.r, S, collect);
     const note = (a, s, more) => { a.st = s; if (a.tr) a.tr.push({ t: now, s, at: a.loc, e: a.e, ...more }); };
 
