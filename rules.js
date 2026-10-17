@@ -101,8 +101,8 @@
     ]);
 
     if (happiness) add("Happiness", "Happiness", [
-      "Everyone has a happiness from 0 to 10: a base of <b>10 − ⌊Intelligence ÷ 20⌋</b> (at least 0), plus 1 for every 1 energy they left unspent the day before (up to 10 in all). Intelligence 100: base 5; 80–99: 6; 200 or more: 0.",
-      "Energy left unspent: what a person had left at the end of the day, after every job (and, for a child, class). A scholar who writes poetry spends all of theirs. On day 1, nobody has any from the day before.",
+      "Everyone has a happiness from 0 to 10: a base of <b>10 − ⌊Intelligence ÷ 20⌋</b> (at least 0), plus 1 for every 1 energy they left unspent at the end of their last day (up to 10 in all). It changes at night: the day's energy left sets it in time for that night's births, and it stays through the next day. Intelligence 100: base 5; 80–99: 6; 200 or more: 0.",
+      "Energy left unspent: what a person had left at the end of the day, after every job (and, for a child, class). A scholar who writes poetry spends all of theirs. On day 1, nobody has any until that night.",
       "Each person's own chance of a child a day = <b>0.002 × happiness ÷ 5</b> (0.002 is the Humans page's chance): 0 at happiness 0, 0.002 at 5, 0.004 at 10. A couple's chance is the average of the two partners'.",
     ]);
 
@@ -123,7 +123,7 @@
       "Day 1: tending restarts. Day 181: the crop is ripe." + (school ? " The scholar steps down at elder age or death; a new one is appointed if the village can spare them." : ""),
       "Work, for yesterday's adult cows" + (energy ? "; children fill gaps" : "") + (school ? "; the scholar teaches, then writes poetry" : "") + (crafts ? "; idle grown-ups craft, then" : "") + (resources ? (crafts ? " cut wood, shear and quarry" : "; idle grown-ups cut wood, shear and quarry") : "") + ". Milk and rice go into store; on day 270 the field's rice is lost.",
       "The advisor sets the share; everyone eats" + (at("inheritance") ? "; children get spare food" : "") + ".",
-      "Hunger, ageing and deaths, " + (happiness ? "the day's random couples, births (each couple at its own chance)" : "births") + (at("inheritance") ? "; newborns inherit, and those coming of age get their bonus" : "") + "." + (happiness ? " Then today's energy left unspent becomes tomorrow's happiness." : ""),
+      "Hunger, ageing and deaths, " + (happiness ? "happiness from the day's energy left, the day's random couples, births (each couple at its own chance)" : "births") + (at("inheritance") ? "; newborns inherit, and those coming of age get their bonus" : "") + "." + "",
     ] : [
       "Stored food ages and spoils; today's milk and rice go into store.",
       (is("advisor") ? "The advisor sets the share; everyone eats." : "Everyone eats.") + " Hunger, ageing and deaths, births.",

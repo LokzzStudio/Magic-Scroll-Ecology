@@ -433,7 +433,8 @@
 
   // ---------- Happiness ----------
   // Happiness, 0 to 10: a base from Intelligence, 10 − ⌊Intelligence ÷ iqStep⌋, plus 1 for every
-  // perEnergy of energy someone left unspent yesterday (h.joy). Each person's own chance of a child is
+  // perEnergy of energy someone left unspent at the end of their last day (h.joy): it changes at night,
+  // in time for that night's births, and stays through the next day. Each person's own chance of a child is
   // p × happiness ÷ 5 (p, the Humans page's chance, at happiness 5), and a couple's is the average of
   // the two partners'.
   const MAX_HAPPY = 10, MID_HAPPY = 5;
@@ -516,7 +517,7 @@
       read: f32(), readGained: i32(),                                                // the scholar's reading
       wool: f32(), stone: f32(), wood: f32(), woolMade: f32(), stoneMade: f32(), woodMade: f32(), resWork: f32(), woolOnSheep: i32(),   // resources
       crafts: cfg.craft ? cfg.craft.items.map(() => i32()) : null, craftWork: f32(), craftDone: i32(), crafting: i32(),   // crafts in store, energy, finished, under way
-      happy: nan(), happyKids: nan(), chance: f32(), joyAdults: nan(),   // happiness: adults', children's, couples' chances together, from energy left
+      happy: nan(), happyKids: nan(), chance: f32(), joyAdults: nan(), happyNight: nan(),   // happiness: adults' and children's by day, couples' chances together, adults' from energy left, adults' at night
     } : null;
     const snap = () => {   // [id, age, sex] triples of the people drawn
       const every = Math.max(1, Math.ceil(st.people.length / MAX_ICONS));
@@ -554,7 +555,7 @@
         if (food.scholar) { d.schPow[day] = food.scholar.power; d.schInt[day] = food.scholar.intel; }
       }
       if (econ) econ.record(d, day, food);
-      if (joy && ev) { d.happy[day] = food.happy; d.happyKids[day] = food.happyKids; d.chance[day] = food.chance; d.joyAdults[day] = food.joyAdults; d.couples[day] = ev.couples; }
+      if (joy && ev) { d.happy[day] = food.happy; d.happyKids[day] = food.happyKids; d.chance[day] = food.chance; d.joyAdults[day] = food.joyAdults; d.happyNight[day] = food.happyNight; d.couples[day] = ev.couples; }
       d.snaps[day] = snap();
     };
 
@@ -751,26 +752,29 @@
         lossOf = (h) => (handLines ? (h.age >= p.M ? grownLoss : hungerOf(g, idleKid, S, p.k, needOf(h))) : hungerOf(g, (timelines && timelines.get(h)) || home, S, p.k, needOf(h)));
         if (trace) trace.share = g;
       }
-      // Happiness today (from yesterday's energy left), for the births and the records
-      let happy = 0, happyKids = 0, joyAdults = 0;
+      // Happiness through the day (from the last day's energy left), for the records; then at night
+      // today's energy left sets everyone's happiness, which tonight's births go by
+      let happy = 0, happyKids = 0, joyAdults = 0, happyNight = 0;
       if (joy) {
-        let a = 0, k = 0, ja = 0;
+        let a = 0, k = 0;
+        const adults = [];
         for (const h of st.people) {
           const st0 = HumanModel.stage(h, p);
           if (h.intel === undefined) continue;
-          if (st0 === "adult") { happy += happinessOf(h, joy); joyAdults += h.joy || 0; a++; } else if (st0 === "child") { happyKids += happinessOf(h, joy); k++; }
+          if (st0 === "adult") { happy += happinessOf(h, joy); joyAdults += h.joy || 0; a++; adults.push(h); } else if (st0 === "child") { happyKids += happinessOf(h, joy); k++; }
         }
-        happy = a ? happy / a : NaN; joyAdults = a ? joyAdults / a : NaN; happyKids = k ? happyKids / k : NaN;
+        for (const h of st.people) { h.joy = h.joyNext || 0; h.joyNext = 0; }
+        for (const h of adults) happyNight += happinessOf(h, joy);
+        happy = a ? happy / a : NaN; joyAdults = a ? joyAdults / a : NaN; happyKids = k ? happyKids / k : NaN; happyNight = a ? happyNight / a : NaN;
       }
       const ev = HumanModel.stepPeople(st, p, rand, lossOf, joy ? chancesOf : null);
-      if (joy) for (const h of st.people) { h.joy = h.joyNext || 0; h.joyNext = 0; }
       if (inherit) inheritAttrs(st.people, p, irand, attrs, inherit);
       record(day, ev, {
         milkMade, milkEaten, milkSpoiled, riceMade, riceEaten, riceSpoiled, foodEaten, share: advIQ != null ? share : undefined, iq: advIQ, extra,
         adults: grownUps, farm: w.farm, milkers: w.milkers, kidsWork: w.kidsWorked, cows, crop, field, riceLost,
         milkWork: w.milkWork, farmWork: w.farmWork, walk, ...made,
         taught: lesson.knowledge, gained: lesson.gained, kids: kidCount, picked, lesson: lesson.hours, scholar, ...reading,
-        happy, happyKids, chance: chanceToday, joyAdults,
+        happy, happyKids, chance: chanceToday, joyAdults, happyNight,
       });
       tally.born += ev.born;
       if (joy && isFinite(happy)) { tally.happy += happy; tally.happyDays++; }

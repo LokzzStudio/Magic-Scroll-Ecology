@@ -510,7 +510,7 @@
         `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over 3600 days"></svg>` +
         legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
         `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>`);
-      if (def.happiness) s += card("Happiness", "Happiness", "Average happiness (0–10) of this run's adults and children. An adult's happiness sets their chance of a child; children's is shown for interest.",
+      if (def.happiness) s += card("Happiness", "Happiness", "Average happiness (0–10) of this run's adults and children through the day. At night each person's energy left that day changes it, and the night's births go by the new happiness; children's is shown for interest.",
         `<svg class="chart" id="happy-chart" height="190" role="img" aria-label="Adults' and children's average happiness over 3600 days"></svg>` +
         legend([["happy-adults", "Adults"], ["happy-kids", "Children"]]) +
         `<div class="food-rows"><dl class="rows" id="happy-day"></dl><dl class="rows" id="happy-run"></dl></div>`);
@@ -736,11 +736,12 @@
       for (let k = 1; k <= pm.last; k++) { born += pm.born[k]; couples += pm.couples[k]; if (isFinite(pm.happy[k])) { happy += pm.happy[k]; n++; } }
       $("happy-day").innerHTML = `<dt class="sub">Day ${fmt(day)}</dt>
         <dt>Adults' happiness, on average</dt><dd>${num(pm.happy[i], 2)}</dd>
-        <dt>Of it, from yesterday's energy left</dt><dd>${has && isFinite(pm.joyAdults[i]) ? "+" + fmt(pm.joyAdults[i], 2) : "—"}</dd>
+        <dt>Of it, from the day before's energy left</dt><dd>${has && isFinite(pm.joyAdults[i]) ? "+" + fmt(pm.joyAdults[i], 2) : "—"}</dd>
         <dt>Children's happiness, on average</dt><dd>${num(pm.happyKids[i], 2)}</dd>
+        <dt>Adults' happiness tonight, with today's energy left</dt><dd>${num(pm.happyNight[i], 2)}</dd>
         <dt>Couples</dt><dd>${has ? fmt(pm.couples[i]) : "—"}</dd>
-        <dt>Chance of a child, all couples</dt><dd>${has ? fmt(pm.chance[i], 4) : "—"}</dd>
-        <dt>Born today</dt><dd>${has ? fmt(pm.born[i]) : "—"}</dd>`;
+        <dt>Chance of a child tonight, all couples</dt><dd>${has ? fmt(pm.chance[i], 4) : "—"}</dd>
+        <dt>Born tonight</dt><dd>${has ? fmt(pm.born[i]) : "—"}</dd>`;
       $("happy-run").innerHTML = `<dt class="sub">Whole run</dt>
         <dt>Adults' happiness, on average</dt><dd>${n ? fmt(happy / n, 2) : "—"}</dd>
         <dt>Children born</dt><dd>${fmt(born)}</dd>
