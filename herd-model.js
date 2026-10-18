@@ -26,6 +26,24 @@
     };
   }
 
+  // Tiers: every animal (and, from the Resources page on, wool, timber, stone and crafts) is 1 基本
+  // Normal, 2 中階 Intermediate, 3 進階 Advanced or 4 稀有 Rare. drawTier(x): x plus a random −0.49 to
+  // 0.50 (in steps of 0.01), rounded, held to 1–4. Tiers have their own dice (state.trand, from the herd's
+  // seed + TIER_SALT), so they change no other draw.
+  const TIERS = [null, { zh: "基本", en: "Normal" }, { zh: "中階", en: "Intermediate" }, { zh: "進階", en: "Advanced" }, { zh: "稀有", en: "Rare" }];
+  const TIER_SALT = 0x3c6ef372;
+  // (held to 1–max: cows and sheep are at most 進階, HERD_MAX_TIER)
+  const drawTier = (x, rand, max = 4) => Math.min(max, Math.max(1, Math.floor(x + (Math.floor(rand() * 100) - 49) / 100 + 0.5 + 1e-9)));
+  const HERD_MAX_TIER = 3;
+  // A newborn's tier: drawTier of the average of two different adults picked at random (the one twice
+  // if there's only one; any two animals if there are no adults)
+  function babyTier(parents, rand, max) {
+    const n = parents.length, i = Math.floor(rand() * n);
+    let j = i;
+    if (n > 1) { j = Math.floor(rand() * (n - 1)); if (j >= i) j++; }
+    return drawTier((parents[i].tier + parents[j].tier) / 2, rand, max);
+  }
+
   // Births (positive) or losses from herd size (negative) per day
   const herdChange = (N, p) => p.r * N * (N / p.A - 1) * (1 - N / p.K);
 
@@ -46,14 +64,15 @@
 
   const lifespan = (p, rand) => Math.max(1, p.L * (1 + (p.S / 100) * (2 * rand() - 1)));
 
-  // A starting herd of mixed ages. Returns { herd, nextId } for stepHerd.
-  function startHerd(count, p, rand) {
+  // A starting herd of mixed ages, all of one tier. Returns { herd, nextId } for stepHerd; with
+  // trand (tier dice), newborns get tiers too, up to maxTier.
+  function startHerd(count, p, rand, tier = 0, trand = null, maxTier = HERD_MAX_TIER) {
     const herd = [];
     for (let i = 0; i < count; i++) {
       const life = lifespan(p, rand);
-      herd.push({ id: i, age: Math.floor(rand() * life), life });
+      herd.push({ id: i, age: Math.floor(rand() * life), life, tier });
     }
-    return { herd, nextId: count };
+    return { herd, nextId: count, trand, maxTier };
   }
 
   // One day for one herd:
@@ -76,7 +95,9 @@
     let born = 0, size = 0;
     if (change > 0) {
       whole = Math.max(0, Math.min(whole, p.K * 10 - herd.length));
-      for (let i = 0; i < whole; i++) herd.push({ id: state.nextId++, age: 0, life: lifespan(p, rand) });
+      let parents = null;
+      if (state.trand && whole > 0) { parents = herd.filter((a) => a.age >= p.M); if (!parents.length) parents = herd.slice(); }
+      for (let i = 0; i < whole; i++) herd.push({ id: state.nextId++, age: 0, life: lifespan(p, rand), tier: parents ? babyTier(parents, state.trand, state.maxTier || 4) : 0 });
       born = whole;
     } else {
       whole = Math.min(whole, herd.length);
@@ -112,15 +133,16 @@
     }
   }
 
-  // Starting herd size, set on the Herd tuner and also used by the Food Model and every page after it
-  const START = { N0: 11 };
+  // Starting herd size, and the starting cows' and sheep's tier, set on the Herd tuner and also used by
+  // the Food Model and every page after it
+  const START = { N0: 11, cowTier: 3, sheepTier: 3 };
 
   // The starting herd the Herd tuner last saved, or null
   function savedStart() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
-      const n = Number(saved && saved.N0);
-      return saved && isFinite(n) && n >= 0 ? { N0: Math.round(n) } : null;
+      const n = Number(saved && saved.N0), tier = (k, max) => { const t = Math.round(Number(saved[k])); return t >= 1 && t <= max ? t : START[k]; };
+      return saved && isFinite(n) && n >= 0 ? { N0: Math.round(n), cowTier: tier("cowTier", HERD_MAX_TIER), sheepTier: tier("sheepTier", HERD_MAX_TIER) } : null;
     } catch (e) {
       return null;
     }
@@ -129,5 +151,5 @@
   // One-line summary for the top bar
   const describe = (p) => `r ${p.r} · K ${p.K} · A ${p.A} · L ${p.L}d ±${p.S}% · adult ${p.M}d`;
 
-  window.HerdModel = { DEFAULTS, STORE_KEY, rng, herdChange, avgGrowth, equilibria, lifespan, startHerd, stepHerd, savedParams, START, savedStart, describe };
+  window.HerdModel = { DEFAULTS, STORE_KEY, rng, TIERS, TIER_SALT, HERD_MAX_TIER, drawTier, herdChange, avgGrowth, equilibria, lifespan, startHerd, stepHerd, savedParams, START, savedStart, describe };
 })();

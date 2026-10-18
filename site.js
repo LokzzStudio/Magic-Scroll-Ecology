@@ -4,16 +4,14 @@
   const PAGES = [
     ["index.html", "Herd", "Set the parameters"],
     ["humans.html", "Humans", "Couples &amp; children"],
-    ["farm.html", "Food", "Harvest, stores &amp; spoiling"],
-    ["advisor.html", "Advisor", "Food advisor &amp; rations"],
+    ["farm.html", "Food", "Harvest, stores &amp; rations"],
     ["map.html", "Map", "Where things are"],
-    ["production.html", "Production", "Food needs workers"],
     ["attribute.html", "Attribute", "Power &amp; intelligence"],
     ["inheritance.html", "Inheritance", "Children take after parents"],
     ["education.html", "Education", "A scholar teaches children"],
-    ["resources.html", "Resources", "Sheep, timber &amp; stone"],
-    ["craft.html", "Craft", "Weaving &amp; forging"],
     ["happiness.html", "Happiness", "Happy couples have children"],
+    ["resources.html", "Resources", "Sheep, timber, stone &amp; skills"],
+    ["craft.html", "Craft", "Weaving &amp; forging"],
   ];
   const nav = document.querySelector("nav.sidenav");
   const here = nav.dataset.page;
@@ -31,14 +29,14 @@
     document.body.appendChild(dlg);
     const draw = () => {
       const t = RolesModel.current();
-      dlg.innerHTML = `<div class="jobs-head"><h2>Jobs</h2><p>Who can do which job. Used from the Production page on; changes apply at once.</p></div>
+      dlg.innerHTML = `<div class="jobs-head"><h2>Jobs</h2><p>Who can do which job. Used from the Attribute page on; changes apply at once.</p></div>
         <div class="jobs-scroll"><table class="jobs-table"><thead><tr><th></th>${JOBS.map((j) =>
           `<th class="${j.used ? "" : "unused"}"><span class="zh">${j.zh}</span><small>${j.en}</small></th>`).join("")}</tr></thead><tbody>${ROLES.map((r) =>
           `<tr><th scope="row"><span class="zh">${r.zh}</span><small>${r.en}</small></th>${JOBS.map((j) => {
             const sim = SIMULATED[r.id].includes(j.id);
             return `<td class="${sim ? "" : "unused"}"><input type="checkbox" data-role="${r.id}" data-job="${j.id}"${t[r.id][j.id] ? " checked" : ""} aria-label="${r.en}: ${j.en}"></td>`;
           }).join("")}</tr>`).join("")}</tbody></table></div>
-        <p class="hint">Shaded cells aren't simulated yet (no fire so far, and scholars only write poetry and teach). Woodcutting, shearing and quarrying happen from the Resources page on, weaving and forging on the Craft page. Children's 教育 is going to class; a scholar's is teaching. Children never work on the Production page.</p>
+        <p class="hint">Shaded cells aren't simulated yet (no fire so far, and scholars only write poetry and teach). Old men and old women work with the elder penalty and eat less. Woodcutting, shearing and quarrying happen from the Resources page on, weaving and forging from the Craft page on. Children's 教育 is going to class; a scholar's is teaching.</p>
         <div class="btn-row"><button type="button" class="btn" data-act="defaults">Back to the default table</button><button type="button" class="btn primary" data-act="close">Done</button></div>`;
     };
     dlg.addEventListener("change", (e) => {
@@ -69,7 +67,7 @@
           return `<li><span class="prio-n">${k + 1}</span><span class="prio-name"><span class="zh">${t.zh}</span><small>${t.en}${t.page ? ` · ${t.page} page on` : ""}</small></span>
             <span class="prio-move"><button type="button" class="btn" data-up="${k}"${k === 0 ? " disabled" : ""} aria-label="Move ${t.en} up">↑</button><button type="button" class="btn" data-down="${k}"${k === order.length - 1 ? " disabled" : ""} aria-label="Move ${t.en} down">↓</button></span></li>`;
         }).join("")}</ol>
-        <p class="hint">Each job takes what it needs from whoever may do it (see Jobs), and passes the rest on. Children fill food work left undone after all of them. On the Production page everyone does one job a day, milking first.</p>
+        <p class="hint">Each person goes down the list and takes the first job they may do (see Jobs) that has work for them. Children only fill food work the grown-ups can't cover; with Education above it, they go to class first while class is on. The scholar teaches when Education comes before Poetry, and only writes poetry otherwise.</p>
         <div class="btn-row"><button type="button" class="btn" data-act="defaults">Back to the default order</button><button type="button" class="btn primary" data-act="close">Done</button></div>`;
     };
     dlg.addEventListener("click", (e) => {

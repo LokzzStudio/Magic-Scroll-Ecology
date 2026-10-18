@@ -1,5 +1,5 @@
 // Who can do which job, for the Magic Scroll ecology pages. The Jobs button (site.js) edits it; the
-// Production page and every page after it follow it.
+// Attribute page and every page after it follow it.
 (function () {
   // Jobs, in the table's order. `used`: the simulation has this job yet.
   const JOBS = [
@@ -21,14 +21,16 @@
     { id: "woman", zh: "女人", en: "Woman" },
     { id: "scholarM", zh: "文人 (男)", en: "Scholar, man" },
     { id: "scholarF", zh: "文人 (女)", en: "Scholar, woman" },
-    { id: "elder", zh: "老人", en: "Elder" },
+    { id: "oldMan", zh: "老人 (男)", en: "Old man" },
+    { id: "oldWoman", zh: "老人 (女)", en: "Old woman" },
   ];
   // Which cells the simulation follows: food work for children, men, women and elders; poetry and
   // teaching for scholars; education (going to class) for children; woodcutting, shearing and
-  // quarrying for grown-ups (Resources page), and weaving and forging (Craft page)
+  // quarrying for grown-ups (Resources page), weaving and forging (Craft page)
   const SIMULATED = {
     child: ["milk", "tend", "harvest", "teach"], man: ["milk", "wood", "wool", "stone", "tend", "harvest", "weave", "forge"], woman: ["milk", "wood", "wool", "stone", "tend", "harvest", "weave", "forge"],
-    scholarM: ["read", "teach"], scholarF: ["read", "teach"], elder: ["milk", "wood", "wool", "stone", "tend", "harvest", "weave", "forge"],
+    scholarM: ["read", "teach"], scholarF: ["read", "teach"],
+    oldMan: ["milk", "wood", "wool", "stone", "tend", "harvest", "weave", "forge"], oldWoman: ["milk", "wood", "wool", "stone", "tend", "harvest", "weave", "forge"],
   };
 
   const row = (...ids) => Object.fromEntries(JOBS.map((j) => [j.id, ids.includes(j.id)]));
@@ -38,15 +40,21 @@
     woman: row("milk", "wood", "wool", "tend", "harvest", "weave", "fire"),
     scholarM: row("read", "teach"),
     scholarF: row("read", "teach"),
-    elder: row("milk"),
+    oldMan: row("milk", "wood", "stone", "tend", "harvest", "forge", "fire"),     // as a man
+    oldWoman: row("milk", "wood", "wool", "tend", "harvest", "weave", "fire"),   // as a woman
   };
 
-  const STORE_KEY = "roles-v1";
+  // Tables saved before elders were split (v1) come over with each elder row as the man's or woman's
+  const STORE_KEY = "roles-v2", OLD_KEY = "roles-v1";
 
   // The table the Jobs button last saved, or null
   function savedParams() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+      let saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+      if (!saved || typeof saved !== "object") {
+        const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+        if (old && typeof old === "object") { delete old.elder; saved = { ...old, oldMan: old.man, oldWoman: old.woman }; }
+      }
       if (!saved || typeof saved !== "object") return null;
       const out = {};
       for (const r of ROLES) {
@@ -72,16 +80,21 @@
   const TIERS = [
     { id: "milk", zh: "採牛奶", en: "Milking" },
     { id: "field", zh: "耕田 · 收割", en: "Fields: tending, or the harvest" },
-    { id: "wood", zh: "伐木", en: "Woodcutting, while timber is under its target", page: "Resources" },
     { id: "craft", zh: "紡織 · 鍛造", en: "Crafts, when the materials are in store (one weaver, one smith)", page: "Craft" },
-    { id: "collect", zh: "採羊毛 · 採石", en: "Shearing or quarrying: women shear first, men quarry first", page: "Resources" },
+    { id: "collect", zh: "採羊毛 · 採石 · 伐木", en: "Collecting: women shear or cut wood, men quarry or cut wood, whichever there's less of", page: "Resources" },
+    { id: "teach", zh: "教育", en: "Education: children go to class, the scholar teaches", page: "Education" },
+    { id: "read", zh: "吟詩", en: "Poetry: the scholar writes", page: "Education" },
   ];
   const PRIORITY_DEFAULT = TIERS.map((t) => t.id);
   const PRIORITY_KEY = "priority-v1";
+  // The saved order, with any jobs it doesn't have yet (added since it was saved) at the end
   function currentPriority() {
     try {
       const saved = JSON.parse(localStorage.getItem(PRIORITY_KEY) || "null");
-      if (Array.isArray(saved) && saved.length === PRIORITY_DEFAULT.length && PRIORITY_DEFAULT.every((id) => saved.includes(id))) return saved;
+      if (Array.isArray(saved)) {
+        const known = saved.filter((id, k) => PRIORITY_DEFAULT.includes(id) && saved.indexOf(id) === k);
+        if (known.length) return [...known, ...PRIORITY_DEFAULT.filter((id) => !known.includes(id))];
+      }
     } catch (e) {}
     return PRIORITY_DEFAULT.slice();
   }

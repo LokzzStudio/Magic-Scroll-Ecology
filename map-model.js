@@ -1,16 +1,18 @@
 // Shared map and day for the Magic Scroll ecology pages: a grid of tiles (house, farm, pasture, forest,
-// mine), how far each kind of place is from the nearest house, and the shape of everyone's day. The Map
-// page (map.html) is where they're set; the Production page and every page after it read them from here.
+// mine, well, river), how far each kind of place is from the nearest house, and the shape of everyone's day. The Map
+// page (map.html) is where they're set; the Attribute page and every page after it read them from here.
 (function () {
   const W = 16, H = 16;
-  // Tile letters: "." empty, H house, F farm, P pasture, T forest, M mine
+  // Tile letters: "." empty, H house, F farm, P pasture, T forest, M mine, W well, R river (the well and
+  // the river have no use yet)
   const TYPES = [
     { id: "H", name: "House" }, { id: "F", name: "Farm" }, { id: "P", name: "Pasture" },
-    { id: "T", name: "Forest" }, { id: "M", name: "Mine" },
+    { id: "T", name: "Forest" }, { id: "M", name: "Mine" }, { id: "W", name: "Well" }, { id: "R", name: "River" },
   ];
   const PLACES = ["F", "P", "T", "M"];
 
-  // The starting map: two houses, farm 2 steps away, pasture 4, forest 7, mine 18 (at 1 minute a tile)
+  // The starting map: two houses, farm 2 steps away, pasture 4, forest 7, mine 18 (at 1 minute a tile), a
+  // well and a river
   function defaultTiles() {
     const t = new Array(W * H).fill(".");
     const fill = (x0, x1, y0, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) t[y * W + x] = c; };
@@ -19,6 +21,8 @@
     fill(1, 3, 6, 9, "P");
     fill(10, 14, 0, 1, "T");
     fill(14, 15, 14, 15, "M");
+    fill(3, 3, 4, 4, "W");
+    fill(7, 8, 0, 0, "R");
     return t.join("");
   }
 
@@ -29,17 +33,18 @@
     activeHours: 12,   // hours a day everyone is out of the house, from waking
     lunchAfter: 5.5,   // hours after waking from which everyone heads home for lunch, once the energy they're on is done
     mealMin: 24,       // minutes to eat breakfast or lunch, by the house
-    load: 1,           // energy of collecting a worker does before carrying it home (搬運)
+    load: 10,          // energy of collecting a worker does before carrying it home (搬運)
     wakeFrom: 4,       // everyone wakes between these hours (o'clock)
     wakeTo: 8,
   };
-  const LIMITS = { minPerTile: [0, 60], activeHours: [6, 18], lunchAfter: [1, 12], mealMin: [0, 120], load: [1, 20], wakeFrom: [0, 12], wakeTo: [0, 12] };
+  const LIMITS = { minPerTile: [0, 60], activeHours: [6, 18], lunchAfter: [1, 12], mealMin: [0, 120], load: [10, 200], wakeFrom: [0, 12], wakeTo: [0, 12] };
 
   // Real time in the game: 5 minutes is 2 hours of game time (for Micro mode's clock)
   const GAME_MIN_PER_REAL_SEC = 0.4;
 
-  // Older saves keep what the defaults since haven't changed: the map, the day's hours, meals, waking and carrying
-  const STORE_KEY = "map-v5", OLD_KEYS = [["map-v4", ["tiles", "activeHours", "mealMin", "load", "wakeFrom", "wakeTo"]], ["map-v3", ["tiles", "activeHours", "mealMin", "wakeFrom", "wakeTo"]], ["map-v2", ["tiles"]]];
+  // Older saves keep what the defaults since haven't changed: the map, the day's hours, meals, waking and
+  // carrying (at 10 energy a day before v6: carrying ×10)
+  const STORE_KEY = "map-v6", OLD_KEYS = [["map-v5", ["tiles", "minPerTile", "activeHours", "lunchAfter", "mealMin", "load", "wakeFrom", "wakeTo"]], ["map-v4", ["tiles", "activeHours", "mealMin", "load", "wakeFrom", "wakeTo"]], ["map-v3", ["tiles", "activeHours", "mealMin", "wakeFrom", "wakeTo"]], ["map-v2", ["tiles"]]];
 
   // Steps (no diagonals) from each kind of place to the nearest house: the nearest such tile to any
   // house. Infinity if there's no house or none of that place. With spots: also where, as
@@ -97,11 +102,11 @@
       for (const [key, keep] of OLD_KEYS) {
         if (saved && typeof saved === "object") break;
         const old = JSON.parse(localStorage.getItem(key) || "null");
-        if (old && typeof old === "object") saved = Object.fromEntries(keep.filter((k) => k in old).map((k) => [k, old[k]]));
+        if (old && typeof old === "object") saved = Object.fromEntries(keep.filter((k) => k in old).map((k) => [k, k === "load" ? Number(old[k]) * 10 : old[k]]));
       }
       if (!saved || typeof saved !== "object") return null;
       const m = { ...DEFAULTS };
-      if (typeof saved.tiles === "string" && saved.tiles.length === W * H && /^[.HFPTM]+$/.test(saved.tiles)) m.tiles = saved.tiles;
+      if (typeof saved.tiles === "string" && saved.tiles.length === W * H && /^[.HFPTMWR]+$/.test(saved.tiles)) m.tiles = saved.tiles;
       for (const [k, [lo, hi]] of Object.entries(LIMITS)) {
         const v = Number(saved[k]);
         if (k in saved && isFinite(v)) m[k] = Math.min(hi, Math.max(lo, v));

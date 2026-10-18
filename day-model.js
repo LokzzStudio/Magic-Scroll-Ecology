@@ -1,4 +1,4 @@
-// The day, for the Production page on: each person's clock from waking (breakfast, walking out, work,
+// The day, for the Attribute page on: each person's clock from waking (breakfast, walking out, work,
 // carrying home, lunch, the walk home at night), what they could still get done, and the hunger it
 // costs them; and, for school, the hours the scholar and a child are both at the house. The macro model
 // (village-model.js), Micro mode (micro-model.js), its day viewer (micro-view.js) and the Map page all
@@ -9,7 +9,7 @@
   // ---------- The clock ----------
   // Everyone's day (S: MapModel.travelOf), in hours since they woke: breakfast by the house (S.meal
   // hours), then work. At S.lunch hours they finish the energy under way, walk home for lunch and eat it
-  // by the house; at S.active hours they finish the energy under way and walk home for the night.
+  // by the house. Nobody starts a unit they couldn't finish and be home from by S.active hours.
   // Anyone with nothing left to do waits by the house. S.between(a, b): hours walking from a to b
   // ("H" the house, "F" farm, "P" pasture, "T" forest, "M" mine).
   // Collecting (milking, harvest, timber, wool, stone) is carried home (搬運) after every S.load energy
@@ -17,8 +17,10 @@
   // A person's clock: the time, where they are, what they're carrying, whether they've had lunch (and
   // got home for it at Lh)
   const newClock = (S) => ({ t: S.meal, at: "H", load: 0, lunched: false, Lh: 0, walked: 0 });
-  // Work up to `want` energy at `place`, `rate` energy an hour, a whole energy at a time (the last may be
-  // a part if want isn't whole), walking there first, carrying it home if it's collecting, and breaking
+  // Work is done UNIT energy at a time: an hour's work for a standard worker
+  const UNIT = 10;
+  // Work up to `want` energy at `place`, `rate` energy an hour, UNIT energy at a time (the last may be
+  // less if want isn't a whole number of units), walking there first, carrying it home if it's collecting, and breaking
   // for lunch. Returns the energy done.
   // (The clock is kept in locals while it runs: this is the hottest loop of a Macro day. A day that
   // starts on a fresh clock depends only on the place, the work, the rate and carrying, so each is
@@ -52,26 +54,27 @@
         t += d; walked += d; at = "H"; load = 0; Lh = t; t += S.meal; lunched = true;
         continue;
       }
+      const a = Math.min(UNIT, want - done), go = at === place ? 0 : at === "H" ? back : S.between(at, place);
+      if (t + go + a / rate + back > S.active + 1e-9) break;   // they couldn't do it and be home by the end of the day
       if (at !== place) {   // walk there (home drops off the load)
-        const d = at === "H" ? back : S.between(at, place);
-        t += d; walked += d; at = place; if (place === "H") load = 0;
+        t += go; walked += go; at = place; if (place === "H") load = 0;
         continue;
       }
-      const a = Math.min(1, want - done);
       t += a / rate; done += a;
       if (carry) { load += a; if (load >= S.load - 1e-9 || want - done <= 1e-9) { t += back; walked += back; at = "H"; load = 0; } }
     }
     c.t = t; c.at = at; c.load = load; c.lunched = lunched; c.Lh = Lh; c.walked = walked;
     return done;
   }
-  // The most whole energy (up to e) a person could still get done at `place` today. Without carrying
-  // it's worked out directly; with it, by stepping through the day on a copy of their clock.
+  // The most whole energy (up to e) a person could still get done at `place` today, in whole units
+  // (UNIT, or the last of e). Without carrying it's worked out directly; with it, by stepping through
+  // the day on a copy of their clock.
   function canAt(c, place, e, rate, S, collect) {
     if (!(rate > 0) || e <= 0) return 0;
     const go = S.between(c.at, place), back = S.between(place, "H");
     if (!isFinite(go) || !isFinite(back)) return 0;
     if (collect && place !== "H" && back > 0) return Math.floor(workAt({ ...c }, place, Math.floor(e + 1e-9), rate, S, true) + 1e-9);
-    const steps = (from, until) => (from < until - 1e-9 ? Math.ceil((until - from) * rate - 1e-9) : 0);
+    const steps = (from, until) => (from < until - 1e-9 ? UNIT * Math.ceil(((until - from) * rate) / UNIT - 1e-9) : 0);   // the units that can start, as energy
     let t = c.t, n = 0;
     if (!c.lunched) {
       if (t >= S.lunch - 1e-9) t += S.between(c.at, "H") + S.meal + back;
@@ -81,7 +84,10 @@
         t += 2 * back + S.meal;
       }
     } else t += go;
-    return Math.min(e, n + steps(t, S.active));
+    // After lunch: units that end, with the walk home, by S.active (all of what's left if it fits)
+    const left = e - n, room = (S.active - back - t) * rate;
+    if (room <= 1e-9) return Math.min(e, n);
+    return n + (left <= room + 1e-9 ? left : UNIT * Math.floor(room / UNIT + 1e-9));
   }
   // Once someone's work is done: they walk home and wait by the house; they go in for lunch at S.lunch
   // (or when they get back, if later) and for the night at S.active (or when they get back).
@@ -115,13 +121,14 @@
     if (spent) { const goIn = Math.max(tl.out, tl.Lh + S.meal, after - low); if (goIn < E - 1e-9) { E = goIn; early = goIn; } }
     return { s1: Math.max(0, tl.Lh - full), s2: Math.max(0, E - after), Lh: tl.Lh, E, early };
   }
-  // Days of life a person loses to hunger in a day: once full runs out they lose 2k × t ÷ u² days an
-  // hour, t hours into the hungry spell (one food lasts u = S.active ÷ need hours), until they eat or go
-  // in: a spell of s hours costs k × (s ÷ u)².
+  // Days of life a person loses to hunger in a day: while out and empty they lose 2k × t ÷ u² days an
+  // hour, t being the hours they've been hungry so far that day (one food lasts u = S.active ÷ need
+  // hours). Eating or going in stops the clock but doesn't reset it; it starts again from 0 the next day.
+  // So the day costs k × ((s1 + s2) ÷ u)².
   function hungerOf(g, tl, S, k, need) {
     if (!(need > 0)) return 0;
-    const d = dayOut(g, tl, S), u = S.active / need;
-    return (k * (d.s1 * d.s1 + d.s2 * d.s2)) / (u * u);
+    const d = dayOut(g, tl, S), u = S.active / need, s = d.s1 + d.s2;
+    return (k * s * s) / (u * u);
   }
   // Someone who spends the whole day by the house (or no schedule); with nothing to do (idle), they may
   // go in early when hungry
@@ -167,6 +174,6 @@
   const NO_MAP = { active: 12, lunch: 5, meal: 0.4, wake0: 4, wake1: 8, between: () => 0 };
 
   window.DayModel = {
-    NO_MAP, HUNGRY_AT, newClock, workAt, canAt, dayEnd, dayOut, hungerOf, atHome, workSpans, classSpans, sharedHours,
+    NO_MAP, HUNGRY_AT, UNIT, newClock, workAt, canAt, dayEnd, dayOut, hungerOf, atHome, workSpans, classSpans, sharedHours,
   };
 })();

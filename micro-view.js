@@ -7,13 +7,19 @@
   const CARRY = { milk: "milk", field: "rice", wood: "timber", wool: "wool", stone: "stone" };
   const JOB = { milk: "Milking", field: "Working the fields", wood: "Cutting wood", wool: "Shearing", stone: "Quarrying", weave: "Weaving", forge: "Forging", class: "In class", teach: "Teaching", poetry: "Writing poetry" };
   // Tile colours and how strongly they show: [colour, fill opacity]
-  const TILE = { H: ["--ink", 0.9], F: ["--allee", 0.55], P: ["--herd", 0.22], T: ["--herd", 0.65], M: ["--muted", 0.6] };
+  const TILE = { H: ["--ink", 0.9], F: ["--allee", 0.55], P: ["--herd", 0.22], T: ["--herd", 0.65], M: ["--muted", 0.6], W: ["--cows", 0.85], R: ["--cows", 0.3] };
   // Speeds, in game hours per real second: real time is 5 minutes of play for 2 hours of the game
   const REAL = MapModel.GAME_MIN_PER_REAL_SEC / 60;
   const SPEEDS = [[1, "Real time"], [10, "×10"], [60, "×60"], [240, "×240"]];
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const clock = (h) => { const m = Math.floor(h * 60 + 1e-6); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  // Skills above level 1, by the map's glyphs (the Skill page)
+  const SKILL_GLYPH = { milk: "奶", farm: "田", wood: "木", weave: "織", forge: "鍛", wool: "毛", stone: "石", teach: "教", poetry: "詩" };
+  const skillText = (a) => {
+    const up = a.levels ? Object.keys(SKILL_GLYPH).filter((id) => a.levels[id] > 1) : [];
+    return up.length ? ` · level ${up.map((id) => SKILL_GLYPH[id] + a.levels[id]).join(" ")}` : "";
+  };
 
   function mount(root) {
     root.innerHTML = `<div class="mv-bar">
@@ -69,13 +75,15 @@
     // Fullness (share of a full day's food still in them), whether they're out, and the day's hunger toll
     // so far: the hours out with nothing in them, until they eat or go in (DayModel.dayOut)
     function fullAt(a, time) {
-      const S = tr.S, g = tr.share !== undefined ? tr.share : 1, B = (g * S.active) / 2, u = S.active / a.need;
+      const S = tr.S, g = a.g, B = (g * S.active) / 2, u = S.active / a.need;
       if (time < a.w) return { full: 0, lost: 0 };
       const lunch = a.plan.Lh !== null ? a.w + a.plan.Lh : Infinity, night = a.w + a.plan.E;
       const end1 = a.w + B, end2 = lunch < Infinity ? Math.max(end1, lunch) + B : end1;
       const until = time < lunch ? end1 : end2;
-      const spell = (from, to) => { const x = Math.max(0, Math.min(time, to) - from); return (info.k * x * x) / (u * u); };
-      const lost = lunch < Infinity ? spell(end1, lunch) + (time > lunch ? spell(end2, night) : 0) : spell(end1, night);
+      // The day's hungry hours so far (they add up over the day), and what they've cost
+      const hours = (from, to) => Math.max(0, Math.min(time, to) - from);
+      const h = lunch < Infinity ? hours(end1, lunch) + (time > lunch ? hours(end2, night) : 0) : hours(end1, night);
+      const lost = (info.k * h * h) / (u * u);
       return { full: Math.max(0, until - time) / S.active, lost };
     }
     // Hunger status: at HUNGRY_AT or less, out of the house; empty: losing life
@@ -150,7 +158,7 @@
       return states;
     }
     function buildRows() {
-      body.innerHTML = tr.people.map((a, k) => `<tr data-k="${k}"><td><span class="mv-dot ${a.sex === HumanModel.MALE ? "m" : "f"}${a.stage === "child" ? " kid" : ""}"></span><b>${nameOf(a)}</b> #${a.id}<small>${a.power !== undefined ? `${fmt(a.power)}/${fmt(a.intel)}` : `${fmt(a.e0)} energy`} · up ${clock(a.w)}${a.happy !== null && a.happy !== undefined ? ` · happiness ${fmt(a.happy)}` : ""}</small></td>` +
+      body.innerHTML = tr.people.map((a, k) => `<tr data-k="${k}"><td><span class="mv-dot ${a.sex === HumanModel.MALE ? "m" : "f"}${a.stage === "child" ? " kid" : ""}"></span><b>${nameOf(a)}</b> #${a.id}<small>${a.power !== undefined ? `${fmt(a.power)}/${fmt(a.intel)}` : `${fmt(a.e0)} energy`} · up ${clock(a.w)}${a.happy !== null && a.happy !== undefined ? ` · happiness ${fmt(a.happy)}` : ""}${skillText(a)}</small></td>` +
         `<td><span class="mv-doing"></span> <span class="mv-tag" hidden></span></td><td><span class="mv-bar-o"><span class="mv-bar-i e"></span></span></td><td><span class="mv-bar-o"><span class="mv-bar-i f"></span></span><small class="mv-lost"></small></td></tr>`).join("");
       rows = [...body.children].map((row) => ({ row, doing: row.querySelector(".mv-doing"), tag: row.querySelector(".mv-tag"), e: row.querySelector(".mv-bar-i.e"), f: row.querySelector(".mv-bar-i.f"), lost: row.querySelector(".mv-lost") }));
     }
@@ -199,7 +207,8 @@
         const same = tr && info && info.day === opts.day;
         tr = trace; info = opts; tileCache = {};
         if (!tr || !tr.people) { body.innerHTML = ""; $(".mv-summary").textContent = ""; return; }
-        for (const a of tr.people) a.plan = DayModel.dayOut(tr.share !== undefined ? tr.share : 1, a.tl, tr.S);
+        // Each person's share of their need today: the grown-ups', or the children's
+        for (const a of tr.people) { a.g = (a.kind === "kid" ? tr.shareKids : tr.share) ?? 1; a.plan = DayModel.dayOut(a.g, a.tl, tr.S); }
         t0 = Math.floor(Math.min(...tr.people.map((a) => a.w)) * 4) / 4;
         t1 = Math.ceil(Math.max(...tr.people.map((a) => a.w + a.plan.E)) * 4) / 4;
         slider.min = t0; slider.max = t1;
@@ -211,7 +220,7 @@
         const parts = [["milk", "milking"], ["field", "the fields"], ["wood", "timber"], ["wool", "shearing"], ["stone", "quarrying"], ["weave", "weaving"], ["forge", "forging"], ["teach", "teaching"], ["poetry", "poetry"], ["class", "class"]]
           .filter(([k]) => sum(k) > 0.05).map(([k, label]) => `${label} ${fmt(sum(k), 1)}`);
         const walked = tr.people.reduce((s, a) => s + a.tr.filter((x) => x.s === "walk").reduce((q, x) => q + (x.t1 - x.t), 0), 0);
-        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people, fed <b>${fmt((tr.share ?? 1) * 100)}%</b> today. Energy spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. Hunger toll: <b>${fmt(lost, 1)}</b> days of life, everyone together. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their energy is spent; a red ring is someone out of food, losing life.`;
+        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people, fed <b>${fmt((tr.share ?? 1) * 100)}%</b> today (children <b>${fmt((tr.shareKids ?? 1) * 100)}%</b>). Energy spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. Hunger toll: <b>${fmt(lost, 1)}</b> days of life, everyone together. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their energy is spent; a red ring is someone out of food, losing life.`;
         draw();
       },
       stop,

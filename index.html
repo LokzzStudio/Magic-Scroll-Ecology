@@ -42,6 +42,8 @@
     max-height: 360px;
   }
   .copy-note { font-size: 12.5px; color: var(--herd); margin: 0; }
+  #tiers .param-head { flex-wrap: wrap; gap: 6px; }
+  #tiers .seg button { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -63,7 +65,7 @@
     <p class="lede">Tune how a herd grows and dies. Every animal is tracked on its own: it dies when it reaches its lifespan, and a herd below the Allee threshold is too small to breed well.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Herd growth, lifespan and starting herd</dd>
+        <dt>Set here</dt><dd>Herd growth, lifespan, starting herd and starting tiers</dd>
         <dt>Follows</dt><dd><span class="none">Nothing; this is where the cows start</span></dd>
         <dt>Used by</dt><dd><a href="farm.html">Food Model</a> and every page after it</dd>
       </dl>
@@ -134,6 +136,26 @@
           </div>
           <input id="S-range" type="range" aria-label="Lifespan spread">
           <p class="hint">How much lifespans vary. At 0%, animals born together die together, so the herd rises and falls in waves.</p>
+        </div>
+      </section>
+
+      <section class="panel-section" id="tiers">
+        <div class="section-head">
+          <h2>Tiers</h2>
+          <p class="scope">Also used by the <b><a href="resources.html">Resources</a></b> page and every page after it</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <span class="lbl">Starting cows</span>
+            <div class="seg" role="group" aria-label="Starting cows' tier" id="cowTier-seg"></div>
+          </div>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <span class="lbl">Starting sheep</span>
+            <div class="seg" role="group" aria-label="Starting sheep's tier" id="sheepTier-seg"></div>
+          </div>
+          <p class="hint">Every animal has a tier: 基本 Normal (1), 中階 Intermediate (2) or 進階 Advanced (3). The starting herd is all one tier. A newborn takes the average of two adults picked at random, plus a random −0.49 to 0.50, rounded, and no higher than 進階. A cow's tier sets the most milk it gives a day (基本 80%, 中階 90%, 進階 all of the Food page's milk cap); a sheep's goes into its wool's tier.</p>
         </div>
       </section>
 
@@ -281,6 +303,7 @@
     }
     P.N0 = Math.round(P.N0);
     P.T = Math.round(P.T);
+    for (const k of ["cowTier", "sheepTier"]) { const t = Math.round(Number(P[k])); P[k] = t >= 1 && t <= HerdModel.HERD_MAX_TIER ? t : DEFAULTS[k]; }
   }
 
   function syncInputs() {
@@ -293,6 +316,8 @@
       range.value = P[k];
       if (document.activeElement !== num) num.value = P[k];
     }
+    for (const k of ["cowTier", "sheepTier"]) $(k + "-seg").innerHTML = [1, 2, 3, 4].slice(0, HerdModel.HERD_MAX_TIER).map((t) =>
+      `<button type="button" data-t="${t}" aria-pressed="${P[k] === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].zh}</button>`).join("");
   }
 
   // ---------- Model (shared with other pages, see herd-model.js) ----------
@@ -301,20 +326,21 @@
   function simulateHerd(seed, detailed) {
     const rand = HerdModel.rng(seed);
     const calfAge = P.M;
-    const state = HerdModel.startHerd(P.N0, P, rand);
+    const state = HerdModel.startHerd(P.N0, P, rand, P.cowTier, HerdModel.rng((seed + HerdModel.TIER_SALT) >>> 0));
     const snap = () => state.herd.filter((c) => c.id % perIcon === 0).slice(0, MAX_ICONS).map((c) => ({ id: c.id, age: c.age }));
     const calves = () => state.herd.reduce((n, c) => n + (c.age < calfAge ? 1 : 0), 0);
+    const tiers = () => { const t = [0, 0, 0, 0, 0]; for (const c of state.herd) t[c.tier]++; return t; };
 
     const series = [[0, state.herd.length]];
     const snaps = detailed ? [snap()] : null;
-    const events = detailed ? [{ born: 0, old: 0, size: 0, calves: calves() }] : null;
+    const events = detailed ? [{ born: 0, old: 0, size: 0, calves: calves(), tiers: tiers() }] : null;
 
     for (let d = 1; d <= P.T; d++) {
       const day = HerdModel.stepHerd(state, P, rand);
       series.push([d, state.herd.length]);
       if (detailed) {
         snaps.push(snap());
-        events.push({ ...day, calves: calves() });
+        events.push({ ...day, calves: calves(), tiers: tiers() });
       }
     }
     return { series, snaps, events, survived: state.herd.length > 0 };
@@ -528,10 +554,11 @@
     const ev = main.events[day];
     $("readout").textContent = `Day ${fmt(day)} · ${fmt(n)} cows · ${fmt(ev.calves)} calves`;
     $("scale").textContent = (perIcon === 1 ? "" : `1 icon ≈ ${perIcon} cows · `) + `Calves: under ${fmt(P.M)} days`;
-    $("events").innerHTML = day === 0
+    $("events").innerHTML = (day === 0
       ? "Day 0: starting herd of mixed ages"
       : `Day ${fmt(day)}: <span class="born">${fmt(ev.born)} born</span> · <span class="died">${fmt(ev.old)} died of old age</span>` +
-        (ev.size ? ` · <span class="died">${fmt(ev.size)} lost to herd size</span>` : "");
+        (ev.size ? ` · <span class="died">${fmt(ev.size)} lost to herd size</span>` : "")) +
+      `<br>By tier: ${[1, 2, 3, 4].map((t) => `${HerdModel.TIERS[t].zh} ${fmt(ev.tiers[t])}`).join(" · ")}`;
   }
 
   // ---------- Readouts ----------
@@ -563,10 +590,28 @@ const COW_ALLEE = ${P.A};            // A, cows
 const COW_LIFESPAN = ${P.L};         // L, days on average
 const COW_LIFESPAN_SPREAD = ${P.S / 100}; // ± share of L
 const COW_ADULT_AGE = ${P.M};        // M, days; younger cows are calves
+const COW_START_TIER = ${P.cowTier};       // 1 基本, 2 中階, 3 進階
 
-function newCow() {
+function newCow(tier) {
   const spread = COW_LIFESPAN_SPREAD * (2 * Math.random() - 1);
-  return { age: 0, lifespan: COW_LIFESPAN * (1 + spread) };
+  return { age: 0, lifespan: COW_LIFESPAN * (1 + spread), tier };
+}
+
+// A tier: x plus a random -0.49 to 0.50 (steps of 0.01), rounded, held to 1-3
+const drawTier = (x) => Math.min(3, Math.max(1,
+  Math.round(x + (Math.floor(Math.random() * 100) - 49) / 100)));
+
+// A calf's tier: the average of two different adults picked at random
+function calfTier(herd) {
+  let adults = herd.filter((cow) => cow.age >= COW_ADULT_AGE);
+  if (!adults.length) adults = herd;
+  const i = Math.floor(Math.random() * adults.length);
+  let j = i;
+  if (adults.length > 1) {
+    j = Math.floor(Math.random() * (adults.length - 1));
+    if (j >= i) j++;
+  }
+  return drawTier((adults[i].tier + adults[j].tier) / 2);
 }
 
 // Label only: calves still count toward births and crowding
@@ -586,8 +631,9 @@ function stepCows(herd) {
   const size = Math.abs(change);
   const count = Math.floor(size)
     + (Math.random() < size % 1 ? 1 : 0);
+  const parents = herd.slice();   // today's calves aren't parents
   for (let i = 0; i < count; i++) {
-    if (change > 0) herd.push(newCow());
+    if (change > 0) herd.push(newCow(calfTier(parents)));
     else if (herd.length) {
       herd.splice(Math.floor(Math.random() * herd.length), 1);
     }
@@ -636,6 +682,10 @@ function stepCows(herd) {
     });
     $(k + "-num").addEventListener("change", () => { syncInputs(); $(k + "-num").value = P[k]; });
   }
+  for (const k of ["cowTier", "sheepTier"]) $(k + "-seg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-t]");
+    if (b) { P[k] = Number(b.dataset.t); recompute(); }
+  });
   $("reroll").addEventListener("click", () => { P.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
   $("reset").addEventListener("click", () => { stop(); P = { ...DEFAULTS }; cursor = null; recompute(); });
 

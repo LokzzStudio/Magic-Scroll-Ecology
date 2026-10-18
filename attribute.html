@@ -26,11 +26,11 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Attribute</h1>
-    <p class="lede">The Production Model, with two attributes on every person: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives at most 10 milk a day, so a strong villager milks another cow or puts the energy they have left into the rice fields, where Power and Intelligence pay off. Elders have less of both (the elder penalty). At 100 and 100, everyone under elder age does exactly what they did on the Production Model.</p>
+    <p class="lede">The Food page's farm, but now food only comes in if people work for it, on the Map page's map and day. Every person has two attributes: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). A cow gives at most 100 milk a day, so a strong villager milks another cow or puts the energy they have left into the rice fields, where Power and Intelligence pay off. Elders have less of both (the elder penalty). At 100 and 100, everyone under elder age does a standard day: 100 energy at 10 an hour.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food Model</a> · <a href="advisor.html">Advisor Model</a> · <a href="map.html">Map</a>, with the <a href="production.html">Production Model</a>'s work rules</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a>, and the Jobs table</dd>
         <dt>Used by</dt><dd><a href="inheritance.html">Inheritance</a>, for its starting grown-ups</dd>
       </dl>
     </aside>
@@ -49,7 +49,7 @@
             <span class="num-wrap"><input id="pow-num" type="number"></span>
           </div>
           <input id="pow-range" type="range" aria-label="Power">
-          <p class="hint">Work durability (耐力): the energy someone can spend in a day. 100 Power = 10 energy; when it's used up, they stop for the day.</p>
+          <p class="hint">Work durability (耐力): the energy someone can spend in a day. 100 Power = 100 energy; when it's used up, they stop for the day.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -57,7 +57,7 @@
             <span class="num-wrap"><input id="int-num" type="number"></span>
           </div>
           <input id="int-range" type="range" aria-label="Intelligence">
-          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 1 energy an hour, for as long as the day out allows (the Map page: about 11 hours once meals are eaten, less the walking).</p>
+          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 10 energy an hour, for as long as the day out allows (the Map page: about 11 hours once meals are eaten, less the walking).</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -117,7 +117,7 @@ VillagePage.start({
     const lo = FoodModel.wholeFood(done, F.milkPerEnergy), hi = Math.ceil(done * F.milkPerEnergy - 1e-7);
     const milking = cows === 0 ? { text: `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} milk`, rest: 0 }
       : { text: `${cows} cow${cows === 1 ? "" : "s"}, ${fmt(cows * F.milkCap)} milk`, rest: Math.round((done - cows * cowE) * 10) / 10 };
-    $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(elder * 100)}%</b> of their Power and Intelligence. It isn't passed on to their children.`;
+    $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(elder * 100)}%</b> of their Power and Intelligence, and eat ${fmt(elder * 100)}% of an adult's food (${fmt(UP.c * elder, 1)} a day). It isn't passed on to their children.`;
     $("eff-text").textContent = `1 energy = ${c.fmtNum(F.milkPerEnergy)} milk`;
     $("workday").innerHTML =
       `<dt></dt><dd class="h">One person's working day</dd><dd class="h v"></dd>` +

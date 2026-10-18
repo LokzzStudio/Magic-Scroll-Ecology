@@ -34,7 +34,7 @@
 .stat-head h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; display: inline-flex; align-items: center; gap: 8px; }
 .big { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
 .big small { font-family: var(--body); font-weight: 400; font-size: 12.5px; color: var(--muted); margin-left: 4px; }
-.rows { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+.rows { display: grid; grid-template-columns: 1fr auto; align-content: start; gap: 4px 12px; margin: 0; font-size: 13.5px; }
 .rows dt { color: var(--muted); }
 .rows dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
 .rows .sub {
@@ -101,7 +101,6 @@
 .pill::before { display: none; }
 #rice-range, #rice0-range { accent-color: var(--allee); }
 #iq-range { accent-color: var(--men); }
-.advisor-off #iq-block { opacity: 0.55; }
 #workday .v { white-space: normal; }
 #pow-range { accent-color: var(--herd); }
 #int-range { accent-color: var(--allee); }
@@ -129,6 +128,26 @@
 .chart .dot.happy-adults { fill: var(--allee); stroke: none; }
 .swatch.happy-adults { border-color: var(--allee); }
 .swatch.happy-kids { border-color: var(--women); }
+/* Skills card: one line per skill; the scholar's two dashed */
+.chart .skill-milk { stroke: var(--cows); }
+.chart .skill-farm { stroke: var(--allee); }
+.chart .skill-wood { stroke: var(--herd); }
+.chart .skill-weave { stroke: var(--women); }
+.chart .skill-forge { stroke: var(--crash); }
+.chart .skill-wool { stroke: var(--sheep); }
+.chart .skill-stone { stroke: var(--muted); }
+.chart .skill-teach { stroke: var(--men); stroke-dasharray: 5 3; }
+.chart .skill-poetry { stroke: var(--ink); stroke-dasharray: 2 3; }
+.chart .dot.skill-milk { fill: var(--cows); stroke: none; }
+.swatch.skill-milk { border-color: var(--cows); }
+.swatch.skill-farm { border-color: var(--allee); }
+.swatch.skill-wood { border-color: var(--herd); }
+.swatch.skill-weave { border-color: var(--women); }
+.swatch.skill-forge { border-color: var(--crash); }
+.swatch.skill-wool { border-color: var(--sheep); }
+.swatch.skill-stone { border-color: var(--muted); }
+.swatch.skill-teach { border-color: var(--men); border-top-style: dashed; }
+.swatch.skill-poetry { border-color: var(--ink); border-top-style: dotted; }
 
 /* ---------- Micro mode: a day, person by person ---------- */
 .mv-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13.5px; }
@@ -166,6 +185,11 @@ small.mv-lost { display: inline; margin-left: 4px; color: var(--crash); }
 .mm-table th, .mm-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
 .mm-table th { font-weight: 600; color: var(--muted); font-size: 12.5px; }
 .mm-table td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.tier-table { margin-top: 16px; }
+.tier-table th { white-space: nowrap; }
+.tier-table th.n, .tier-table td.n { text-align: right; }
+.tier-table th small { display: block; font-weight: 400; font-size: 11px; }
 .mv-tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 16px; vertical-align: 1px; }
 .mv-tag.hungry { background: var(--allee); color: var(--surface); }
 .mv-tag.empty { background: var(--crash); color: var(--surface); }

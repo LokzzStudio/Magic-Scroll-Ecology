@@ -396,6 +396,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--herd); }
   padding: 5px 10px;
   cursor: pointer;
 }
+.seg button { white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
 
