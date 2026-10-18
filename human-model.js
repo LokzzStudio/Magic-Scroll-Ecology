@@ -3,7 +3,7 @@
 (function () {
   // Human parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    p: 0.002,  // chance a fertile couple has a child each day
+    p: 0.003,  // chance a fertile couple has a child each day
     M: 360,    // adult at age, days. Younger people are children.
     E: 2880,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
     L: 3600,   // average lifespan, days
@@ -16,19 +16,22 @@
   // Where the Humans page saves its sliders. Settings saved at 10 food a day (v10) come over with food
   // ×10 and k ÷ 100, so the same share missing costs the same; those saved before k became 10 (v9),
   // without k.
-  const STORE_KEY = "human-params-v11";
+  // v12: the birth chance became 0.003; saved settings keep everything else.
+  const STORE_KEY = "human-params-v12", V11 = "human-params-v11";
   try {
-    if (!localStorage.getItem(STORE_KEY)) {
+    if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
         const old = JSON.parse(localStorage.getItem(key) || "null");
         if (!old || typeof old !== "object") continue;
         if (key === "human-params-v9") delete old.k;
         for (const f of ["F", "c"]) if (f in old) old[f] = Number(old[f]) * 10;
         if ("k" in old) old.k = Number(old.k) / 100;
-        localStorage.setItem(STORE_KEY, JSON.stringify(old));
+        localStorage.setItem(V11, JSON.stringify(old));
         break;
       }
     }
+    const v11 = JSON.parse(localStorage.getItem(V11) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v11 && typeof v11 === "object") { delete v11.p; localStorage.setItem(STORE_KEY, JSON.stringify(v11)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;

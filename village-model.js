@@ -229,8 +229,8 @@
   const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor(rate - 7 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
   // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding toolBonus(its tier) to the
-  // holder's effectiveness there: +10%, +15%, +20%, +25% (toolFor: the one w has for a skill, or none)
-  const toolBonus = (tier) => 0.05 + 0.05 * tier;
+  // holder's effectiveness there: +20%, +30%, +40%, +50% (toolFor: the one w has for a skill, or none)
+  const toolBonus = (tier) => 0.1 + 0.1 * tier;
   // By default a finished craft keeps its drawn tier with this chance (基本 to 稀有), else it's one tier lower
   const SUCCESS = [0, 1, 0.75, 0.5, 0.25];
   const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" ? w.b : null);

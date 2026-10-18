@@ -40,7 +40,7 @@
       "Lifespan 3,600 × (1 ± up to 10%) days, drawn evenly. Child under 360 days, adult to 2,880, then elder; adults and elders are grown-ups. Start: 5 men, 5 women, each aged min(lifespan − 1, 360 + ⌊an even draw below (lifespan − 360)⌋).",
       happiness
         ? "Couples last for life. Each night after the deaths, a couple with a dead partner ends; then single adult men and women, each shuffled, pair up in order (the shorter list's length). Only couples of two adults can have a child, each at its own chance (see Happiness), taken in the order they paired; boy or girl 50/50."
-        : "Couples = min(adult men, adult women). Each has a child at 0.002 a day, boy or girl 50/50.",
+        : "Couples = min(adult men, adult women). Each has a child at 0.003 a day, boy or girl 50/50.",
       "Need: 100 food a day per adult, 70 per child, " + (working ? "100 × (1 − elder penalty) = 80" : "80") + " per elder." + (working ? " Hunger (see Meals and hunger) takes days off the lifespan; they die when their age reaches it." : " Each loses <b>0.1 × (their missing food)²</b> days of life a day (missing = (1 − share) × their need; share = food ÷ total need), off their lifespan; they die when their age reaches it."),
       is("humans") && "Each day: hunger, ageing and deaths, births. Food: a fixed 2,000 a day, never stored.",
     ]);
@@ -95,7 +95,7 @@
 
     if (happiness) add("Happiness", "Happiness", [
       "Happiness = min(100, <b>max(0, 100 − ⌊Intelligence ÷ 2⌋) + ⌊energy left at the end of their last day ÷ 1⌋</b>), set each night (in time for that night's births) and kept through the next day. Energy left: after all jobs" + (school ? " and a child's class; a scholar who writes poetry has none" : "") + ". Day 1 and the born: none yet.",
-      "Each person's chance of a child: <b>0.002 × happiness ÷ 50</b>; a couple's is the average of the two.",
+      "Each person's chance of a child: <b>0.003 × happiness ÷ 50</b>; a couple's is the average of the two.",
     ]);
 
     if (resources) add("Sheep and resources", "Resources", [
@@ -107,13 +107,13 @@
     if (crafts) add("Crafts", "Craft", [
       "Women weave (紡織) 衣 clothes or 笠 hats (each 100 wool + 100 timber); men forge (鍛造) 刀 blades or 叉 hayforks (each 100 stone + 100 timber); each takes 200 energy of work at the house. One loom and one forge, one person each; a craft takes its materials up front and is worked until done, across days, by whoever holds the station.",
       "Next item: the station's item started fewest times (衣 before 笠, 刀 before 叉); the station waits until all its materials are in store.",
-      "In use: each day everyone with energy (and the scholar), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best 叉 or 刀 left, putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 100,000), 叉 farming and 刀 collecting with it (10,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
+      "In use: each day everyone with energy (and the scholar), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best 叉 or 刀 left, putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 10,000), 叉 farming and 刀 collecting with it (1,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
       "It takes each material lowest tier first (closing the filling lot early if the full ones fall short). Done: tier = draw(the average of three: its materials' average tier, and its crafters' skill tier and human tier (⌊Intelligence ÷ 10 − 7⌋ held to 1–4), these two averaged by work on it); then a roll on the tier dice keeps it with 100% / 75% / 50% / 25% (基本 / 中階 / 進階 / 稀有), else it's one tier lower.",
     ]);
 
     if (skills) add("Skills", "Resources", [
       "Nine skills, each with exp and a level (1–5), from 0 exp and level 1 (the born too): milking, farming (tending and harvest), woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Each energy spent on the job is 1 exp; a child's class earns none. Level L + 1 comes at <b>10,000 × L(L + 1) ÷ 2</b> exp, counted at the end of the day for the next.",
-      "<b>Work = energy × (1 + 5% × (level − 1)" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 10% / 15% / 20% / 25% for 基本 / 中階 / 進階 / 稀有" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
+      "<b>Work = energy × (1 + 5% × (level − 1)" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 20% / 30% / 40% / 50% for 基本 / 中階 / 進階 / 稀有" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
     ]);
 
     if (school) add("Scholar and school", "Education", [
