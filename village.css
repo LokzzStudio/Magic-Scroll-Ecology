@@ -1,16 +1,13 @@
 /* Shared look for the six village pages (Food, Advisor, Production, Attribute, Inheritance, Education) */
 
-.params {
-  display: grid;
-  grid-template-columns: 1.4em 1fr auto;
-  gap: 4px 8px;
-  margin: 0;
-  font-size: 13.5px;
-  align-items: baseline;
-}
-.params dt { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+/* Each row: symbol, label and value on one line; a value that doesn't fit goes on its own line,
+   right-aligned and wrapping between words, so the list is never wider than the panel */
+.params { display: grid; gap: 5px; margin: 0; font-size: 13.5px; }
+.params .prow { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 1px; padding-left: calc(1.4em + 8px); }
+.params dt { flex: none; width: 1.4em; margin-left: calc(-1.4em - 8px); font-family: var(--mono); font-size: 13px; color: var(--muted); }
 .params dd { margin: 0; }
-.params .v { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.params .label { flex: 1 1 auto; min-width: 0; }
+.params .v { margin-left: auto; max-width: 100%; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: break-word; }
 .params .sep { padding-top: 6px; border-top: 1px dashed var(--line); }
 .start-line { margin: 0; font-size: 13.5px; padding: 6px 10px; background: var(--ground); border: 1px solid var(--line); border-radius: 6px; }
 .start-line b { font-weight: 600; }

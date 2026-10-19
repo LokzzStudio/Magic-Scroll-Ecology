@@ -24,8 +24,9 @@
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const fmtNum = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);   // 2 or 2.37
   const milkText = (v) => { const r = Math.round(v * 10) / 10; return fmt(r, r % 1 ? 1 : 0); };
+  // One row each: symbol, label and value on a line, the value on a line of its own if it doesn't fit
   const paramRows = (rows) => rows.map(([s, label, v, cls = ""]) =>
-    `<dt class="${cls}">${s}</dt><dd class="${cls}">${label}</dd><dd class="v ${cls}">${v}</dd>`).join("");
+    `<div class="prow ${cls}"><dt>${s}</dt><dd class="label">${label}</dd><dd class="v">${v}</dd></div>`).join("");
   // n null: still being run (aliveWith), shown as "…", with nothing marked best until all are in
   const compareRows = (title, rows) => {
     const ready = rows.every(([, n]) => n !== null);

@@ -28,6 +28,30 @@
       ]);
     };
     if (is("map")) { walking(); return out; }
+    if (is("weather")) {
+      add("Seasons", "Weather", [
+        "Days 1–90 of each 360 are spring, 91–180 summer, 181–270 autumn, 271–360 winter. Each season has its own settings: spawn rate λ, average wind w̄, wind volatility σ, cloudiness q, rain changeability ρ, and for temperature μ, s, c, k.",
+        "<b>Defaults</b> (spring / summer / autumn / winter): λ 0.45 / 0.5 / 1.8 / 3 an hour; w̄ 3 / 2.5 / 7 / 7 tiles an hour; σ 0.5 / 1 / 2 / 3; q 70 / 25 / 40 / 70%; ρ 2 / 0.5 / 0.2 / 0.3 an hour; average temperature μ 15 / 30 / 15 / −5 °C; and in every season spread s 5 °C, cloud cooling c 10 °C, rain cooling k 10 °C.",
+        "<b>Season ramp</b> h = 15 days: the base temperature b(d) on day d is its season's μ, except within h days of a season's start: there, with p the days from the boundary (half-days counted: the first day of a season is p = 0.5, the last of the one before p = −0.5), b = μ_before + (μ_after − μ_before) × (p + h) ÷ 2h. h = 0: no ramp.",
+        "On a season's first day its settings take over at once: a new wind is drawn, and the times to the next cloud, the spell's end, the wind's change and the re-roll are drawn afresh, as below. The clouds, the spell and the rain die carry on.",
+      ]);
+      add("Clouds and rain", "Weather", [
+        "Spells: clear (no clouds come) and cloudy, taking turns. Each cloudy spell lasts an exponential time with mean 24q h, each clear one mean 24(1 − q) h. q = 0: always clear; q = 100%: always cloudy.",
+        "The sky is over the 16 × 16 map and holds at most 10 clouds. In a cloudy spell clouds are due at the west edge at random: the gaps between them are exponential, mean 1 ÷ λ (a new gap is drawn when a cloudy spell starts). A cloud due while 10 are in the sky doesn't come.",
+        "Wind v, the same for every cloud: it holds for an exponential time, mean 3 h, then a new v is drawn from a gamma distribution with mean w̄ and standard deviation σ: shape (w̄ ÷ σ)², scale σ² ÷ w̄. σ = 0: always w̄; w̄ = 0: no wind.",
+        "Each cloud comes in at x = 0 on a row drawn evenly over the map's height, blows east at the wind and leaves at x = 16 (16 ÷ w̄ h at the average wind; with no wind, never). All clouds move together, so they leave in the order they came.",
+        "Start (day 1, spring): the spell is cloudy with chance q, its length drawn as above; the wind a draw as above. With q = 100% and σ = 0 (or no wind), n clouds, n drawn from the distribution below, each at an even draw across the width; otherwise from an empty sky, run on for 5 × (16 ÷ w̄ + 24 + 3) h first.",
+        "<b>Rain</b>: with n clouds in the sky it rains with chance <b>log₁₀(n)</b> (0 for n ≤ 1), and rainfall = n while it rains. The sky keeps a rain die d, an even draw in [0, 1) on its own dice, re-rolled after exponential gaps, mean 1 ÷ ρ; it's raining whenever d < log₁₀(n), checked after every cloud coming or leaving and every re-roll. Start: d drawn evenly.",
+        "With q = 100% and σ = 0, <b>the share of time with n clouds</b>, with a = λ × 16 ÷ w̄: <b>aⁿ ÷ n! over Σ aᵏ ÷ k!</b>, k = 0 … 10, and the share of clouds turned away is the n = 10 share. No wind: always 10 once any cloud has come. Otherwise the counts are clumpier than this (more 0s and more 10s); the page simulates them.",
+      ]);
+      add("Temperature", "Weather", [
+        "One temperature a day (midnight to midnight). The day's weather part <b>x = −(c × its average clouds ÷ 10 + k × its hours raining ÷ 24)</b>.",
+        "<b>T = b(d) + x − x̄ + e × u</b>, where x̄ is the average of x over the season's long run (so T averages the season's average b), e = √(max(0, s² − the variance of x over it)) (so T's standard deviation is s), and u carries over: u ← 0.6u + 0.8z each day (z a standard normal draw, on the temperature's own dice; start u = z).",
+        "Precipitation on a day below 0 °C is snow (snowfall = clouds, as rainfall).",
+        "A day's type, by what most of its hours were: sunny (no clouds), cloudy (clouds, no rain) or rainy / snowy (raining); a tie goes to the wetter. Sunny days average warmest and rainy ones coolest; one day's random part can still turn that round.",
+      ]);
+      return out;
+    }
 
     if (!is("humans")) add("Cows", "Herd", [
       "Lifespan 360 × (1 ± up to 15%) days, drawn evenly. Start: 11 cows, each aged ⌊an even draw below its lifespan⌋." + (at("food") ? " Calves (under 60 days) give no milk." : " Under 60 days, a calf."),

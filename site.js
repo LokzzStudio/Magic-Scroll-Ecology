@@ -12,6 +12,7 @@
     ["happiness.html", "Happiness", "Happy couples have children"],
     ["resources.html", "Resources", "Sheep, timber, stone &amp; skills"],
     ["craft.html", "Craft", "Weaving &amp; forging"],
+    ["weather.html", "Weather", "Clouds &amp; wind"],
   ];
   const nav = document.querySelector("nav.sidenav");
   const here = nav.dataset.page;

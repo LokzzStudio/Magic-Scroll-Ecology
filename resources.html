@@ -10,10 +10,11 @@
 <link rel="stylesheet" href="ecology.css">
 <link rel="stylesheet" href="village.css">
 <style>
-  .level-set th, .level-set td { padding: 5px 6px; }
+  .level-set th, .level-set td { padding: 5px 4px; vertical-align: top; }
   .level-set .n { text-align: right; white-space: nowrap; }
-  .level-set input { width: 76px; }
-  .level-set td small { display: block; font-size: 11px; color: var(--muted); }
+  .level-set input { width: 92px; max-width: 100%; box-sizing: border-box; }
+  .level-set input.pct { width: 54px; }
+  .level-set td small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -104,13 +105,13 @@
           <p class="scope">Practice at each job; this page only</p>
         </div>
         <table class="mm-table level-set">
-          <thead><tr><th>Level</th><th class="n">Exp to reach</th><th class="n">Exp in all</th><th class="n">Bonus</th></tr></thead>
+          <thead><tr><th>Level</th><th class="n">Exp to reach</th><th class="n">Bonus</th></tr></thead>
           <tbody>
-            <tr><td><b>0</b><small>Tier N</small></td><td class="n">—</td><td class="n">0</td><td class="n">0%</td></tr>
-            <tr><td><b>1</b><small>Tier N</small></td><td class="n"><input id="ex1-num" type="number" aria-label="Exp from level 0 to level 1"></td><td class="n" id="ex1-all"></td><td class="n"><input id="bn1-num" type="number" aria-label="Bonus at level 1"> %</td></tr>
-            <tr><td><b>2</b><small>Tier R</small></td><td class="n"><input id="ex2-num" type="number" aria-label="Exp from level 1 to level 2"></td><td class="n" id="ex2-all"></td><td class="n"><input id="bn2-num" type="number" aria-label="Bonus at level 2"> %</td></tr>
-            <tr><td><b>3</b><small>Tier SR</small></td><td class="n"><input id="ex3-num" type="number" aria-label="Exp from level 2 to level 3"></td><td class="n" id="ex3-all"></td><td class="n"><input id="bn3-num" type="number" aria-label="Bonus at level 3"> %</td></tr>
-            <tr><td><b>4</b><small>Tier SSR</small></td><td class="n"><input id="ex4-num" type="number" aria-label="Exp from level 3 to level 4"></td><td class="n" id="ex4-all"></td><td class="n"><input id="bn4-num" type="number" aria-label="Bonus at level 4"> %</td></tr>
+            <tr><td><b>0</b><small>N</small></td><td class="n">start<small>0 in all</small></td><td class="n">0%</td></tr>
+            <tr><td><b>1</b><small>N</small></td><td class="n"><input id="ex1-num" type="number" aria-label="Exp from level 0 to level 1"><small id="ex1-all"></small></td><td class="n"><input id="bn1-num" class="pct" type="number" aria-label="Bonus at level 1"> %</td></tr>
+            <tr><td><b>2</b><small>R</small></td><td class="n"><input id="ex2-num" type="number" aria-label="Exp from level 1 to level 2"><small id="ex2-all"></small></td><td class="n"><input id="bn2-num" class="pct" type="number" aria-label="Bonus at level 2"> %</td></tr>
+            <tr><td><b>3</b><small>SR</small></td><td class="n"><input id="ex3-num" type="number" aria-label="Exp from level 2 to level 3"><small id="ex3-all"></small></td><td class="n"><input id="bn3-num" class="pct" type="number" aria-label="Bonus at level 3"> %</td></tr>
+            <tr><td><b>4</b><small>SSR</small></td><td class="n"><input id="ex4-num" type="number" aria-label="Exp from level 3 to level 4"><small id="ex4-all"></small></td><td class="n"><input id="bn4-num" class="pct" type="number" aria-label="Bonus at level 4"> %</td></tr>
           </tbody>
         </table>
         <p class="hint">1 energy spent on a job = 1 exp in its skill. At a level, every energy spent at that job does its bonus more work: more milk, rice, timber, wool or stone, crafts done sooner, more knowledge from teaching and poetry. The level is also the person's tier at that skill, for what they collect and craft.</p>
@@ -156,7 +157,7 @@ VillagePage.start({
     const { VM } = c, K = { exp: [S.exp1, S.exp2, S.exp3, S.exp4], bonus: [S.bonus1, S.bonus2, S.bonus3, S.bonus4] };
     // Each level's exp in all
     let total = 0;
-    K.exp.forEach((e, k) => { total += e; $(`ex${k + 1}-all`).textContent = fmt(total); });
+    K.exp.forEach((e, k) => { total += e; $(`ex${k + 1}-all`).textContent = `${fmt(total)} in all`; });
     $("skill-hint").innerHTML = `A standard worker spends ${fmt(VM.DAY_ENERGY)} energy a day, so working one job every day takes about <b>${fmt(total / VM.DAY_ENERGY / c.YEAR, 1)} years</b> to reach level ${VM.MAX_LEVEL}. At level ${VM.MAX_LEVEL} a cow is fully milked with ${fmt(100 / VM.effAt(VM.MAX_LEVEL, K))}% of the energy, so the rest goes to the fields.`;
     const k = c.result.skillCompare;
     $("skill-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With skills", k.now, k.now >= k.flat], ["Everyone at level 0", k.flat, k.flat >= k.now]]);
