@@ -26,13 +26,13 @@
     };
   }
 
-  // Tiers: every animal (and, from the Resources page on, wool, timber, stone and crafts) is 1 基本
-  // Normal, 2 中階 Intermediate, 3 進階 Advanced or 4 稀有 Rare. drawTier(x): x plus a random −0.49 to
+  // Tiers: every animal (and, from the Resources page on, wool, timber, stone and crafts) is 1 N
+  // (Normal), 2 R (Rare), 3 SR (Super Rare) or 4 SSR (Super Super Rare). drawTier(x): x plus a random −0.49 to
   // 0.50 (in steps of 0.01), rounded, held to 1–4. Tiers have their own dice (state.trand, from the herd's
   // seed + TIER_SALT), so they change no other draw.
-  const TIERS = [null, { zh: "基本", en: "Normal" }, { zh: "中階", en: "Intermediate" }, { zh: "進階", en: "Advanced" }, { zh: "稀有", en: "Rare" }];
+  const TIERS = [null, { code: "N", en: "Normal" }, { code: "R", en: "Rare" }, { code: "SR", en: "Super Rare" }, { code: "SSR", en: "Super Super Rare" }];
   const TIER_SALT = 0x3c6ef372;
-  // (held to 1–max: cows and sheep are at most 進階, HERD_MAX_TIER)
+  // (held to 1–max: cows and sheep are at most SR, HERD_MAX_TIER)
   const drawTier = (x, rand, max = 4) => Math.min(max, Math.max(1, Math.floor(x + (Math.floor(rand() * 100) - 49) / 100 + 0.5 + 1e-9)));
   const HERD_MAX_TIER = 3;
   // A newborn's tier: drawTier of the average of two different adults picked at random (the one twice

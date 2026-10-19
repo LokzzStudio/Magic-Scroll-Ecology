@@ -14,10 +14,10 @@
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const clock = (h) => { const m = Math.floor(h * 60 + 1e-6); return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  // Skills above level 1, by the map's glyphs (the Skill page)
+  // Skills above level 0, by the map's glyphs (the Skill page)
   const SKILL_GLYPH = { milk: "奶", farm: "田", wood: "木", weave: "織", forge: "鍛", wool: "毛", stone: "石", teach: "教", poetry: "詩" };
   const skillText = (a) => {
-    const up = a.levels ? Object.keys(SKILL_GLYPH).filter((id) => a.levels[id] > 1) : [];
+    const up = a.levels ? Object.keys(SKILL_GLYPH).filter((id) => a.levels[id] > 0) : [];
     return up.length ? ` · level ${up.map((id) => SKILL_GLYPH[id] + a.levels[id]).join(" ")}` : "";
   };
 

@@ -33,7 +33,7 @@
       "Lifespan 360 × (1 ± up to 15%) days, drawn evenly. Start: 11 cows, each aged ⌊an even draw below its lifespan⌋." + (at("food") ? " Calves (under 60 days) give no milk." : " Under 60 days, a calf."),
       "Each day: ageing, deaths at lifespan; then with N cows the herd changes by <b>r·N·(N/A − 1)·(1 − N/K)</b> (r 0.02, A 2, K 10). The fraction is a chance (2.3: 2, plus 1 at 30%). Positive: that many calves, never past 10 × K cows; negative: that many deaths, each the cow at ⌊u × N⌋ in herd order, the last cow taking its place (u: a die roll in [0, 1)).",
       at("food") && "Each day the village has the adult cows of the day before.",
-      "Tiers: 1 基本, 2 中階, 3 進階, 4 稀有. <b>draw(x)</b> = x + (⌊u × 100⌋ − 49) ÷ 100, rounded half up, held to 1–4; cows and sheep at most 3. Start: all 進階. A calf (on the day's births, in turn): draw(the average of two different adults: the ⌊u × n⌋-th of the n adults in herd order, then the ⌊u × (n − 1)⌋-th of the rest; one adult: it twice; none: from everyone).",
+      "Tiers: 1 N, 2 R, 3 SR, 4 SSR. <b>draw(x)</b> = x + (⌊u × 100⌋ − 49) ÷ 100, rounded half up, held to 1–4; cows and sheep at most 3. Start: all SR. A calf (on the day's births, in turn): draw(the average of two different adults: the ⌊u × n⌋-th of the n adults in herd order, then the ⌊u × (n − 1)⌋-th of the rest; one adult: it twice; none: from everyone).",
     ]);
 
     if (at("humans")) add("People", "Humans", [
@@ -47,7 +47,7 @@
 
     if (at("food")) add("Food", "Food", [
       "Milk and rice meet need one for one. Made on day d, they keep until day d + keep (milk 1, rice 360). Start: 200,000 food in store that never spoils. Eat whatever spoils soonest first (milk on a tie), the starting food last.",
-      "A standard day is 100 energy. 1 energy collects 1 milk (an adult cow gives at most 100 a day as 進階, 90 as 中階, 80 as 基本: its cap) or grows 1 rice tending (at most 50,000 per field a year, 4 fields).",
+      "A standard day is 100 energy. 1 energy collects 1 milk (an adult cow gives at most 100 a day as SR, 90 as R, 80 as N: its cap) or grows 1 rice tending (at most 50,000 per field a year, 4 fields).",
       !working && "Nobody works: each adult cow gives its cap; while any adult lives, the year's 72,000 rice comes in evenly over days 181–210.",
     ]);
 
@@ -89,8 +89,8 @@
 
     if (at("inheritance")) add("Inheritance", "Inheritance", [
       "Newborn: each attribute = <b>max(0, ⌊0.7 × average of a random adult man and woman × (1 ± up to 10%)⌋)</b>; the pair drawn once, the variation evenly, Power first. No adult man or woman: 100 / 100.",
-      "At 360 days: +30 to both; then extra food buys Power a point at a time, each costing <b>100 + 10 × max(0, Power − 100)</b>; any remainder is lost.",
-      "Extra food: a child's ration above their need, shared evenly (fractions kept), less any of it that came out of the starting food (eaten last). It isn't need: hunger counts only their need.",
+      "A child's <b>food balance</b>, from birth: + their extra food − the food they went without (70 × (1 − their share) a day). Extra food: the children's ration above their need, shared evenly (fractions kept), less any of it that came out of the starting food (eaten last); it isn't need (hunger counts only need).",
+      "Power from food: a balance B buys points one at a time, from Power P, each costing <b>100 + 10 × max(0, P − 100)</b> (what's left over buys nothing). Each day after eating, a child's Power = born Power + what max(0, B) buys from it, so a famine takes it back. At 360 days: +30 to both, then Power = born Power + 30 + what max(0, B) buys from that, for life.",
     ]);
 
     if (happiness) add("Happiness", "Happiness", [
@@ -101,19 +101,19 @@
     if (resources) add("Sheep and resources", "Resources", [
       "Sheep: the cows' herd model (same settings, own dice); the village has the adult sheep of the day before. Each carries 0–100 wool. Each morning all grow 10 back (to 100); new adults arrive with 100; when there are fewer, sheep are removed one at a time from the wool level most sheep have (the lower on a tie). All of this per tier.",
       "1 energy = 1 timber (forest), 1 wool (pasture) or 1 stone (mine); forest and mine never run out. Each day's take is whole (fractions carry over) and kept forever. Shorn wool comes off the fullest sheep first (the higher tier first), one sheep at a time. Children don't collect" + (crafts ? " or craft" : "") + ".",
-      "Tiers: a skill's is ⌊(level + 1) ÷ 2⌋; forest and mine are 進階. The day's take of each has one average: wool (skill, sheep), timber (skill, forest), stone (skill, mine), skill weighted by work, sheep by the wool shorn off each. It fills lots of 100 in turn; a full lot's tier is draw(the average over its units).",
+      "Tiers: a skill's is its level (0 counts as N); forest and mine are SR. The day's take of each has one average: wool (skill, sheep), timber (skill, forest), stone (skill, mine), skill weighted by work, sheep by the wool shorn off each. It fills lots of 100 in turn; a full lot's tier is draw(the average over its units).",
     ]);
 
     if (crafts) add("Crafts", "Craft", [
       "Women weave (紡織) 衣 clothes or 笠 hats (each 100 wool + 100 timber); men forge (鍛造) 刀 blades or 叉 hayforks (each 100 stone + 100 timber); each takes 200 energy of work at the house. One loom and one forge, one person each; a craft takes its materials up front and is worked until done, across days, by whoever holds the station.",
       "Next item: the station's item started fewest times (衣 before 笠, 刀 before 叉); the station waits until all its materials are in store.",
-      "In use: each day everyone with energy (and the scholar), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best 叉 or 刀 left, putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 10,000), 叉 farming and 刀 collecting with it (1,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
-      "It takes each material lowest tier first (closing the filling lot early if the full ones fall short). Done: tier = draw(the average of three: its materials' average tier, and its crafters' skill tier and human tier (⌊Intelligence ÷ 10 − 7⌋ held to 1–4), these two averaged by work on it); then a roll on the tier dice keeps it with 100% / 75% / 50% / 25% (基本 / 中階 / 進階 / 稀有), else it's one tier lower.",
+      "In use: each day everyone with energy (and the scholar), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best 叉 or 刀 left, putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 30,000), 叉 farming and 刀 collecting with it (3,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
+      "It takes each material lowest tier first (closing the filling lot early if the full ones fall short). Done: tier = draw(the average of three: its materials' average tier, and its crafters' skill tier and human tier (⌊Intelligence ÷ 10 − 7⌋ held to 1–4), these two averaged by work on it); then a roll on the tier dice keeps it with 100% / 75% / 50% / 25% (N / R / SR / SSR), else it's one tier lower.",
     ]);
 
     if (skills) add("Skills", "Resources", [
-      "Nine skills, each with exp and a level (1–5), from 0 exp and level 1 (the born too): milking, farming (tending and harvest), woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Each energy spent on the job is 1 exp; a child's class earns none. Level L + 1 comes at <b>10,000 × L(L + 1) ÷ 2</b> exp, counted at the end of the day for the next.",
-      "<b>Work = energy × (1 + 5% × (level − 1)" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 50% / 100% / 150% / 200% for 基本 / 中階 / 進階 / 稀有 (as made)" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
+      "Nine skills, each with exp and a level (0–4), from 0 exp and level 0 (the born too): milking, farming (tending and harvest), woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Each energy spent on the job is 1 exp; a child's class earns none. Levels 1 / 2 / 3 / 4 take <b>100 / 1,000 / 10,000 / 100,000</b> more exp each (level 4 at 111,100), counted at the end of the day for the next.",
+      "<b>Work = energy × (1 + 0 / 25% / 50% / 75% / 100% at skill level 0 / 1 / 2 / 3 / 4" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 25% / 50% / 75% / 100% for N / R / SR / SSR (as made)" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
     ]);
 
     if (school) add("Scholar and school", "Education", [

@@ -20,8 +20,8 @@
 //             through the day (hungerOf) instead of all at once.
 //   roles     a jobs table (RolesModel): who may do which job; RolesModel's default table without one
 //   resources null, or { fleece, regrow, perEnergy: { wool, stone, wood }, tiers: { wood, stone } (the
-//             forest's and the mine's; 進階 without) } with cfg.sheepAdults (and
-//             cfg.sheepTiers, runHerd's tiers; all 進階 without): grown-ups' energy left after the
+//             forest's and the mine's; SR without) } with cfg.sheepAdults (and
+//             cfg.sheepTiers, runHerd's tiers; all SR without): grown-ups' energy left after the
 //             food work shears wool, quarries stone and cuts wood, each in lots of a tier (Resources)
 //   craft     null, or { items: [{ id, job, needs: { material: amount }, energy, wear }], keep }: one loom
 //             and one forge at the house turn stores into crafts, each lasting wear energy of its use;
@@ -31,8 +31,8 @@
 //             "collect", "teach", "read" (DEFAULT_ORDER without one)
 //   happiness null, or { iqStep, perEnergy }: each person's happiness (0–100) sets their own chance of a
 //             child, and couples last for life (Happiness)
-//   skills    null, or { expPerLevel, perLevel }: everyone gets better at the jobs they do, each
-//             energy there doing more (Resources)
+//   skills    null, or { exp: [to level 1, …, to level 4], bonus: [% at level 1, …, % at level 4] }:
+//             everyone gets better at the jobs they do, each energy there doing more (Resources)
 // Needs herd-model.js, human-model.js, food-model.js, ration-model.js, roles-model.js and day-model.js (the day: the
 // clock, walking, lunch, carrying and hunger) loaded first, and micro-model.js for Micro mode.
 (function () {
@@ -98,8 +98,8 @@
     return { counts, adults, tiers, last: T, extinctDay, survived: counts[T] > 0, ...d };
   }
 
-  // A cow's tier sets the most milk it gives a day: 基本 80%, 中階 90%, 進階 all of milkCap (COW_CAP).
-  // herd: runHerd's { adults, tiers } (no tiers: all 進階). fullCows: the day's adult cows, each
+  // A cow's tier sets the most milk it gives a day: N 80%, R 90%, SR all of milkCap (COW_CAP).
+  // herd: runHerd's { adults, tiers } (no tiers: all SR). fullCows: the day's adult cows, each
   // counted as its share of a full one; milkGiven: the milk they give on a day nobody works (Food page).
   const COW_CAP = [0, 0.8, 0.9, 1, 1];
   function fullCows(herd, day) {
@@ -223,17 +223,17 @@
   // ---------- Tiers ----------
   // From the Resources page on, wool, timber, stone and crafts have tiers (HerdModel.TIERS), each drawn
   // (HerdModel.drawTier) from the average of what went into it, on the village's own tier dice. What
-  // goes in: a person's tier at a skill, ⌊(level + 1) ÷ 2⌋; their human tier, ⌊Intelligence ÷ 10 − 7⌋
+  // goes in: a person's tier at a skill, their level there (level 0 counting as N); their human tier, ⌊Intelligence ÷ 10 − 7⌋
   // held to 1–4 (from their rate, Intelligence ÷ 10); the sheep's, the forest's and the mine's tier; and
   // a craft's materials.
-  const adjSkill = (h, skill) => Math.floor(((h.level ? h.level[skill] : 1) + 1) / 2);
+  const adjSkill = (h, skill) => Math.max(1, h.level ? h.level[skill] : 0);
   const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor(rate - 7 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
   // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding its bonus (cr.bonus, by tier) to
-  // the holder's effectiveness there; by default +50%, +100%, +150%, +200% (toolFor: the one w has for
-  // a skill, or none)
-  const toolBonus = (tier) => 0.5 * tier;
-  // By default a finished craft keeps its drawn tier with this chance (基本 to 稀有), else it's one tier lower
+  // the holder's effectiveness there; by default +25%, +50%, +75%, +100% (toolFor: the one w has for a
+  // skill, or none)
+  const toolBonus = (tier) => 0.25 * tier;
+  // By default a finished craft keeps its drawn tier with this chance (N to SSR), else it's one tier lower
   const SUCCESS = [0, 1, 0.75, 0.5, 0.25];
   const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" ? w.b : null);
 
@@ -532,8 +532,11 @@
 
   // ---------- Inheritance ----------
   // Newborns get share × the average of a random adult man and woman, give or take the variation,
-  // rounded down, for each attribute. Anyone who came of age today gains the bonus in both, plus
-  // Power the extra food they ate as a child buys (powerFromFood).
+  // rounded down, for each attribute (h.basePower: the Power they were born with). A child's food
+  // balance (h.extra) is the extra food they've eaten less the food they went without; while a child,
+  // their Power is basePower plus what a positive balance buys (powerFromFood), so a famine takes it
+  // back. Anyone who came of age today gains the bonus in both, and their balance buys Power on top of
+  // basePower + the bonus, theirs for life.
   // Extra food buys Power one point at a time, the next point costing powerFoodBase + POWER_FOOD_STEP ×
   // max(0, Power − powerFoodFrom) food; what can't buy another point is lost. Returns the Power gained.
   const POWER_FOOD_STEP = 10;
@@ -558,13 +561,13 @@
           const vary = ih.variation > 0 ? (ih.variation / 100) * (2 * irand() - 1) : 0;
           return Math.max(0, Math.floor(ih.share * ((a + b) / 2) * (1 + vary) + 1e-9));
         };
-        h.power = dad && mum ? born(dad.power, mum.power) : attrs.power;
+        h.power = h.basePower = dad && mum ? born(dad.power, mum.power) : attrs.power;
         h.intel = dad && mum ? born(dad.intel, mum.intel) : attrs.intel;
         h.grown = false; h.extra = 0; h.knowledge = 0; h.learned = 0;
       } else if (!h.grown && h.age >= p.M) {
         h.grown = true;
-        h.power += ih.grow; h.intel += ih.grow;
-        h.power += powerFromFood(h.power, h.extra, ih);
+        const base = h.basePower + ih.grow;
+        h.power = base + powerFromFood(base, Math.max(0, h.extra), ih); h.intel += ih.grow;
       }
     }
   }
@@ -587,12 +590,12 @@
   const joyOf = (left, hp) => Math.max(0, Math.floor(left / hp.perEnergy + 1e-9));
 
   // ---------- Skills ----------
-  // Everyone has a level, 1 to MAX_LEVEL, at each skill, from the exp they've earned at it: 1 exp for
-  // each energy spent on that job (fractions kept). Going from level L to L + 1 takes L × expPerLevel
-  // more exp (10,000, 20,000, 30,000 and 40,000: level 5 at 100,000 in all). Each level above 1 is
-  // perLevel % more effective at that job: each energy there does 1 + perLevel% × (level − 1) energy's
-  // work (more milk, rice, timber, wool, stone, craft, knowledge or poetry). Levels go up at the end of
-  // the day, for the next day's work. Skills aren't passed on: the born start at level 1.
+  // Everyone has a level, 0 to MAX_LEVEL, at each skill, from the exp they've earned at it: 1 exp for
+  // each energy spent on that job (fractions kept). Going from level L to L + 1 takes exp[L] more exp
+  // (100, 1,000, 10,000, 100,000: level 4 at 111,100 in all). At level L ≥ 1 each energy there does
+  // 1 + bonus[L − 1]% energy's work (+25%, +50%, +75%, +100%; more milk, rice, timber, wool, stone,
+  // craft, knowledge or poetry). Levels go up at the end of the day, for the next day's work. Skills
+  // aren't passed on: the born start at level 0.
   const SKILLS = [
     { id: "milk", zh: "採牛奶", en: "Milking" }, { id: "farm", zh: "耕田", en: "Farming" },
     { id: "wood", zh: "伐木", en: "Woodcutting" }, { id: "weave", zh: "紡織", en: "Weaving" },
@@ -600,21 +603,26 @@
     { id: "stone", zh: "採石", en: "Quarrying" }, { id: "teach", zh: "教育", en: "Teaching" },
     { id: "poetry", zh: "吟詩", en: "Poetry" },
   ];
-  const MAX_LEVEL = 5;
+  const MAX_LEVEL = 4;
+  // The exp a level ends at: level L + 1 starts at exp[0] + … + exp[L] (none past the top)
+  function nextAt(level, sk) {
+    if (level >= MAX_LEVEL) return Infinity;
+    let at = 0;
+    for (let k = 0; k <= level; k++) at += sk.exp[k];
+    return at;
+  }
   // The level a skill's exp reaches
   function levelOf(exp, sk) {
-    let level = 1, at = sk.expPerLevel;
-    while (level < MAX_LEVEL && exp >= at - 1e-9) { level++; at += level * sk.expPerLevel; }
+    let level = 0;
+    while (level < MAX_LEVEL && exp >= nextAt(level, sk) - 1e-9) level++;
     return level;
   }
-  const effAt = (level, sk) => 1 + (sk.perLevel / 100) * (level - 1);
+  const effAt = (level, sk) => 1 + (level > 0 ? sk.bonus[level - 1] : 0) / 100;
   const SKILL_IX = Object.fromEntries(SKILLS.map(({ id }, k) => [id, k]));
-  // The exp a level ends at: level L + 1 starts at expPerLevel × L(L + 1) ÷ 2 (none past the top)
-  const nextAt = (level, sk) => (level < MAX_LEVEL ? (sk.expPerLevel * level * (level + 1)) / 2 : Infinity);
   // A person's skills, by skill id: exp, level, effectiveness, and the exp the next level comes at
   function newSkills(h, sk) {
     h.exp = {}; h.level = {}; h.eff = {}; h.next = {}; h.xp = new Float64Array(SKILLS.length);   // xp: the day's energy by skill (assignEnergy)
-    for (const { id } of SKILLS) { h.exp[id] = 0; h.level[id] = 1; h.eff[id] = 1; h.next[id] = nextAt(1, sk); }
+    for (const { id } of SKILLS) { h.exp[id] = 0; h.level[id] = 0; h.eff[id] = 1; h.next[id] = nextAt(0, sk); }
   }
   // A day's energy spent on each skill (spent[k]: SKILLS[k]) goes into exp; levels go up with it
   function earn(h, spent, sk) {
@@ -830,7 +838,7 @@
         //    village can spare them. Then the grown-ups (and children, if needed) go to work.
         for (const h of st.people) {
           h.role = roleOf(h);   // the jobs table's row for the day
-          if (skills && !h.exp) newSkills(h, skills);   // the born, and day 1: level 1 at everything
+          if (skills && !h.exp) newSkills(h, skills);   // the born, and day 1: level 0 at everything
         }
         if (school) {
           if (scholar && (scholar.age >= scholar.life || HumanModel.stage(scholar, p) === "elder")) scholar = null;
@@ -972,7 +980,15 @@
       const alike = gGrown === gKids, share = alike ? Math.min(1, need > 0 ? eatenAll / need : 1) : Math.min(1, gGrown * got);
       const shareKids = alike ? share : Math.min(1, gKids * got);
       const extra = gKids > 1 + 1e-9 ? Math.max(0, kidNeed * (gKids * got - 1)) : 0, extraCounted = Math.max(0, extra - foodEaten);
-      if (extraCounted > 0) for (const h of st.people) if (h.age < p.M) h.extra += extraCounted / kidCountNow;
+      // Each child's food balance: today's extra food, or less the food they went without; their Power
+      // follows it while they're a child
+      if (inherit && kidCountNow > 0) {
+        const missed = Math.max(0, 1 - shareKids) * p.c * HumanModel.CHILD_FOOD;
+        for (const h of st.people) if (h.age < p.M && h.basePower !== undefined) {
+          h.extra += extraCounted / kidCountNow - missed;
+          h.power = h.basePower + powerFromFood(h.basePower, Math.max(0, h.extra), inherit);
+        }
+      }
 
       // 6. What was eaten is shared out by need; hunger, ageing and deaths, births. Newborns take
       //    after their parents; anyone who came of age gets their bonus. With a schedule, each person's

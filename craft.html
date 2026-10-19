@@ -104,10 +104,10 @@
         <table class="mm-table tier-set">
           <thead><tr><th>Tier</th><th class="n">刀 / 叉 bonus</th><th class="n">Keeps tier</th></tr></thead>
           <tbody>
-            <tr><td><b>基本</b><small>Normal</small></td><td class="n"><input id="tb1-num" type="number" aria-label="Bonus a 基本 刀 or 叉 gives"> %</td><td class="n">100%</td></tr>
-            <tr><td><b>中階</b><small>Intermediate</small></td><td class="n"><input id="tb2-num" type="number" aria-label="Bonus a 中階 刀 or 叉 gives"> %</td><td class="n"><input id="k2-num" type="number" aria-label="Chance a 中階 craft keeps its tier"> %</td></tr>
-            <tr><td><b>進階</b><small>Advanced</small></td><td class="n"><input id="tb3-num" type="number" aria-label="Bonus a 進階 刀 or 叉 gives"> %</td><td class="n"><input id="k3-num" type="number" aria-label="Chance a 進階 craft keeps its tier"> %</td></tr>
-            <tr><td><b>稀有</b><small>Rare</small></td><td class="n"><input id="tb4-num" type="number" aria-label="Bonus a 稀有 刀 or 叉 gives"> %</td><td class="n"><input id="k4-num" type="number" aria-label="Chance a 稀有 craft keeps its tier"> %</td></tr>
+            <tr><td><b>N</b><small>Normal</small></td><td class="n"><input id="tb1-num" type="number" aria-label="Bonus a N 刀 or 叉 gives"> %</td><td class="n">100%</td></tr>
+            <tr><td><b>R</b><small>Rare</small></td><td class="n"><input id="tb2-num" type="number" aria-label="Bonus a R 刀 or 叉 gives"> %</td><td class="n"><input id="k2-num" type="number" aria-label="Chance a R craft keeps its tier"> %</td></tr>
+            <tr><td><b>SR</b><small>Super Rare</small></td><td class="n"><input id="tb3-num" type="number" aria-label="Bonus a SR 刀 or 叉 gives"> %</td><td class="n"><input id="k3-num" type="number" aria-label="Chance a SR craft keeps its tier"> %</td></tr>
+            <tr><td><b>SSR</b><small>Super Super Rare</small></td><td class="n"><input id="tb4-num" type="number" aria-label="Bonus a SSR 刀 or 叉 gives"> %</td><td class="n"><input id="k4-num" type="number" aria-label="Chance a SSR craft keeps its tier"> %</td></tr>
           </tbody>
         </table>
         <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft rolls its tier, then keeps it with this chance; otherwise it comes out one tier lower.</p>
@@ -142,7 +142,7 @@ VillagePage.start({
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("craft-hint").innerHTML = `A craft takes its materials up front, worst tier first, and is worked until it's done, even across days: by its crafter if they have energy left after the jobs above crafts in the <b>Priority</b> order, otherwise by the next idle grown-up who may. With nothing under way, a station's next item is the one the village has started fewest of; it waits until all that item's materials are in store, so clothes and hats take turns, and so do blades and hayforks. Its tier comes from its crafters' skill and Intelligence and its materials' tier.`
-      + ` A standard worker (${fmt(c.VM.DAY_ENERGY)} energy a day) on their own, at level 1, finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / c.VM.DAY_ENERGY))} days; weavers and forgers get better at it as they go (see the Resources page's skills).`;
+      + ` A standard worker (${fmt(c.VM.DAY_ENERGY)} energy a day) on their own, at skill level 0, finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / c.VM.DAY_ENERGY))} days; weavers and forgers get better at it as they go (see the Resources page's skills).`;
   },
 });
 </script>

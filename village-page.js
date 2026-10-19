@@ -7,7 +7,7 @@
 //   inputs     its sliders: { id, key, obj: "S" (default) | "F", round: "step" | "int" | "none" }, with
 //              lo, hi and step from its settings table (SPECS), or given here (a number box #id-num, with a
 //              slider #id-range if the page has one); or with tiers: true,
-//              a button for each tier from lo to hi (基本 to 稀有) in #id-seg
+//              a button for each tier from lo to hi (N to SSR) in #id-seg
 //   storeKey, defaults: where it keeps its settings and their defaults, for pages without a SPECS table
 //   setup(c), beforeRun(c), drawPanel(c), compare(c), config(c), ration(c): page hooks
 // From the Attribute page on, the top bar switches between Macro mode (each day worked out for the
@@ -38,10 +38,10 @@
   // use it lasts (wear: 衣 and 笠 anything, 刀 collecting, 叉 farming). needKey: the setting for one of its
   // materials ("hatWood")
   const CRAFTS = [
-    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 100, wood: 100 }, wear: 10000 },
-    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 100 }, wear: 10000 },
-    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 100, wood: 100 }, wear: 1000 },
-    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 100 }, wear: 1000 },
+    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 100, wood: 100 }, wear: 30000 },
+    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 100 }, wear: 30000 },
+    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 100, wood: 100 }, wear: 3000 },
+    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 100 }, wear: 3000 },
   ];
   const needKey = (it, m) => it.id + m[0].toUpperCase() + m.slice(1);
   // The settings pages' own settings, by field: [default, lowest, highest, slider step]. Each page takes
@@ -51,10 +51,11 @@
     inheritance: { key: "inheritance-v8", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], extraCap: [30, 0, 200, 10], powerFoodBase: [100, 10, 1000, 10], powerFoodFrom: [100, 0, 300, 5] } },
     education: { key: "education-v3", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowPerIntel: [1000, 100, 5000, 100], readPerIntel: [10000, 500, 20000, 500], scholarShift: [10, 0, 50, 5] } },
     happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5], perEnergy: [1, 1, 100, 1] } },
-    resources: { key: "resources-v3", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
-      expPerLevel: [10000, 1000, 50000, 1000], perLevel: [5, 0, 25, 1] } },
-    craft: { key: "craft-v7", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [200, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])), keep2: [75, 0, 100, 5], keep3: [50, 0, 100, 5], keep4: [25, 0, 100, 5],
-      bonus1: [50, 0, 500, 5], bonus2: [100, 0, 500, 5], bonus3: [150, 0, 500, 5], bonus4: [200, 0, 500, 5] } },
+    resources: { key: "resources-v5", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
+      exp1: [100, 10, 1000000, 10], exp2: [1000, 10, 1000000, 10], exp3: [10000, 10, 1000000, 10], exp4: [100000, 10, 1000000, 10],
+      bonus1: [25, 0, 500, 5], bonus2: [50, 0, 500, 5], bonus3: [75, 0, 500, 5], bonus4: [100, 0, 500, 5] } },
+    craft: { key: "craft-v8", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [200, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])), keep2: [75, 0, 100, 5], keep3: [50, 0, 100, 5], keep4: [25, 0, 100, 5],
+      bonus1: [25, 0, 500, 5], bonus2: [50, 0, 500, 5], bonus3: [75, 0, 500, 5], bonus4: [100, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
   // ×10 (scale), happiness's Intelligence step ÷ 10. Each new key takes from the first of its old keys
@@ -63,7 +64,8 @@
   // changed, Resources v1 with Craft v1. Craft v5 (every craft 100 + 100) keeps only the energies. Education v3 (poetry 10,000 per
   // +1 Intelligence) keeps the rest of v2; Happiness v3 and v4 (each a new
   // default step) keep the rest; Craft v6 (new wear limits) keeps all but the wear,
-  // v7 (new tool bonuses) all but the bonuses.
+  // v7 (new tool bonuses) all but the bonuses, v8 (new bonuses and wear) all but those; Resources v5
+  // (skill levels 0–4) all but the old skill fields.
   try {
     const keyed = (k) => { const v = JSON.parse(localStorage.getItem(k) || "null"); return v && typeof v === "object" ? v : null; };
     const scaled = (old, factors) => {
@@ -85,10 +87,12 @@
       ["happiness-v3", [() => scaled(keyed("happiness-v2") || {}, { iqStep: 0 })]],
       ["happiness-v4", [() => scaled(keyed("happiness-v3") || {}, { iqStep: 0 })]],
       ["resources-v3", [() => Object.assign(scaled(pick(resV2(), res), ten("fleece", "regrow", "woodTarget")), scaled(keyed("skill-v1") || {}, ten("expPerLevel")))]],
+      ["resources-v5", [() => scaled(keyed("resources-v4") || keyed("resources-v3") || {}, { expPerLevel: 0, perLevel: 0, exp2: 0, exp3: 0, bonus2: 0, bonus3: 0 })]],
       ["craft-v2", [() => scaled(pick(resV2(), crafts), ten(...crafts))]],
       ["craft-v5", [() => pick(keyed("craft-v4") || keyed("craft-v3") || keyed("craft-v2") || {}, energies)]],
       ["craft-v6", [() => { const v5 = keyed("craft-v5") || {}; return pick(v5, Object.keys(v5).filter((k) => !k.endsWith("Wear"))); }]],
       ["craft-v7", [() => { const v6 = keyed("craft-v6") || {}; return pick(v6, Object.keys(v6).filter((k) => !k.startsWith("bonus"))); }]],
+      ["craft-v8", [() => { const v7 = keyed("craft-v7") || {}; return pick(v7, Object.keys(v7).filter((k) => !k.startsWith("bonus") && !k.endsWith("Wear"))); }]],
     ];
     for (const [key, from] of MOVES) {
       if (keyed(key)) continue;
@@ -116,7 +120,7 @@
   const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowPerIntel: E.knowPerIntel, readPerIntel: E.readPerIntel, shift: E.scholarShift });
   const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier } });
   const happinessOf = (H) => ({ iqStep: H.iqStep, perEnergy: H.perEnergy });
-  const skillsOf = (K) => ({ expPerLevel: K.expPerLevel, perLevel: K.perLevel });
+  const skillsOf = (K) => ({ exp: [K.exp1, K.exp2, K.exp3, K.exp4], bonus: [K.bonus1, K.bonus2, K.bonus3, K.bonus4] });
   const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, needs: Object.fromEntries(Object.keys(it.needs).map((m) => [m, C[needKey(it, m)]])), energy: C[it.id + "Energy"], wear: C[it.id + "Wear"] })), keep: [0, 1, C.keep2 / 100, C.keep3 / 100, C.keep4 / 100],
     bonus: [0, C.bonus1 / 100, C.bonus2 / 100, C.bonus3 / 100, C.bonus4 / 100] });
 
@@ -197,7 +201,7 @@
         v = inp.round === "int" ? Math.round(v) : inp.round === "none" ? v : Number((Math.round(v / step) * step).toFixed(2));
         obj[inp.key] = v;
         if (inp.tiers) {
-          $(inp.id + "-seg").innerHTML = [1, 2, 3, 4].filter((t) => t >= lo && t <= hi).map((t) => `<button type="button" data-t="${t}" aria-pressed="${v === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].zh}</button>`).join("");
+          $(inp.id + "-seg").innerHTML = [1, 2, 3, 4].filter((t) => t >= lo && t <= hi).map((t) => `<button type="button" data-t="${t}" aria-pressed="${v === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].code}</button>`).join("");
           continue;
         }
         const range = $(inp.id + "-range"), num = $(inp.id + "-num");
@@ -362,7 +366,7 @@
       let s = "";
       if (at("craft")) s += section("resources", "Resources and skills", from("resources.html#resources", "Resources page"),
         `<dl class="params" id="res-params"></dl>
-        <p class="hint">Once every food job is filled, idle grown-ups collect: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 1 makes each energy there more effective.</p>
+        <p class="hint">Once every food job is filled, idle grown-ups collect: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 0 makes each energy there more effective.</p>
         <p class="source" id="res-source" hidden></p>${change("resources.html#resources", "Resources")}`);
       if (at("resources")) s += section("happiness", "Happiness", from("happiness.html#happiness", "Happiness page"),
         `<dl class="params" id="happy-params"></dl>
@@ -414,7 +418,7 @@
         ["E", "Elder at age", `${fmt(UP.E)} days`], ["±", "Lifespan spread", `${fmt(UP.S)}%`],
         ["c", "Food need", `${fmt(UP.c, 1)} /person`, "sep"], ["k", "Hunger toll", `${Number(UP.k.toPrecision(3))} × (missing food)² days`],
       ]);
-      const tierName = (t) => `${HerdModel.TIERS[t].zh} ${HerdModel.TIERS[t].en}`;
+      const tierName = (t) => `${HerdModel.TIERS[t].code} ${HerdModel.TIERS[t].en}`;
       $("herd-start").innerHTML = `Start with <b>${fmt(HS.N0)} cows</b>` + (def.resources ? ` (${tierName(HS.cowTier)}) and as many sheep (${tierName(HS.sheepTier)})` : "");
       $("human-start").innerHTML = `Start with <b>${fmt(US.men)} men</b> and <b>${fmt(US.women)} women</b>`;
       source("herd-source", c.saved.herd);
@@ -499,8 +503,8 @@
         $("res-params").innerHTML = paramRows([
           ["", "Wool per sheep", `${fmt(R.fleece)}, regrows ${fmt(R.regrow)} a day`],
           ["", "1 energy collects", `${fmtNum(R.woolPerEnergy)} wool · ${fmtNum(R.woodPerEnergy)} timber · ${fmtNum(R.stonePerEnergy)} stone`],
-          ["", "Forest / mine tier", `${HerdModel.TIERS[R.forestTier].zh} / ${HerdModel.TIERS[R.mineTier].zh}`],
-          ["", "Exp per level", `level L to L + 1 takes L × ${fmt(R.expPerLevel)}`], ["", "Effectiveness per level", `+${fmt(R.perLevel)}%`],
+          ["", "Forest / mine tier", `${HerdModel.TIERS[R.forestTier].code} / ${HerdModel.TIERS[R.mineTier].code}`],
+          ["", "Skill levels 1–4", `exp ${[R.exp1, R.exp2, R.exp3, R.exp4].map((v) => fmt(v)).join(" / ")} more each · +${[R.bonus1, R.bonus2, R.bonus3, R.bonus4].map((v) => fmt(v)).join(" / ")}%`],
         ]);
         source("res-source", c.saved.resources);
       }
@@ -565,7 +569,7 @@
         legend([["res-wool", "Wool"], ["res-wood", "Timber"], ["res-stone", "Stone"]]) +
         `<div class="food-rows"><dl class="rows" id="res-day"></dl><dl class="rows" id="res-run"></dl></div>` +
         `<div class="table-scroll"><table class="mm-table tier-table" id="res-tiers"></table></div>`);
-      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, collectors carry 刀, farmers 叉 (+50% to +200% effectiveness by tier). Each wears out with use.",
+      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, collectors carry 刀, farmers 叉 (+25% to +100% effectiveness by tier). Each wears out with use.",
         `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over 3600 days"></svg>` +
         legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
         `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>` +
@@ -574,7 +578,7 @@
         `<svg class="chart" id="happy-chart" height="190" role="img" aria-label="Adults' and children's average happiness over 3600 days"></svg>` +
         legend([["happy-adults", "Adults"], ["happy-kids", "Children"]]) +
         `<div class="food-rows"><dl class="rows" id="happy-day"></dl><dl class="rows" id="happy-run"></dl></div>`);
-      if (def.skills) s += card("Skills", "Skills", "Average level (1–5) of this run's grown-ups at each skill. Only the scholar teaches and writes poetry, so those two stay low on average; the rows give the highest anyone has.",
+      if (def.skills) s += card("Skills", "Skills", "Average level (0–4) of this run's grown-ups at each skill. Only the scholar teaches and writes poetry, so those two stay low on average; the rows give the highest anyone has.",
         `<svg class="chart" id="skill-chart" height="220" role="img" aria-label="Grown-ups' average level at each skill over 3600 days"></svg>` +
         legend(VM.SKILLS.map((sk) => [`skill-${sk.id}`, `${sk.zh} ${sk.en}`])) +
         `<div class="food-rows"><dl class="rows" id="skill-day"></dl><dl class="rows" id="skill-run"></dl></div>`);
@@ -765,9 +769,9 @@
         cursorLine("happy-line", f) + `<circle class="dot happy-adults" id="happy-dot" r="4"/>`;
       scales.happy = f;
     }
-    // Grown-ups' average level at each skill, 1 to 5, with gaps where there are none
+    // Grown-ups' average level at each skill, 0 to 4, with gaps where there are none
     function drawSkillChart() {
-      const pm = c.result.people.main, f = frame("skill-chart", 220, VM.MAX_LEVEL, { ticks: 5 }), { x, y, step } = f;
+      const pm = c.result.people.main, f = frame("skill-chart", 220, VM.MAX_LEVEL, { ticks: VM.MAX_LEVEL }), { x, y, step } = f;
       const path = (arr) => {
         let d = "", pen = false;
         for (let i = 1; i <= pm.last; i += step) {
@@ -798,7 +802,7 @@
     }
     // A day's counts by tier, as a table: rows of [name, count of tier t (0–3), ...the last columns]
     function tierTable(id, day, lasts, rows) {
-      const head = [1, 2, 3, 4].map((t) => `<th class="n">${HerdModel.TIERS[t].zh}<small>${HerdModel.TIERS[t].en}</small></th>`).join("");
+      const head = [1, 2, 3, 4].map((t) => `<th class="n">${HerdModel.TIERS[t].code}<small>${HerdModel.TIERS[t].en}</small></th>`).join("");
       $(id).innerHTML = `<thead><tr><th>Day ${fmt(day)}, by tier</th>${head}${lasts.map((l) => `<th class="n">${l}</th>`).join("")}</tr></thead><tbody>` +
         rows.map(([name, get, ...ends]) => `<tr><td>${name}</td>${[0, 1, 2, 3].map((t) => `<td class="n">${fmt(get(t))}</td>`).join("")}${ends.map((e) => `<td class="n">${e}</td>`).join("")}</tr>`).join("") + `</tbody>`;
     }

@@ -155,7 +155,7 @@
             <span class="lbl">Starting sheep</span>
             <div class="seg" role="group" aria-label="Starting sheep's tier" id="sheepTier-seg"></div>
           </div>
-          <p class="hint">Every animal has a tier: 基本 Normal (1), 中階 Intermediate (2) or 進階 Advanced (3). The starting herd is all one tier. A newborn takes the average of two adults picked at random, plus a random −0.49 to 0.50, rounded, and no higher than 進階. A cow's tier sets the most milk it gives a day (基本 80%, 中階 90%, 進階 all of the Food page's milk cap); a sheep's goes into its wool's tier.</p>
+          <p class="hint">Every animal has a tier: N Normal (1), R Rare (2) or SR Super Rare (3). The starting herd is all one tier. A newborn takes the average of two adults picked at random, plus a random −0.49 to 0.50, rounded, and no higher than SR. A cow's tier sets the most milk it gives a day (N 80%, R 90%, SR all of the Food page's milk cap); a sheep's goes into its wool's tier.</p>
         </div>
       </section>
 
@@ -317,7 +317,7 @@
       if (document.activeElement !== num) num.value = P[k];
     }
     for (const k of ["cowTier", "sheepTier"]) $(k + "-seg").innerHTML = [1, 2, 3, 4].slice(0, HerdModel.HERD_MAX_TIER).map((t) =>
-      `<button type="button" data-t="${t}" aria-pressed="${P[k] === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].zh}</button>`).join("");
+      `<button type="button" data-t="${t}" aria-pressed="${P[k] === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].code}</button>`).join("");
   }
 
   // ---------- Model (shared with other pages, see herd-model.js) ----------
@@ -558,7 +558,7 @@
       ? "Day 0: starting herd of mixed ages"
       : `Day ${fmt(day)}: <span class="born">${fmt(ev.born)} born</span> · <span class="died">${fmt(ev.old)} died of old age</span>` +
         (ev.size ? ` · <span class="died">${fmt(ev.size)} lost to herd size</span>` : "")) +
-      `<br>By tier: ${[1, 2, 3, 4].map((t) => `${HerdModel.TIERS[t].zh} ${fmt(ev.tiers[t])}`).join(" · ")}`;
+      `<br>By tier: ${[1, 2, 3, 4].map((t) => `${HerdModel.TIERS[t].code} ${fmt(ev.tiers[t])}`).join(" · ")}`;
   }
 
   // ---------- Readouts ----------
@@ -590,7 +590,7 @@ const COW_ALLEE = ${P.A};            // A, cows
 const COW_LIFESPAN = ${P.L};         // L, days on average
 const COW_LIFESPAN_SPREAD = ${P.S / 100}; // ± share of L
 const COW_ADULT_AGE = ${P.M};        // M, days; younger cows are calves
-const COW_START_TIER = ${P.cowTier};       // 1 基本, 2 中階, 3 進階
+const COW_START_TIER = ${P.cowTier};       // 1 N, 2 R, 3 SR
 
 function newCow(tier) {
   const spread = COW_LIFESPAN_SPREAD * (2 * Math.random() - 1);

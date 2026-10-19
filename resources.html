@@ -9,6 +9,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="ecology.css">
 <link rel="stylesheet" href="village.css">
+<style>
+  .level-set th, .level-set td { padding: 5px 6px; }
+  .level-set .n { text-align: right; white-space: nowrap; }
+  .level-set input { width: 76px; }
+  .level-set td small { display: block; font-size: 11px; color: var(--muted); }
+</style>
 </head>
 <body>
 <nav class="sidenav" aria-label="Pages" data-page="resources.html"></nav>
@@ -26,7 +32,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Resources</h1>
-    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. Once every food job is filled, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (基本, 中階, 進階 or 稀有), from the collector's skill and the tier of the sheep, the forest or the mine it came from. And everyone has a level from 1 to 5 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level above 1 makes each energy there 5% more effective.</p>
+    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. Once every food job is filled, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (N, R, SR or SSR), from the collector's skill and the tier of the sheep, the forest or the mine it came from. And everyone has a level from 1 to 5 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level above 1 makes each energy there 5% more effective.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Wool per sheep, how fast it regrows, what 1 energy collects, the forest's and the mine's tier; the exp each skill level takes and what each level adds</dd>
@@ -97,23 +103,17 @@
           <h2>Skills</h2>
           <p class="scope">Practice at each job; this page only</p>
         </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="epl-num">Exp per level</label>
-            <span class="num-wrap"><input id="epl-num" type="number"><span class="unit">exp</span></span>
-          </div>
-          <input id="epl-range" type="range" aria-label="Exp per level: going from level L to L + 1 takes L times this">
-          <p class="hint">Going from level L to L + 1 takes L × this much more exp. 1 energy spent on a job = 1 exp in its skill.</p>
-        </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="spl-num">Effectiveness per level</label>
-            <span class="num-wrap"><input id="spl-num" type="number"><span class="unit">%</span></span>
-          </div>
-          <input id="spl-range" type="range" aria-label="How much more each energy does at a job, for each level above 1">
-          <p class="hint">Each level above 1 makes every energy spent at that job do this much more work: more milk, rice, timber, wool or stone, crafts done sooner, more knowledge from teaching and poetry.</p>
-        </div>
-        <dl class="foods" id="skill-levels"></dl>
+        <table class="mm-table level-set">
+          <thead><tr><th>Level</th><th class="n">Exp to reach</th><th class="n">Exp in all</th><th class="n">Bonus</th></tr></thead>
+          <tbody>
+            <tr><td><b>0</b><small>Tier N</small></td><td class="n">—</td><td class="n">0</td><td class="n">0%</td></tr>
+            <tr><td><b>1</b><small>Tier N</small></td><td class="n"><input id="ex1-num" type="number" aria-label="Exp from level 0 to level 1"></td><td class="n" id="ex1-all"></td><td class="n"><input id="bn1-num" type="number" aria-label="Bonus at level 1"> %</td></tr>
+            <tr><td><b>2</b><small>Tier R</small></td><td class="n"><input id="ex2-num" type="number" aria-label="Exp from level 1 to level 2"></td><td class="n" id="ex2-all"></td><td class="n"><input id="bn2-num" type="number" aria-label="Bonus at level 2"> %</td></tr>
+            <tr><td><b>3</b><small>Tier SR</small></td><td class="n"><input id="ex3-num" type="number" aria-label="Exp from level 2 to level 3"></td><td class="n" id="ex3-all"></td><td class="n"><input id="bn3-num" type="number" aria-label="Bonus at level 3"> %</td></tr>
+            <tr><td><b>4</b><small>Tier SSR</small></td><td class="n"><input id="ex4-num" type="number" aria-label="Exp from level 3 to level 4"></td><td class="n" id="ex4-all"></td><td class="n"><input id="bn4-num" type="number" aria-label="Bonus at level 4"> %</td></tr>
+          </tbody>
+        </table>
+        <p class="hint">1 energy spent on a job = 1 exp in its skill. At a level, every energy spent at that job does its bonus more work: more milk, rice, timber, wool or stone, crafts done sooner, more knowledge from teaching and poetry. The level is also the person's tier at that skill, for what they collect and craft.</p>
         <p class="hint" id="skill-hint"></p>
         <dl class="foods" id="skill-compare"></dl>
       </section>
@@ -144,26 +144,22 @@ VillagePage.start({
     { id: "spe", key: "stonePerEnergy" },
     { id: "ft", key: "forestTier", tiers: true },
     { id: "mt", key: "mineTier", tiers: true },
-    { id: "epl", key: "expPerLevel" },
-    { id: "spl", key: "perLevel" },
+    { id: "ex1", key: "exp1" }, { id: "ex2", key: "exp2" }, { id: "ex3", key: "exp3" }, { id: "ex4", key: "exp4" },
+    { id: "bn1", key: "bonus1" }, { id: "bn2", key: "bonus2" }, { id: "bn3", key: "bonus3" }, { id: "bn4", key: "bonus4" },
   ],
-  // The same villages with everyone at level 1 for good
+  // The same villages with everyone at level 0 for good
   compare: (c) => { c.result.skillCompare = { now: c.result.people.alive, flat: c.aliveWith({ skills: null }) }; },
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
     $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. Each, in turn, looks at the stores (counting what's been brought in today): women go to the sheep or the forest, men to the mine or the forest, whichever of the two has less, their own on a tie; so timber keeps up with wool and with stone. When the sheep are bare, women cut wood, then turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
-    const { VM } = c, K = { expPerLevel: S.expPerLevel, perLevel: S.perLevel };
-    // Each level: the exp it takes in all, and the effectiveness
-    let total = 0, rows = `<dt></dt><dd class="h">Effectiveness</dd><dd class="h v">Exp in all</dd>`;
-    for (let level = 1; level <= VM.MAX_LEVEL; level++) {
-      if (level > 1) total += (level - 1) * K.expPerLevel;
-      rows += `<dt>Level ${level}</dt><dd>${fmt(VM.effAt(level, K) * 100)}%</dd><dd class="v">${fmt(total)}</dd>`;
-    }
-    $("skill-levels").innerHTML = rows;
+    const { VM } = c, K = { exp: [S.exp1, S.exp2, S.exp3, S.exp4], bonus: [S.bonus1, S.bonus2, S.bonus3, S.bonus4] };
+    // Each level's exp in all
+    let total = 0;
+    K.exp.forEach((e, k) => { total += e; $(`ex${k + 1}-all`).textContent = fmt(total); });
     $("skill-hint").innerHTML = `A standard worker spends ${fmt(VM.DAY_ENERGY)} energy a day, so working one job every day takes about <b>${fmt(total / VM.DAY_ENERGY / c.YEAR, 1)} years</b> to reach level ${VM.MAX_LEVEL}. At level ${VM.MAX_LEVEL} a cow is fully milked with ${fmt(100 / VM.effAt(VM.MAX_LEVEL, K))}% of the energy, so the rest goes to the fields.`;
     const k = c.result.skillCompare;
-    $("skill-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With skills", k.now, k.now >= k.flat], ["Everyone at level 1", k.flat, k.flat >= k.now]]);
+    $("skill-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With skills", k.now, k.now >= k.flat], ["Everyone at level 0", k.flat, k.flat >= k.now]]);
   },
 });
 </script>
