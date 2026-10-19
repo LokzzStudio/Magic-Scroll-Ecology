@@ -136,9 +136,9 @@
     // A person's day so far as a clock (day-model.js), for working out what they could still do
     const clockOf = (a) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, load: a.load, lunched: a.lunched, Lh: a.Lh || 0, walked: 0 });
     // A person's effectiveness at a job (a job id, or the jobs table's): the work each energy does there
-    // plus VM.toolBonus of the tier of their tool for it (a 叉 hayfork in the fields, a 刀 blade collecting)
+    // plus the bonus of their tool for it (a 叉 hayfork in the fields, a 刀 blade collecting)
     const TOOL_OF = { field: "fork", wool: "blade", wood: "blade", stone: "blade" };
-    const effAt = (a, id) => { const t = TOOL_OF[id] && a[TOOL_OF[id]]; return a.eff[id] + (t ? VM.toolBonus(t.tier) : 0); };
+    const effAt = (a, id) => { const t = TOOL_OF[id] && a[TOOL_OF[id]]; return a.eff[id] + (t ? t.bonus : 0); };
     // What they could still do at a place: energy, and as work at a job
     const est = (a, place, collect) => DayModel.canAt(clockOf(a), place, a.e, a.r, S, collect);
     // Whether they could still do a unit there today (what est > 0 asks, worked out for one unit only):

@@ -25,7 +25,7 @@
 
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    ricePerEnergy: 2,  // rice effectiveness: rice 1 energy of tending grows (144,000 a year)
+    ricePerEnergy: 1,  // rice effectiveness: rice 1 energy of tending grows (72,000 a year)
     foodStart: 200000, // food in store on day 0; it never spoils
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
@@ -46,9 +46,9 @@
   // the n days add up to exactly `amount`
   const spread = (amount, n, k) => Math.floor((amount * k) / n) - Math.floor((amount * (k - 1)) / n);
 
-  // Where the Food Model page saves its sliders; where it saved them at 10 energy a day (v4), and
-  // before that at an older scale (v2)
-  const STORE_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
+  // Where the Food Model page saves its sliders; before rice became 1 per energy (v5, kept but for
+  // that); at 10 energy a day (v4), and before that at an older scale (v2)
+  const STORE_KEY = "food-params-v6", V5_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
   const TEN_FIELDS = ["foodStart", "milkCap", "fieldCap"];   // ×10 at 100 energy a day
 
   // Food in store: stores.milk[a] / stores.rice[a] = food made a days ago that is still good, and
@@ -102,6 +102,8 @@
   function savedParams() {
     try {
       let saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+      const v5 = !saved || typeof saved !== "object" ? JSON.parse(localStorage.getItem(V5_KEY) || "null") : null;
+      if (v5 && typeof v5 === "object") { saved = { ...v5 }; delete saved.ricePerEnergy; localStorage.setItem(STORE_KEY, JSON.stringify(saved)); }
       if (!saved || typeof saved !== "object") {
         // Settings saved at 10 energy a day: convert them once (and the older scale's, to that first)
         let ten = JSON.parse(localStorage.getItem(TEN_KEY) || "null");
@@ -116,6 +118,7 @@
         saved = { ...ten };
         if (!("foodStart" in saved) && "riceStart" in saved) saved.foodStart = saved.riceStart;   // its old name
         for (const k of TEN_FIELDS) if (k in saved && isFinite(Number(saved[k]))) saved[k] = Number(saved[k]) * 10;
+        delete saved.ricePerEnergy;
         localStorage.setItem(STORE_KEY, JSON.stringify(saved));
       }
       if (!("foodStart" in saved) && "riceStart" in saved) saved.foodStart = saved.riceStart;   // its old name

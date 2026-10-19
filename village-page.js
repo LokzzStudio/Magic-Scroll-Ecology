@@ -53,7 +53,8 @@
     happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5], perEnergy: [1, 1, 100, 1] } },
     resources: { key: "resources-v3", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
       expPerLevel: [10000, 1000, 50000, 1000], perLevel: [5, 0, 25, 1] } },
-    craft: { key: "craft-v6", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [200, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])), keep2: [75, 0, 100, 5], keep3: [50, 0, 100, 5], keep4: [25, 0, 100, 5] } },
+    craft: { key: "craft-v7", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [200, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])), keep2: [75, 0, 100, 5], keep3: [50, 0, 100, 5], keep4: [25, 0, 100, 5],
+      bonus1: [50, 0, 500, 5], bonus2: [100, 0, 500, 5], bonus3: [150, 0, 500, 5], bonus4: [200, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
   // ×10 (scale), happiness's Intelligence step ÷ 10. Each new key takes from the first of its old keys
@@ -61,7 +62,8 @@
   // The older keys came over to the 10-base ones before: Inheritance v5/v6 without the fields since
   // changed, Resources v1 with Craft v1. Craft v5 (every craft 100 + 100) keeps only the energies. Education v3 (poetry 10,000 per
   // +1 Intelligence) keeps the rest of v2; Happiness v3 and v4 (each a new
-  // default step) keep the rest; Craft v6 (new wear limits) keeps all but the wear.
+  // default step) keep the rest; Craft v6 (new wear limits) keeps all but the wear,
+  // v7 (new tool bonuses) all but the bonuses.
   try {
     const keyed = (k) => { const v = JSON.parse(localStorage.getItem(k) || "null"); return v && typeof v === "object" ? v : null; };
     const scaled = (old, factors) => {
@@ -86,6 +88,7 @@
       ["craft-v2", [() => scaled(pick(resV2(), crafts), ten(...crafts))]],
       ["craft-v5", [() => pick(keyed("craft-v4") || keyed("craft-v3") || keyed("craft-v2") || {}, energies)]],
       ["craft-v6", [() => { const v5 = keyed("craft-v5") || {}; return pick(v5, Object.keys(v5).filter((k) => !k.endsWith("Wear"))); }]],
+      ["craft-v7", [() => { const v6 = keyed("craft-v6") || {}; return pick(v6, Object.keys(v6).filter((k) => !k.startsWith("bonus"))); }]],
     ];
     for (const [key, from] of MOVES) {
       if (keyed(key)) continue;
@@ -114,7 +117,8 @@
   const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier } });
   const happinessOf = (H) => ({ iqStep: H.iqStep, perEnergy: H.perEnergy });
   const skillsOf = (K) => ({ expPerLevel: K.expPerLevel, perLevel: K.perLevel });
-  const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, needs: Object.fromEntries(Object.keys(it.needs).map((m) => [m, C[needKey(it, m)]])), energy: C[it.id + "Energy"], wear: C[it.id + "Wear"] })), keep: [0, 1, C.keep2 / 100, C.keep3 / 100, C.keep4 / 100] });
+  const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, needs: Object.fromEntries(Object.keys(it.needs).map((m) => [m, C[needKey(it, m)]])), energy: C[it.id + "Energy"], wear: C[it.id + "Wear"] })), keep: [0, 1, C.keep2 / 100, C.keep3 / 100, C.keep4 / 100],
+    bonus: [0, C.bonus1 / 100, C.bonus2 / 100, C.bonus3 / 100, C.bonus4 / 100] });
 
   // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
   // (the Food page keeps the food and the rationing settings)
@@ -561,7 +565,7 @@
         legend([["res-wool", "Wool"], ["res-wood", "Timber"], ["res-stone", "Stone"]]) +
         `<div class="food-rows"><dl class="rows" id="res-day"></dl><dl class="rows" id="res-run"></dl></div>` +
         `<div class="table-scroll"><table class="mm-table tier-table" id="res-tiers"></table></div>`);
-      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, collectors carry 刀, farmers 叉 (+20% to +50% effectiveness by tier). Each wears out with use.",
+      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, collectors carry 刀, farmers 叉 (+50% to +200% effectiveness by tier). Each wears out with use.",
         `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over 3600 days"></svg>` +
         legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
         `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>` +

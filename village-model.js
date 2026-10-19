@@ -25,7 +25,8 @@
 //             food work shears wool, quarries stone and cuts wood, each in lots of a tier (Resources)
 //   craft     null, or { items: [{ id, job, needs: { material: amount }, energy, wear }], keep }: one loom
 //             and one forge at the house turn stores into crafts, each lasting wear energy of its use;
-//             keep[t]: the chance a finished craft keeps tier t (SUCCESS without) (Craft)
+//             keep[t]: the chance a finished craft keeps tier t (SUCCESS without); bonus[t]: a 刀 or 叉
+//             of tier t's bonus to effectiveness (toolBonus without) (Craft)
 //   priority  the order of the day's jobs from the Attribute page on: "milk", "field", "craft",
 //             "collect", "teach", "read" (DEFAULT_ORDER without one)
 //   happiness null, or { iqStep, perEnergy }: each person's happiness (0–100) sets their own chance of a
@@ -139,10 +140,10 @@
     let need = cows * cowE, milkEnergy = 0, farmWork = 0, farmEnergy = 0, tendEnergy = 0, fields = 0;
     const fieldJob = tending ? "tend" : "harvest";
     // ops: the work someone could still do at a place, and doing `amount` of it (collect: carried home,
-    // 搬運). Work is energy × their effectiveness at the job's skill (SKILLS), plus toolBonus of the
-    // tier of the tool they have for it (a 叉 hayfork farming, a 刀 blade collecting): the energy they
+    // 搬運). Work is energy × their effectiveness at the job's skill (SKILLS), plus the bonus of the
+    // tool they have for it (a 叉 hayfork farming, a 刀 blade collecting): the energy they
     // spend on it is work ÷ effectiveness.
-    const effOf = (w, skill) => { const t = toolFor(w, skill); return (eff ? eff(w.h, skill) : 1) + (t ? toolBonus(t.tier) : 0); };
+    const effOf = (w, skill) => { const t = toolFor(w, skill); return (eff ? eff(w.h, skill) : 1) + (t ? t.bonus : 0); };
     const ops = {
       can: (w, place, collect, skill) => canAt(w.c, place, w.e, w.r, S, collect) * effOf(w, skill),
       work: (w, place, amount, collect, skill) => {
@@ -228,9 +229,10 @@
   const adjSkill = (h, skill) => Math.floor(((h.level ? h.level[skill] : 1) + 1) / 2);
   const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor(rate - 7 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
-  // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding toolBonus(its tier) to the
-  // holder's effectiveness there: +20%, +30%, +40%, +50% (toolFor: the one w has for a skill, or none)
-  const toolBonus = (tier) => 0.1 + 0.1 * tier;
+  // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding its bonus (cr.bonus, by tier) to
+  // the holder's effectiveness there; by default +50%, +100%, +150%, +200% (toolFor: the one w has for
+  // a skill, or none)
+  const toolBonus = (tier) => 0.5 * tier;
   // By default a finished craft keeps its drawn tier with this chance (基本 to 稀有), else it's one tier lower
   const SUCCESS = [0, 1, 0.75, 0.5, 0.25];
   const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" ? w.b : null);
@@ -425,7 +427,7 @@
         for (let i = 0; i < today.done.length; i += 2) {
           const id = today.done[i], tier = today.done[i + 1], c = crafted[id];
           c[0]++; c[tier]++; craftDone++;
-          tools[id].push({ id, tier, used: 0, day: 0 });
+          tools[id].push({ id, tier, used: 0, day: 0, bonus: cr.bonus ? cr.bonus[tier] : toolBonus(tier) });
         }
         const made = {};
         for (const r of RESOURCES) {
@@ -1064,6 +1066,6 @@
   window.VillageModel = {
     T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, TEND_DAYS, HARVEST_PER_HAND, DAY_ENERGY, POWER_FOOD_STEP,
     milkGiven, DEFAULT_ORDER, fullOrder, teachesFirst, SKILLS, MAX_LEVEL, effAt, MAX_HAPPY, MID_HAPPY, baseHappiness, happinessOf, birthChance, powerFromFood, dayOfYear, harvestLastOf, workDay, runHerd, run, scholarDay, scholarIQ, teach, learn, read,
-    collectOrder, assignEnergy, toolBonus,
+    collectOrder, assignEnergy,
   };
 })();

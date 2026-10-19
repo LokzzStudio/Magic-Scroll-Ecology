@@ -47,8 +47,8 @@
 
     if (at("food")) add("Food", "Food", [
       "Milk and rice meet need one for one. Made on day d, they keep until day d + keep (milk 1, rice 360). Start: 200,000 food in store that never spoils. Eat whatever spoils soonest first (milk on a tie), the starting food last.",
-      "A standard day is 100 energy. 1 energy collects 1 milk (an adult cow gives at most 100 a day as 進階, 90 as 中階, 80 as 基本: its cap) or grows 2 rice tending (at most 50,000 per field a year, 4 fields).",
-      !working && "Nobody works: each adult cow gives its cap; while any adult lives, the year's 144,000 rice comes in evenly over days 181–210.",
+      "A standard day is 100 energy. 1 energy collects 1 milk (an adult cow gives at most 100 a day as 進階, 90 as 中階, 80 as 基本: its cap) or grows 1 rice tending (at most 50,000 per field a year, 4 fields).",
+      !working && "Nobody works: each adult cow gives its cap; while any adult lives, the year's 72,000 rice comes in evenly over days 181–210.",
     ]);
 
     if (at("food")) add("Food advisor", "Food", [
@@ -60,7 +60,7 @@
     if (working) add("Jobs", "Jobs", [
       "The Jobs table: children milk" + (school ? " and go to class" : "") + "; men milk, tend, harvest" + (resources ? ", cut wood, quarry" : "") + (crafts ? ", forge" : "") + "; women the same but " + (resources ? "shear instead of quarry" : "likewise") + (crafts ? " and weave instead of forge" : "") + "; old men and women as men and women" + (school ? "; scholars (row by sex) write poetry and teach" : "") + ". Field work is tending on days 1–180, harvest after. Milk-only: a grown-up who may milk but not do today's field work.",
       "Priority (the order of the day's jobs): milking, fields, crafts (loom, then forge), collecting (shearing, quarrying, woodcutting), Education (class and teaching), Poetry. Jobs a page doesn't have are skipped.",
-      "Milking needs the adult cows' caps in energy; milk made = whole milk from all milking energy so far, less earlier days' (fractions carry over). Tending: 4 × 50,000 ÷ (180 × 2) energy a day in all; on day 181 the field holds ⌊the year's tending × 2⌋ rice. Harvest: ⌈min(400, rice in the field ÷ 25)⌉ energy, each bringing in 25 rice; whatever's left after day 270 is lost.",
+      "Milking needs the adult cows' caps in energy; milk made = whole milk from all milking energy so far, less earlier days' (fractions carry over). Tending: 4 × 50,000 ÷ 180 energy a day in all; on day 181 the field holds ⌊the year's tending work⌋ rice. Harvest: ⌈min(400, rice in the field ÷ 25)⌉ energy, each bringing in 25 rice; whatever's left after day 270 is lost.",
     ]);
 
     if (working) walking();
@@ -113,7 +113,7 @@
 
     if (skills) add("Skills", "Resources", [
       "Nine skills, each with exp and a level (1–5), from 0 exp and level 1 (the born too): milking, farming (tending and harvest), woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Each energy spent on the job is 1 exp; a child's class earns none. Level L + 1 comes at <b>10,000 × L(L + 1) ÷ 2</b> exp, counted at the end of the day for the next.",
-      "<b>Work = energy × (1 + 5% × (level − 1)" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 20% / 30% / 40% / 50% for 基本 / 中階 / 進階 / 稀有" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
+      "<b>Work = energy × (1 + 5% × (level − 1)" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 50% / 100% / 150% / 200% for 基本 / 中階 / 進階 / 稀有 (as made)" : "") + ")</b>. Everything a job makes or needs is in work: shared jobs' need, done, reserved and open; milk, rice" + (crafts ? ", a craft's energy" : "") + ", timber, wool, stone; knowledge from teaching and poetry. Could still do, as work: the energy × that. A unit is min(10, e, reservation left" + (crafts ? " or craft left" : "") + " ÷ that) energy, credited × that. Hours go by energy.",
     ]);
 
     if (school) add("Scholar and school", "Education", [
