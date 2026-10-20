@@ -26,10 +26,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Happiness</h1>
-    <p class="lede">The Education page, with <b>happiness</b>. Everyone has a happiness from 0 to 100: the cleverer they are, the less content (100 − ⌊Intelligence ÷ 2⌋), and every energy they have left over at the end of a day makes them happier that night and through the next day. Couples now pair for life (adults without a partner pair up at random), and a happy couple is more likely to have a child, while both are adults: happiness 50 is the Humans page's chance, 0 is none, 100 is double.</p>
+    <p class="lede">The Education page, with <b>happiness</b>. Everyone has a happiness from 0 to 100: the cleverer they are, the less content (100 − ⌊Intelligence ÷ 2⌋), and the energy they have left over at the end of a day makes them happier that night and through the next day, by its square root, rounded down. Couples now pair for life (adults without a partner pair up at random), and a happy couple is more likely to have a child, while both are adults: happiness 50 is the Humans page's chance, 0 is none, 100 is double.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>How Intelligence and spare energy set happiness</dd>
+        <dt>Set here</dt><dd>How Intelligence sets happiness</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a>, and the Jobs table</dd>
         <dt>Used by</dt><dd><a href="resources.html">Resources</a> builds on it</dd>
       </dl>
@@ -51,14 +51,7 @@
           <input id="iqs-range" type="range" aria-label="Intelligence per point of happiness lost">
           <p class="hint">Base happiness = 100 − ⌊Intelligence ÷ this⌋, at least 0.</p>
         </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="pen-num">Energy left per +1 happiness</label>
-            <span class="num-wrap"><input id="pen-num" type="number"><span class="unit">energy</span></span>
-          </div>
-          <input id="pen-range" type="range" aria-label="Energy left unspent per point of happiness the next day">
-          <p class="hint">Energy left unspent at the end of a day adds to happiness from that night (the night's births go by it) through the next day, up to 100.</p>
-        </div>
+        <p class="hint"><b>Extra happiness = ⌊√(energy left)⌋</b>: energy left unspent at the end of a day adds to happiness from that night (the night's births go by it) through the next day, up to 100. 4 energy left is +2, 25 is +5, 100 is +10: the first few energy count the most.</p>
         <p class="hint" id="happy-hint"></p>
         <dl class="foods" id="happy-compare"></dl>
       </section>
@@ -81,11 +74,11 @@
 // Happiness: the Education page, plus each person's happiness setting their chance of a child
 VillagePage.start({
   key: "happiness", work: "energy", inherit: true, school: true, happiness: true,
-  inputs: [{ id: "iqs", key: "iqStep" }, { id: "pen", key: "perEnergy" }],
+  inputs: [{ id: "iqs", key: "iqStep" }],
   // The same villages with every couple at the Humans page's chance
   compare: (c) => { c.result.happyCompare = { now: c.result.people.alive, flat: c.aliveWith({ happiness: null }) }; },
   drawPanel(c) {
-    const { S, $, fmt, VM, UP } = c, H = { iqStep: S.iqStep, perEnergy: S.perEnergy };
+    const { S, $, fmt, VM, UP } = c, H = { iqStep: S.iqStep };
     const at = (intel) => VM.baseHappiness(intel, H), chance = (h) => fmt(VM.birthChance(h, UP), 4);
     const base = at(c.A.intel);
     $("happy-hint").innerHTML = `Each person's chance of a child a day is <b>${fmt(UP.p, 4)} × happiness ÷ 50</b> (${fmt(UP.p, 4)} from the Humans page): ${chance(0)} at 0, ${chance(50)} at 50, ${chance(100)} at 100. A couple's is the average of the two partners'. Starting grown-ups (Intelligence ${fmt(c.A.intel)}) have a base of <b>${fmt(base)}</b>, so ${chance(base)} a day before any spare energy; Intelligence 100 gives ${fmt(at(100))}, 150 gives ${fmt(at(150))}.`;

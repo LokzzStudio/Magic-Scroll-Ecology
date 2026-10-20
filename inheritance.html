@@ -26,10 +26,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Inheritance</h1>
-    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from an adult man and woman drawn at random: a share of their average, give or take a random variation. Coming of age adds 30 to both. Extra food children get once everyone is fed adds Power as they grow, but going hungry before they come of age takes it back; once grown, it's theirs for life. Without that extra food, a village drifts toward the same level whatever it starts at.</p>
+    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from an adult man and woman drawn at random: a share of their average, give or take a random variation. Coming of age adds 30 to both. Milk goes to the children first: milk they drink above their need adds Power as they grow, for good, while going hungry as a child takes Power away, even below what they were born with. Rice doesn't build Power, so milking for the children is time not spent in the fields. Without that extra milk, a village drifts toward the same level whatever it starts at.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Share passed on, variation at birth, coming-of-age bonus and the children's extra food</dd>
+        <dt>Set here</dt><dd>Share passed on, variation at birth, coming-of-age bonus and the base cost of +1 Power</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a></dd>
         <dt>Used by</dt><dd><a href="education.html">Education</a></dd>
       </dl>
@@ -71,25 +71,13 @@
           <input id="grow-range" type="range" aria-label="Power and Intelligence gained on coming of age">
           <p class="hint" id="grow-hint"></p>
         </div>
+        <p class="hint">Once everyone's need is met, the food advisor gives the children all the extra it expects, split evenly (or your children's share, on the Food page); there's no limit a day. Milk goes to the children first, and only the milk they drink above their need counts: rice or the starting food eaten as extra builds nothing.</p>
         <div class="param">
           <div class="param-head">
-            <label for="cap-num">Extra food per child</label>
-            <span class="num-wrap"><input id="cap-num" type="number"><span class="unit">/day</span></span>
+            <label for="pfb-num">Base cost of +1 Power</label>
+            <span class="num-wrap"><input id="pfb-num" type="number"><span class="unit">milk</span></span>
           </div>
-          <input id="cap-range" type="range" aria-label="Most extra food a child eats in a day">
-          <p class="hint">The most a child eats above their need in a day. Once everyone's need is met, the food advisor (or your children's share, on the Food page) gives children extra food out of the milk and rice, split evenly, up to this much each.</p>
-        </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="pfb-num">Extra food per +1 Power</label>
-            <span class="num-wrap"><input id="pfb-num" type="number"><span class="unit">food</span></span>
-          </div>
-          <input id="pfb-range" type="range" aria-label="Extra food the cheapest +1 Power takes">
-          <div class="param-head">
-            <span class="hint">… plus 10 more for each Power above</span>
-            <span class="num-wrap"><input id="pff-num" type="number"></span>
-          </div>
-          <input id="pff-range" type="range" aria-label="Power above which each +1 Power costs 10 more extra food">
+          <input id="pfb-range" type="range" aria-label="Base cost: the extra milk each +1 Power takes up to Power 100">
           <p class="hint" id="pf-hint"></p>
         </div>
         <dl class="foods" id="inherit-compare"></dl>
@@ -117,19 +105,19 @@ VillagePage.start({
     { id: "share", key: "share" },
     { id: "vary", key: "variation" },
     { id: "grow", key: "grow" },
-    { id: "cap", key: "extraCap" },
-    { id: "pfb", key: "powerFoodBase" },
-    { id: "pff", key: "powerFoodFrom" },
+    { id: "pfb", key: "powerBase" },
+
   ],
   // The same villages without inheritance: everyone always has the starting attributes
   compare: (c) => { c.result.inheritCompare = { now: c.result.people.alive, flat: c.aliveWith({ inherit: null }) }; },
   drawPanel(c) {
     const { S, A, UP, $, fmt } = c, settle = S.share < 1 ? S.grow / (1 - S.share) : Infinity;
     // What extra food buys at coming of age, for a child at the base Power and a stronger one
-    const most = S.extraCap * UP.M, buy = (power, food) => c.VM.powerFromFood(power, food, S);
-    const cost = (power) => S.powerFoodBase + c.VM.POWER_FOOD_STEP * Math.max(0, power - S.powerFoodFrom);
-    $("pf-hint").innerHTML = `A child's food balance (the extra food they've eaten, less any food they went without) buys Power one point at a time as they grow, so hunger takes it back; at coming of age it's bought again on top of the bonus, for life. Each point is dearer than the last once Power passes ${fmt(S.powerFoodFrom)}. At ${fmt(S.powerFoodFrom)} the next point costs ${fmt(cost(S.powerFoodFrom))}, at ${fmt(S.powerFoodFrom + 50)} it costs ${fmt(cost(S.powerFoodFrom + 50))}. ` +
-      `6,000 extra food buys <b>+${fmt(buy(S.powerFoodFrom, 6000))}</b> for a child at ${fmt(S.powerFoodFrom)}; the most a child can eat (${fmt(most)}) buys <b>+${fmt(buy(S.powerFoodFrom, most))}</b>, or +${fmt(buy(S.powerFoodFrom + 70, most))} for one at ${fmt(S.powerFoodFrom + 70)}. What can't buy another point is lost.`;
+    const buy = (power, food) => c.VM.powerFromFood(power, food, S), cost = (power) => c.VM.nextPointCost(power, S);
+    const year = 100 * UP.M;
+    $("pf-hint").innerHTML = `A child's extra milk buys Power one point at a time as it comes, for good. The next point costs <b>(max(100, Power) − 100)² + ${fmt(S.powerBase)}</b> extra milk (the base cost, plus the square of how far Power is past 100): ${fmt(cost(100))} up to Power 100, ${fmt(cost(110))} at 110, ${fmt(cost(130))} at 130, ${fmt(cost(150))} at 150, ${fmt(cost(200))} at 200. ` +
+      `A childhood of 100 extra milk a day (${fmt(year)}) buys <b>+${fmt(buy(70, year))}</b> for a child at 70, or +${fmt(buy(130, year))} for one at 130. ` +
+      `Going hungry costs a child 1 Power for every ${fmt(c.VM.HUNGER_FOOD)} food they go without (a day on half rations: ${fmt(UP.c * 0.7 * 0.5)}), even below what they were born with, and that's for good too. What's put by toward a point when they come of age is lost.`;
     $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(A.power)}</b> and <b>Intelligence ${fmt(A.intel)}</b>. Elders work with ${fmt(A.elderPenalty)}% less.`;
     $("attr-source").hidden = c.saved.attribute;
     $("attr-source").textContent = c.NOTE;

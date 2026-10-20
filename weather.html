@@ -80,6 +80,14 @@
   .sky .flake { fill: var(--cloud); stroke: var(--cloud-edge); stroke-width: 0.03; }
   .sky-stats .cold { color: var(--cows); font-weight: 500; }
   .type-table td.n { text-align: right; }
+  .chart .water-line { fill: none; stroke: var(--rain); stroke-width: 1.8; }
+  .chart .water-fill { fill: var(--rain); opacity: 0.18; }
+  .chart .drought-zone { fill: var(--allee); opacity: 0.16; }
+  .chart .flood-zone { fill: var(--cows); opacity: 0.2; }
+  .chart .bar.water { fill: var(--rain); opacity: 0.75; }
+  .chart .bar.water.drought { fill: var(--allee); }
+  .chart .bar.water.flood { fill: var(--cows); }
+  .sky-stats .dry { color: var(--allee); font-weight: 500; }
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0; }
   .facts div { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
   .facts dt { font-size: 12px; color: var(--muted); }
@@ -101,10 +109,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Weather</h1>
-    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Four settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, and how much of the time is cloudy. Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C.</p>
+    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Four settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, and how much of the time is cloudy. Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C. A water level from 0 to 10 rises with rain and falls in dry hours: at 0 it's a drought, at 10 a flood.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness, how changeable the rain is, and the temperature</dd>
+        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness, how changeable the rain is, and the temperature; for the year, the season ramp and the water level's settings</dd>
         <dt>Follows</dt><dd><a href="map.html">Map</a> (drawn under the sky)</dd>
         <dt>Used by</dt><dd class="none">No page yet</dd>
       </dl>
@@ -222,6 +230,45 @@
           <p class="hint" id="rcl-hint"></p>
         </div>
       </section>
+      <section class="panel-section" id="water">
+        <div class="section-head">
+          <h2>Water level</h2>
+          <p class="scope">For the whole year; this page only, for now</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wpl-num">Rain per water level</label>
+            <span class="num-wrap"><input id="wpl-num" type="number"><span class="unit">rain</span></span>
+          </div>
+          <input id="wpl-range" type="range" aria-label="Rainfall times hours that raises the water level by 1">
+          <p class="hint" id="wpl-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wsd-num">Sunny drain</label>
+            <span class="num-wrap"><input id="wsd-num" type="number"><span class="unit">levels/h</span></span>
+          </div>
+          <input id="wsd-range" type="range" aria-label="Water level a sunny hour takes off">
+          <p class="hint" id="wsd-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wcd-num">Cloudy drain</label>
+            <span class="num-wrap"><input id="wcd-num" type="number"><span class="unit">levels/h</span></span>
+          </div>
+          <input id="wcd-range" type="range" aria-label="Water level a cloudy, dry hour takes off">
+          <p class="hint" id="wcd-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wsl-num">Drain slope</label>
+            <span class="num-wrap"><input id="wsl-num" type="number"><span class="unit"></span></span>
+          </div>
+          <input id="wsl-range" type="range" aria-label="How much faster the water drains when high and slower when low">
+          <p class="hint" id="wsl-hint"></p>
+        </div>
+        <p class="hint" id="water-hint"></p>
+      </section>
     </aside>
 
     <main>
@@ -269,6 +316,14 @@
         <svg class="chart" id="temp-chart" height="210" role="img" aria-label="Each day's temperature over the same simulated year"></svg>
         <div class="legend"><span><i class="key-dot sunny"></i>Sunny day</span><span><i class="key-dot cloudy"></i>Cloudy</span><span><i class="key-dot wet"></i>Rainy</span><span><i class="key-dot snow"></i>Snowy</span></div>
         <p class="hint" id="year-hint"></p>
+      </section>
+      <section class="card" aria-label="Drought and flood">
+        <div class="card-head"><h2>Drought and flood</h2><p>The water level through the year, and how often it reaches 0 or 10.</p></div>
+        <dl class="facts" id="water-facts"></dl>
+        <svg class="chart" id="water-chart" height="190" role="img" aria-label="The water level over the same simulated year"></svg>
+        <div class="table-scroll"><table class="mm-table season-set" id="water-table"></table></div>
+        <svg class="chart" id="level-chart" height="190" role="img" aria-label="Share of time at each water level"></svg>
+        <p class="hint" id="water-run-hint"></p>
       </section>
       <section class="card impl" id="rules" data-page="weather" aria-label="Implementation details"><div class="card-head"><h2>Implementation details</h2><p>Every rule this page sets, for building it into the game. Numbers are the defaults.</p></div><div class="rules-body"></div></section>
     </main>
@@ -345,6 +400,23 @@
   $("ramp-range").addEventListener("input", (e) => { $("ramp-num").value = e.target.value; rampChanged(e.target.value); });
   $("ramp-num").addEventListener("input", (e) => rampChanged(e.target.value));
   $("ramp-num").addEventListener("change", () => { syncRamp(); update(); save(); });
+  // The water settings, for the whole year (ALL.water)
+  const WATER_INPUTS = [["wpl", "perLevel"], ["wsd", "sunnyDrain"], ["wcd", "cloudyDrain"], ["wsl", "slope"]];
+  function syncWater() {
+    for (const [id, key] of WATER_INPUTS) {
+      const [lo, hi, step] = WM.WATER_LIMITS[key], range = $(id + "-range"), num = $(id + "-num"), v = Number(ALL.water[key]);
+      ALL.water[key] = isFinite(v) ? Math.min(hi, Math.max(lo, Number((Math.round(v / step) * step).toFixed(4)))) : WM.WATER[key];
+      range.min = num.min = lo; range.max = num.max = hi; range.step = num.step = step;
+      range.value = ALL.water[key];
+      if (document.activeElement !== num) num.value = ALL.water[key];
+    }
+  }
+  for (const [id, key] of WATER_INPUTS) {
+    const changed = (v) => { if (v !== "" && isFinite(v)) { ALL.water[key] = Number(v); update(); save(); } };
+    $(id + "-range").addEventListener("input", (e) => { $(id + "-num").value = e.target.value; changed(e.target.value); });
+    $(id + "-num").addEventListener("input", (e) => changed(e.target.value));
+    $(id + "-num").addEventListener("change", () => { syncWater(); update(); save(); });
+  }
 
   // ---------- Charts ----------
   const svgSize = (svg, h) => { const w = Math.max(280, svg.clientWidth || 640); svg.setAttribute("viewBox", `0 0 ${w} ${h}`); return w; };
@@ -413,6 +485,16 @@
   function update() {
     syncInputs();
     syncRamp();
+    syncWater();
+    if (sky.water) Object.assign(sky.water, ALL.water);
+    const wa = ALL.water;
+    $("wpl-hint").innerHTML = `An hour of rain (or snow) at rainfall n raises the level by n ÷ this: an hour under a full sky raining (rainfall 10) adds <b>${fmt(10 / wa.perLevel, 3)}</b>, a day of it <b>${fmt(240 / wa.perLevel, 1)}</b>.`;
+    // Days of sun from 10 to 0, with the slope
+    const sunDays = (() => { const s = wa.slope, a = wa.sunnyDrain * (1 - s), b = (wa.sunnyDrain * s) / 5; if (!(wa.sunnyDrain > 0)) return Infinity; if (!(b > 0)) return 10 / a / 24; return a > 0 ? Math.log((10 + a / b) / (a / b)) / b / 24 : Infinity; })();
+    $("wsd-hint").innerHTML = `An hour with no clouds takes this off the level at level 5: a fully sunny day <b>${fmt(24 * wa.sunnyDrain, 2)}</b>. From 10 to 0 takes ${isFinite(sunDays) ? `<b>${fmt(sunDays, 0)}</b> sunny days` : "forever"}.`;
+    $("wcd-hint").innerHTML = `An hour with clouds but no rain takes this off at level 5: a dry, overcast day <b>${fmt(24 * wa.cloudyDrain, 2)}</b>. Hours of rain don't drain.`;
+    $("wsl-hint").innerHTML = `The drain is × (1 + this × (level − 5) ÷ 5): high water runs off faster, low water holds on, which pulls the level back toward the middle, so a wet or dry year doesn't leave it stuck at 10 or 0 for years after. Now a dry hour drains <b>${fmt((1 + wa.slope) * 100)}%</b> of the above at level 10 and <b>${fmt((1 - wa.slope) * 100)}%</b> near 0. 0: the same at every level.`;
+    $("water-hint").innerHTML = `One water level for the whole year, 0 to 10, carrying over from season to season: at <b>0</b> it's a <b>drought</b>, at <b>10</b> a <b>flood</b>. Between the sky's events (a cloud coming or going, a spell changing, a re-roll) it follows a set curve, so it's worked out to the moment it reaches 0 or 10 however often the page draws it.`;
     drawSeason();
     const even = WM.evenDistribution(P), cross = WM.crossHours(P), a = WM.loadOf(P), sp = WM.spellHours(P);
     $("rate-hint").innerHTML = P.spawnRate > 0 ? `In a cloudy spell a cloud is due on average every <b>${hours(1 / P.spawnRate)}</b>, at random: some come close together, some far apart.` : "No clouds come.";
@@ -437,7 +519,7 @@
     $("dist-hint").innerHTML = `The dots are the same clouds coming evenly with no spells and a steady wind: then the count is exactly a Poisson distribution with mean ${isFinite(a) ? fmt(a, 2) : "∞"} cut off at 10, one hump around the average. Spells bunch the clouds up, and a volatile wind adds calm stretches when they pile up, so the sky is clear more often (the clear spells, and the last clouds blowing away) and full more often (cloudy spells pile them up). A cloud due when the sky is full doesn't come.`;
     drawFacts(null);
     drawDist(even, null);
-    if (INPUTS.some(([, k]) => sky.P[k] !== P[k])) { sky = WM.newSky({ ...P }, HerdModel.rng((Math.random() * 2 ** 32) >>> 0)); today = null; newDay(); drawSky(); }
+    if (INPUTS.some(([, k]) => sky.P[k] !== P[k])) { sky = WM.newSky({ ...P }, HerdModel.rng((Math.random() * 2 ** 32) >>> 0)); waterOn(); today = null; newDay(); drawSky(); }
     clearTimeout(simTimer);
     simTimer = setTimeout(() => {
       const sim = simFor(P);
@@ -485,6 +567,62 @@
     drawYear();
   }
   let yearKey = "", year = null;
+  // The same year's water level, day by day (at each day's end), with drought and flood marked
+  function drawYearWater() {
+    const svg = $("water-chart"), H0 = 190, w = svgSize(svg, H0), m = { l: 44, r: 40, t: 22, b: 26 }, D = year.length, MAXW = WM.WATER_MAX;
+    const x = (d) => m.l + (d / D) * (w - m.l - m.r), y = (v) => m.t + (1 - v / MAXW) * (H0 - m.t - m.b);
+    let s = "";
+    WM.SEASONS.forEach((se, k) => {
+      const a = k * WM.SEASON_DAYS, b = a + WM.SEASON_DAYS;
+      s += `<rect class="band ${se.id}" x="${x(a)}" y="${m.t}" width="${x(b) - x(a)}" height="${y(0) - m.t}"/><text class="season-label" x="${(x(a) + x(b)) / 2}" y="${m.t - 7}" text-anchor="middle">${se.zh} ${se.en}</text>`;
+    });
+    for (const v of [0, 5, 10]) s += `<line class="gridline" x1="${m.l}" x2="${w - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    s += `<text class="tag a" x="${w - m.r + 4}" y="${y(0) + 4}">drought</text><text class="tag" style="fill:var(--cows)" x="${w - m.r + 4}" y="${y(10) + 4}">flood</text>`;
+    for (const d of [1, 91, 181, 271, 360]) s += `<text x="${x(d - 0.5)}" y="${H0 - m.b + 15}" text-anchor="middle">day ${d}</text>`;
+    // Days with any drought or flood, shaded
+    year.forEach((d, i) => {
+      if (d.drought > 0) s += `<rect class="drought-zone" x="${x(i).toFixed(1)}" y="${m.t}" width="${(x(i + 1) - x(i)).toFixed(2)}" height="${y(0) - m.t}"/>`;
+      if (d.flood > 0) s += `<rect class="flood-zone" x="${x(i).toFixed(1)}" y="${m.t}" width="${(x(i + 1) - x(i)).toFixed(2)}" height="${y(0) - m.t}"/>`;
+    });
+    const pts = year.map((d, i) => `${x(i + 1).toFixed(1)} ${y(d.water).toFixed(1)}`);
+    s += `<path class="water-fill" d="M${x(0).toFixed(1)} ${y(0)} L${pts.join(" L")} L${x(D).toFixed(1)} ${y(0)} Z"/><path class="water-line" d="M${pts.join(" L")}"/>`;
+    s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    svg.innerHTML = s;
+  }
+  // Droughts and floods over 100 years in a row, run once the page has settled (about a second)
+  let waterKey = "", waterRes = null, waterTimer = 0;
+  function drawWater() {
+    const key = JSON.stringify(ALL);
+    if (key !== waterKey) {
+      waterKey = key; waterRes = null;
+      clearTimeout(waterTimer);
+      waterTimer = setTimeout(() => { waterRes = WM.waterRun(ALL, 1, null, 100); drawWater(); }, 60);
+    }
+    const r = waterRes, v = (f) => (r ? f(r) : "…"), pd = (x) => `${fmt(x * 360, 1)} days a year`;
+    $("water-facts").innerHTML = [["Drought", v((x) => pct(x.drought))], ["Years with a drought", v((x) => pct(x.droughtYears))], ["Flood", v((x) => pct(x.flood))], ["Years with a flood", v((x) => pct(x.floodYears))]]
+      .map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
+    const S = WM.SEASONS;
+    $("water-table").innerHTML = `<thead><tr><th></th>${S.map((s) => `<th class="n">${s.zh} ${s.en}</th>`).join("")}</tr></thead><tbody>` +
+      `<tr><th scope="row">Drought, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].drought))}</td>`).join("")}</tr>` +
+      `<tr><th scope="row">Flood, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].flood))}</td>`).join("")}</tr></tbody>`;
+    // The share of time at each level, 0–1 … 9–10
+    const svg = $("level-chart"), H0 = 190, w = svgSize(svg, H0), m = { l: 44, r: 12, t: 18, b: 38 };
+    if (!r) { svg.innerHTML = `<text x="${w / 2}" y="${H0 / 2}" text-anchor="middle">Running 100 years…</text>`; }
+    else {
+      const { step, top } = niceScale(Math.max(...r.levels)), bw = (w - m.l - m.r) / r.levels.length, y = (val) => m.t + (1 - val / top) * (H0 - m.t - m.b);
+      let s = "";
+      for (let k = 0; k * step <= top + 1e-9; k++) { const val = k * step; s += `<line class="gridline" x1="${m.l}" x2="${w - m.r}" y1="${y(val)}" y2="${y(val)}"/><text x="${m.l - 6}" y="${y(val) + 4}" text-anchor="end">${fmt(val * 100)}%</text>`; }
+      r.levels.forEach((p, k) => {
+        const xx = m.l + k * bw;
+        s += `<rect class="bar water${k === 0 ? " drought" : k === r.levels.length - 1 ? " flood" : ""}" x="${xx + bw * 0.14}" y="${y(p)}" width="${bw * 0.72}" height="${Math.max(0, y(0) - y(p))}"/>`;
+        if (p >= 0.005) s += `<text class="pct" x="${xx + bw / 2}" y="${y(p) - 5}" text-anchor="middle">${fmt(p * 100)}</text>`;
+        s += `<text x="${xx + bw / 2}" y="${H0 - m.b + 15}" text-anchor="middle">${k}–${k + 1}</text>`;
+      });
+      s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/><text class="axis-title" x="${m.l + (w - m.l - m.r) / 2}" y="${H0 - 4}" text-anchor="middle">Water level at the end of the day</text>`;
+      svg.innerHTML = s;
+    }
+    $("water-run-hint").innerHTML = r ? `Over ${fmt(r.years)} years in a row: a drought ${fmt(r.droughtSpells, 1)} times a year on average, lasting about <b>${fmt(r.droughtDays, 1)}</b> days (days with some drought, in a row); a flood ${fmt(r.floodSpells, 1)} times a year, about <b>${fmt(r.floodDays, 1)}</b> days. In all, ${pd(r.drought)} of drought and ${pd(r.flood)} of flood. The level carries over from one season to the next, so a dry summer leaves autumn short of water, and a wet winter can carry a flood into spring. Droughts and floods are rare, so one century is a small sample: another can differ by several points (over 1,000 years the defaults give a drought in about 9% of years and a flood in about 11%).` : "";
+  }
   // The same year's temperatures, each day a dot by its type
   function drawYearTemp(ready) {
     const svg = $("temp-chart"), H0 = 210, w = svgSize(svg, H0), m = { l: 44, r: 40, t: 22, b: 26 }, D = year.length;
@@ -508,7 +646,8 @@
   function drawYear() {
     // Temperatures once every season's long run is in (they give each season's figures)
     const ready = WM.SEASONS.every((s) => hasSim(ALL[s.id])), key = JSON.stringify(ALL) + ready;
-    if (key !== yearKey) { year = WM.simulateYear(ALL, 1, ready ? Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats])) : null); yearKey = key; }
+    // Two years in a row, the second shown, so the water level has settled from where it starts
+    if (key !== yearKey) { year = WM.simulateYear(ALL, 1, ready ? Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats])) : null, 2).slice(WM.SEASONS.length * WM.SEASON_DAYS); yearKey = key; }
     const svg = $("year-chart"), H0 = 210, w = svgSize(svg, H0), m = { l: 44, r: 40, t: 22, b: 26 }, D = year.length;
     const top = Math.max(10, Math.ceil(Math.max(...year.map((d) => d.rain)) / 20) * 20), vTop = Math.max(2, Math.ceil(Math.max(...year.map((d) => d.wind)) / 2) * 2);
     const x = (d) => m.l + (d / D) * (w - m.l - m.r), y = (v) => m.t + (1 - v / top) * (H0 - m.t - m.b), yv = (v) => m.t + (1 - v / vTop) * (H0 - m.t - m.b);
@@ -525,8 +664,10 @@
     s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
     svg.innerHTML = s;
     drawYearTemp(ready);
+    drawYearWater();
+    drawWater();
     const dry = (a) => year.slice(a, a + WM.SEASON_DAYS).filter((d) => d.wet === 0).length;
-    $("year-hint").innerHTML = `One simulated year, each season with its own settings; at a season's first day the new settings take over at once. A day's rain is its rainfall summed over its hours (rainfall 3 for 2 hours is 6). Days without any rain or snow: ${WM.SEASONS.map((se, k) => `${se.en.toLowerCase()} <b>${fmt(dry(k * WM.SEASON_DAYS))}</b>`).join(", ")} of 90. In the temperatures, the dashed green line is the day's base temperature (the seasons', ramping between them) and the dashed blue line 0 °C; a day's dot is by what most of its hours were.`;
+    $("year-hint").innerHTML = `One simulated year (the second of a run, so the water level has settled), each season with its own settings; at a season's first day the new settings take over at once. A day's rain is its rainfall summed over its hours (rainfall 3 for 2 hours is 6). Days without any rain or snow: ${WM.SEASONS.map((se, k) => `${se.en.toLowerCase()} <b>${fmt(dry(k * WM.SEASON_DAYS))}</b>`).join(", ")} of 90. In the temperatures, the dashed green line is the day's base temperature (the seasons', ramping between them) and the dashed blue line 0 °C; a day's dot is by what most of its hours were.`;
   }
   const TYPES = [["sunny", "Sunny", "most hours without a cloud"], ["cloudy", "Cloudy", "most hours with clouds, dry"], ["wet", "Rainy or snowy", "most hours raining or snowing"]];
   function drawTemp(sim) {
@@ -580,12 +721,16 @@
     return `<line class="drop" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${(x0 - 0.25).toFixed(2)}" y2="${(y0 + 1.1).toFixed(2)}" stroke-dashoffset="${(-drift).toFixed(2)}"/>`;
   }).join("");
   let sky = WM.newSky({ ...P }, HerdModel.rng((Math.random() * 2 ** 32) >>> 0));
+  // The live sky's own water level, from the middle; it keeps the picked season for good, so the level
+  // drifts as that season would have it
+  const waterOn = () => { sky.water = { ...ALL.water, level: WM.WATER_START, drought: 0, flood: 0 }; };
+  waterOn();
   newDay();
   function drawSky() {
     const rain = WM.rainfall(sky), T = tempNow(), snow = rain > 0 && T < 0;
     $("sky").innerHTML = tiles + (rain ? sky.clouds.map(snow ? flakesSvg : dropsSvg).join("") : "") + sky.clouds.map(cloudSvg).join("");
     const t = sky.t + 6, day = Math.floor(t / 24) + 1, h = t % 24;
-    $("sky-stats").innerHTML = `Day ${day}, ${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor((h % 1) * 60)).padStart(2, "0")} · ${sky.cloudy ? "<b>cloudy spell</b>" : "clear spell"} · wind ${fmt(sky.v, 1)} · <b>${sky.clouds.length}</b> cloud${sky.clouds.length === 1 ? "" : "s"} · ${isFinite(T) ? `<span${T < 0 ? ' class="cold"' : ""}>${fmt(T, 1)} °C</span>` : "… °C"} · ${rain ? (snow ? `<span class="cold">snowing, snowfall ${rain}</span>` : `<span class="wet">raining, rainfall ${rain}</span>`) : `dry (${fmt(WM.rainChance(sky.clouds.length) * 100)}% chance)`} · ${fmt(sky.came)} came, ${fmt(sky.lost)} turned away`;
+    $("sky-stats").innerHTML = `Day ${day}, ${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor((h % 1) * 60)).padStart(2, "0")} · ${sky.cloudy ? "<b>cloudy spell</b>" : "clear spell"} · wind ${fmt(sky.v, 1)} · <b>${sky.clouds.length}</b> cloud${sky.clouds.length === 1 ? "" : "s"} · ${isFinite(T) ? `<span${T < 0 ? ' class="cold"' : ""}>${fmt(T, 1)} °C</span>` : "… °C"} · ${rain ? (snow ? `<span class="cold">snowing, snowfall ${rain}</span>` : `<span class="wet">raining, rainfall ${rain}</span>`) : `dry (${fmt(WM.rainChance(sky.clouds.length) * 100)}% chance)`} · water <b>${fmt(sky.water.level, 2)}</b>${sky.water.level <= 0 ? ' <span class="dry">drought</span>' : sky.water.level >= WM.WATER_MAX ? ' <span class="cold">flood</span>' : ""} · ${fmt(sky.came)} came, ${fmt(sky.lost)} turned away`;
   }
   // Playback: real seconds per game hour
   const SPEEDS = [["Game speed", 60 / MapModel.GAME_MIN_PER_REAL_SEC], ["1 h = 5 s", 5], ["1 h = 1 s", 1]];

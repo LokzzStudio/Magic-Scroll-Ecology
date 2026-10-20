@@ -114,7 +114,7 @@
             <tr><td><b>4</b><small>SSR</small></td><td class="n"><input id="ex4-num" type="number" aria-label="Exp from level 3 to level 4"><small id="ex4-all"></small></td><td class="n"><input id="bn4-num" class="pct" type="number" aria-label="Bonus at level 4"> %</td></tr>
           </tbody>
         </table>
-        <p class="hint">1 energy spent on a job = 1 exp in its skill. At a level, every energy spent at that job does its bonus more work: more milk, rice, timber, wool or stone, crafts done sooner, more knowledge from teaching and poetry. The level is also the person's tier at that skill, for what they collect and craft.</p>
+        <p class="hint">1 energy spent on a job = 1 exp in its skill. At a level, every energy spent at that job brings in its bonus more: more milk, more rice from the same field, more wool from the same sheep, more timber, stone, and knowledge from teaching and poetry. At the harvest the standing rice is all there is, so there it's done faster instead. Crafts get done faster. The level is also the person's tier at that skill, for what they collect and craft.</p>
         <p class="hint" id="skill-hint"></p>
         <dl class="foods" id="skill-compare"></dl>
       </section>
@@ -153,12 +153,12 @@ VillagePage.start({
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
-    $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. Each, in turn, looks at the stores (counting what's been brought in today): women go to the sheep or the forest, men to the mine or the forest, whichever of the two has less, their own on a tie; so timber keeps up with wool and with stone. When the sheep are bare, women cut wood, then turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
+    $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. Each, in turn, looks at the stores (counting what's been brought in today): women go to the sheep or the forest, men to the mine or the forest, whichever of the two has less, their own on a tie; so timber keeps up with wool and with stone. One person to a place for the day: a shearer to each sheep with wool on it (the fullest first, getting at most its wool), a quarrier or woodcutter to each tile of the mine or the forest on the map. When the sheep are bare, women cut wood, then turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
     const { VM } = c, K = { exp: [S.exp1, S.exp2, S.exp3, S.exp4], bonus: [S.bonus1, S.bonus2, S.bonus3, S.bonus4] };
     // Each level's exp in all
     let total = 0;
     K.exp.forEach((e, k) => { total += e; $(`ex${k + 1}-all`).textContent = `${fmt(total)} in all`; });
-    $("skill-hint").innerHTML = `A standard worker spends ${fmt(VM.DAY_ENERGY)} energy a day, so working one job every day takes about <b>${fmt(total / VM.DAY_ENERGY / c.YEAR, 1)} years</b> to reach level ${VM.MAX_LEVEL}. At level ${VM.MAX_LEVEL} a cow is fully milked with ${fmt(100 / VM.effAt(VM.MAX_LEVEL, K))}% of the energy, so the rest goes to the fields.`;
+    $("skill-hint").innerHTML = `A standard worker spends ${fmt(VM.DAY_ENERGY)} energy a day, so working one job every day takes about <b>${fmt(total / VM.DAY_ENERGY / c.YEAR, 1)} years</b> to reach level ${VM.MAX_LEVEL}. At level ${VM.MAX_LEVEL} each energy of milking brings in <b>${c.fmtNum(c.F.milkPerEnergy * VM.effAt(VM.MAX_LEVEL, K))}</b> milk instead of ${c.fmtNum(c.F.milkPerEnergy)}, and a field tended by masters ${fmt(VM.effAt(VM.MAX_LEVEL, K) * 100)}% of its rice.`;
     const k = c.result.skillCompare;
     $("skill-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With skills", k.now, k.now >= k.flat], ["Everyone at level 0", k.flat, k.flat >= k.now]]);
   },

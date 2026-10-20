@@ -49,12 +49,12 @@
   // its defaults and slider ranges from here; the pages after it read what it saved.
   const SPECS = {
     attribute: { key: "attribute-v4", fields: { power: [100, 0, 300, 5], intel: [100, 0, 300, 5], elderPenalty: [20, 0, 50, 5] } },
-    inheritance: { key: "inheritance-v8", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], extraCap: [30, 0, 200, 10], powerFoodBase: [100, 10, 1000, 10], powerFoodFrom: [100, 0, 300, 5] } },
-    education: { key: "education-v3", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowPerIntel: [1000, 100, 5000, 100], readPerIntel: [10000, 500, 20000, 500], scholarShift: [10, 0, 50, 5] } },
-    happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5], perEnergy: [1, 1, 100, 1] } },
-    resources: { key: "resources-v5", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
+    inheritance: { key: "inheritance-v8", fields: { share: [0.7, 0, 1, 0.05], variation: [10, 0, 50, 1], grow: [30, 0, 100, 5], powerBase: [300, 10, 1000, 10] } },
+    education: { key: "education-v3", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowBase: [300, 10, 1000, 10], scholarShift: [10, 0, 50, 5] } },
+    happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5] } },
+    resources: { key: "resources-v6", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
       exp1: [100, 10, 1000000, 10], exp2: [1000, 10, 1000000, 10], exp3: [10000, 10, 1000000, 10], exp4: [100000, 10, 1000000, 10],
-      bonus1: [25, 0, 500, 5], bonus2: [50, 0, 500, 5], bonus3: [75, 0, 500, 5], bonus4: [100, 0, 500, 5] } },
+      bonus1: [10, 0, 500, 5], bonus2: [20, 0, 500, 5], bonus3: [30, 0, 500, 5], bonus4: [40, 0, 500, 5] } },
     craft: { key: "craft-v8", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [200, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])), keep2: [75, 0, 100, 5], keep3: [50, 0, 100, 5], keep4: [25, 0, 100, 5],
       bonus1: [25, 0, 500, 5], bonus2: [50, 0, 500, 5], bonus3: [75, 0, 500, 5], bonus4: [100, 0, 500, 5] } },
   };
@@ -66,7 +66,7 @@
   // +1 Intelligence) keeps the rest of v2; Happiness v3 and v4 (each a new
   // default step) keep the rest; Craft v6 (new wear limits) keeps all but the wear,
   // v7 (new tool bonuses) all but the bonuses, v8 (new bonuses and wear) all but those; Resources v5
-  // (skill levels 0–4) all but the old skill fields.
+  // (skill levels 0–4) all but the old skill fields; v6 (skill bonuses as yields, +10–40%) all but the bonuses.
   try {
     const keyed = (k) => { const v = JSON.parse(localStorage.getItem(k) || "null"); return v && typeof v === "object" ? v : null; };
     const scaled = (old, factors) => {
@@ -89,6 +89,7 @@
       ["happiness-v4", [() => scaled(keyed("happiness-v3") || {}, { iqStep: 0 })]],
       ["resources-v3", [() => Object.assign(scaled(pick(resV2(), res), ten("fleece", "regrow", "woodTarget")), scaled(keyed("skill-v1") || {}, ten("expPerLevel")))]],
       ["resources-v5", [() => scaled(keyed("resources-v4") || keyed("resources-v3") || {}, { expPerLevel: 0, perLevel: 0, exp2: 0, exp3: 0, bonus2: 0, bonus3: 0 })]],
+      ["resources-v6", [() => scaled(keyed("resources-v5") || {}, { bonus1: 0, bonus2: 0, bonus3: 0, bonus4: 0 })]],
       ["craft-v2", [() => scaled(pick(resV2(), crafts), ten(...crafts))]],
       ["craft-v5", [() => pick(keyed("craft-v4") || keyed("craft-v3") || keyed("craft-v2") || {}, energies)]],
       ["craft-v6", [() => { const v5 = keyed("craft-v5") || {}; return pick(v5, Object.keys(v5).filter((k) => !k.endsWith("Wear"))); }]],
@@ -118,9 +119,9 @@
     }
   }
   // Simulation options from the Education, Happiness, Resources and Craft pages' settings
-  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowPerIntel: E.knowPerIntel, readPerIntel: E.readPerIntel, shift: E.scholarShift });
+  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowBase: E.knowBase, shift: E.scholarShift });
   const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier } });
-  const happinessOf = (H) => ({ iqStep: H.iqStep, perEnergy: H.perEnergy });
+  const happinessOf = (H) => ({ iqStep: H.iqStep });
   const skillsOf = (K) => ({ exp: [K.exp1, K.exp2, K.exp3, K.exp4], bonus: [K.bonus1, K.bonus2, K.bonus3, K.bonus4] });
   const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, needs: Object.fromEntries(Object.keys(it.needs).map((m) => [m, C[needKey(it, m)]])), energy: C[it.id + "Energy"], wear: C[it.id + "Wear"] })), keep: [0, 1, C.keep2 / 100, C.keep3 / 100, C.keep4 / 100],
     bonus: [0, C.bonus1 / 100, C.bonus2 / 100, C.bonus3 / 100, C.bonus4 / 100] });
@@ -336,7 +337,7 @@
     // ---------- The scholar as food advisor (Education page on) ----------
     const firstScholarIQ = () => VM.scholarIQ({ intel: c.A.intel, age: c.UP.M }, c.UP, 1, schoolOf(c.ED));
     const SCHOLAR_RATION = {
-      hint: "The scholar is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor plans the day's food: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest.",
+      hint: "The scholar with the highest Intelligence is the food advisor, with their Intelligence at work (with the scholar adjustment) as the advisor's IQ. With no scholar, nobody rations: everyone eats what they need until it runs out. Each day the advisor plans the day's food: the food in store plus what today's workers will still bring in, spread evenly over the days until the next harvest.",
       choice: () => ({ value: "scholar", label: `The scholar (IQ ${fmt(firstScholarIQ())} at the start)` }),
       rows: () => {
         const iq = firstScholarIQ(), err = iqError(iq);
@@ -346,11 +347,11 @@
     };
     // Who rations (the Food page), as rows and a hint; with the advisor: its IQ rows, who it is, and how good
     function rationText(iqRows, advisorName, advisorHint) {
-      const R = c.R, extra = inherit() ? ` Once everyone's need is met, the children get extra food out of the milk and rice it expects, up to ${fmt(c.IH.extraCap)} each a day; the starting food is kept as a reserve.` : "";
+      const R = c.R, extra = inherit() ? ` Once everyone's need is met, the children get all the extra milk and rice it expects, split evenly; the starting food is kept as a reserve. Milk goes to the children first, and only the milk they drink above their need builds Power.` : "";
       if (R.who === "off") return { rows: [["", "Who rations", "nobody"]], hint: "Rationing is off on the Food page, so everyone eats what they need until the food runs out." };
       if (R.who === "you") return {
         rows: [["", "Who rations", "you, on the Food page"], ["", "Grown-ups' share", `${fmt(R.grown)}% of their need`], ["", "Children's share", `${fmt(R.kids)}% of their need`]],
-        hint: `Grown-ups get ${fmt(R.grown)}% of their need and children ${fmt(R.kids)}%${R.kids > 100 ? (inherit() ? `, the part above their need as extra food (at most ${fmt(c.IH.extraCap)} each a day, and only out of milk and rice)` : " (but no more than their need: extra food counts from the Inheritance page on)") : ""}. If the stores run short, every share shrinks alike.`,
+        hint: `Grown-ups get ${fmt(R.grown)}% of their need and children ${fmt(R.kids)}%${R.kids > 100 ? (inherit() ? `, the part above their need as extra (milk goes to them first, and only milk above their need builds Power)` : " (but no more than their need: extra food counts from the Inheritance page on)") : ""}. If the stores run short, every share shrinks alike.`,
       };
       return { rows: [["", "Who rations", `the food advisor: ${advisorName}`], ...iqRows], hint: advisorHint + extra };
     }
@@ -367,15 +368,15 @@
       let s = "";
       if (at("craft")) s += section("resources", "Resources and skills", from("resources.html#resources", "Resources page"),
         `<dl class="params" id="res-params"></dl>
-        <p class="hint">Once every food job is filled, idle grown-ups collect: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 0 makes each energy there more effective.</p>
+        <p class="hint">Once every food job is filled, idle grown-ups collect: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 0 brings in more for the same energy: more milk, more rice from a field, more wool from a sheep.</p>
         <p class="source" id="res-source" hidden></p>${change("resources.html#resources", "Resources")}`);
       if (at("resources")) s += section("happiness", "Happiness", from("happiness.html#happiness", "Happiness page"),
         `<dl class="params" id="happy-params"></dl>
-        <p class="hint">Happiness (0–100) is 100 − ⌊Intelligence ÷ the step⌋, plus 1 for each lot of energy left unspent the day before; each person's chance of a child goes by it, and couples last for life.</p>
+        <p class="hint">Happiness (0–100) is 100 − ⌊Intelligence ÷ the step⌋, plus ⌊√(the energy left unspent the day before)⌋; each person's chance of a child goes by it, and couples last for life.</p>
         <p class="source" id="happy-source" hidden></p>${change("happiness.html#happiness", "Happiness")}`);
       if (at("happiness")) s += section("education", "Education", from("education.html#education", "Education page"),
         `<dl class="params" id="edu-params"></dl>
-        <p class="hint">The village's adult with the highest Intelligence becomes scholar when the others can spare them; they teach the children, spend what's left on poetry, and advise on food.</p>
+        <p class="hint">The village appoints a scholar for each child (at least one), the highest Intelligence first, while the others can spare them. The children are split evenly among them each day, and a class's lesson is shared out among its children. Scholars spend what's left on poetry, and the brightest advises on food.</p>
         <p class="source" id="edu-source" hidden></p>${change("education.html#education", "Education")}`);
       if (at("education")) s += section("inheritance", "Inheritance", from("inheritance.html#inheritance", "Inheritance page"),
         `<p class="start-line" id="attr-start"></p><dl class="params" id="inherit-params"></dl>
@@ -391,7 +392,7 @@
         `<dl class="foods"><dt></dt><dd class="h">Needs</dd><dd class="h v">Days</dd>
           <dt>Milk</dt><dd id="milk-work"></dd><dd class="v">all year</dd>
           <dt>Rice</dt><dd><span id="rice-who">adults</span>: tending, then harvest</dd><dd class="v">1–270</dd></dl>
-        <p class="hint">${`Work is counted in <b>energy</b>; ${fmt(DAY_ENERGY)} energy is what a person with 100 Power spends in a day. Milk comes first: an adult cow gives at most <span class="milk-cap">${fmt(FoodModel.DEFAULTS.milkCap)}</span> milk, so milking it fully takes a set amount of energy, and people milk one cow after another while their energy lasts, first anyone who may milk but not farm (by the Jobs table). Whatever energy is left goes into the rice. <b>Tending</b> (days 1–180): the 4 fields take up to their daily limit each, from whoever has energy left, most first; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): each ${fmt(DAY_ENERGY)} energy brings in ${fmt(VM.HARVEST_PER_HAND)} rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <span id="kids-work"></span> Who may do which job is set with the <b>Jobs</b> button at the top.`}</p>`);
+        <p class="hint">${`Work is counted in <b>energy</b>; ${fmt(DAY_ENERGY)} energy is what a person with 100 Power spends in a day. Milk comes first: each adult cow takes one milker for the day, who milks it while their energy lasts (a cow has no limit), first anyone who may milk but not farm (by the Jobs table). Whatever energy is left goes into the rice. <b>Tending</b> (days 1–180): one person to each of the 4 fields a day, whoever has the most energy left first, each up to the field's daily limit; a field gives its tending energy × rice effectiveness, up to its yearly limit. <b>Harvest</b> (days 181–270): one person to a field again, and each ${fmt(DAY_ENERGY)} energy brings in ${fmt(VM.HARVEST_PER_HAND)} rice until the field is bare; rice still standing after day 270 is lost. Days 271–360 have no rice work. <span id="kids-work"></span> Who may do which job is set with the <b>Jobs</b> button at the top.`}</p>`);
       if (at("attribute")) s += section("map", "Map", from("map.html#map", "Map page"),
         `<dl class="params" id="map-params"></dl><p class="hint" id="map-hint"></p><p class="source" id="map-source" hidden></p>${change("map.html#map", "Map")}`);
       if (at("attribute")) s += section("advice", "Rationing", from("farm.html#advice", "Food page"),
@@ -425,18 +426,18 @@
       source("herd-source", c.saved.herd);
       source("human-source", c.saved.humans);
 
-      const milkPerCow = FoodModel.milkPerDay(F), cowE = FoodModel.cowEnergyOf(F), eats = YEAR * UP.c;
+      const milkPerCow = FoodModel.milkPerDay(F), eats = YEAR * UP.c;
       if ($("food-params")) {
         $("food-params").innerHTML = paramRows([
           ["", "Rice effectiveness", `1 energy = ${fmtNum(F.ricePerEnergy)} rice (${fmt(F.riceYear)} a year)`],
           ["", "Food in store at start", `${fmt(F.foodStart)}, never spoils`],
           ["", "Milk keeps", FoodModel.keepText(F.milkKeep)], ["", "Rice keeps", FoodModel.keepText(F.riceKeep)],
           ["", "Milk effectiveness", `1 energy = ${fmtNum(F.milkPerEnergy)} milk`],
-          ["", "Milk per cow", `at most ${fmt(F.milkCap)} a day`],
+
           ["", "Rice per field", `at most ${fmt(F.fieldCap)} a year (${fmt(FULL_CREW)} fields)`],
         ]);
         source("food-source", c.saved.food);
-        $("milk-cow").textContent = none ? `${milkText(milkPerCow)} a day per adult cow` : `at most ${fmt(F.milkCap)} a day per adult cow`;
+        $("milk-cow").textContent = none ? `${milkText(milkPerCow)} a day per adult cow` : "one milker to an adult cow a day, no limit per cow";
         const days = HARVEST_LAST - HARVEST_FIRST + 1, most = FULL_CREW * F.fieldCap;
         $("rice-hint").innerHTML = none
           ? `Harvested evenly over the ${days} harvest days: <b>${milkText(F.riceYear / days)}</b> rice a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child 70%), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`
@@ -455,9 +456,9 @@
         $("rice-who").textContent = who.length ? who.join(", ") : "nobody";
       }
       if ($("milk-work")) $("milk-work").textContent = energy
-        ? `each adult cow: ${fmt(cowE, Number.isInteger(cowE) ? 0 : 1)} energy for its ${fmt(F.milkCap)} milk`
+        ? `${fmtNum(F.milkPerEnergy)} milk per energy, one milker to an adult cow a day`
         : `1 adult or elder per adult cow (${milkText(milkPerCow)} milk a day)`;
-      for (const el of document.querySelectorAll(".milk-cap")) el.textContent = fmt(F.milkCap);
+
 
       if ($("map-params")) {
         const M = c.M, d = MapModel.distances(M.tiles), tv = c.travel;
@@ -511,13 +512,12 @@
       }
       if ($("happy-params")) {
         const H = c.set.happiness;
-        $("happy-params").innerHTML = paramRows([["", "Intelligence per −1 happiness", fmt(H.iqStep)], ["", "Energy left per +1 happiness", fmt(H.perEnergy)]]);
+        $("happy-params").innerHTML = paramRows([["", "Intelligence per −1 happiness", fmt(H.iqStep)], ["", "Extra happiness", "⌊√(energy left)⌋"]]);
         source("happy-source", c.saved.happiness);
       }
       if ($("edu-params")) {
         $("edu-params").innerHTML = paramRows([
-          ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", fmt(c.ED.knowPerIntel)],
-          ["", "Poetry per +1 Intelligence", fmt(c.ED.readPerIntel)], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
+          ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", `(max(100, Intelligence) − 100)² + ${fmt(c.ED.knowBase)}`], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
         ]);
         source("edu-source", c.saved.education);
       }
@@ -525,8 +525,8 @@
         $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(c.A.power)}</b> and <b>Intelligence ${fmt(c.A.intel)}</b>, from the Attribute page.`;
         $("inherit-params").innerHTML = paramRows([
           ["", "Share passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
-          ["", "Coming-of-age bonus", `+${fmt(c.IH.grow)} each`], ["", "Extra food per child", `${fmt(c.IH.extraCap)} /day`],
-          ["", "Extra food per +1 Power", `${fmt(c.IH.powerFoodBase)} + (Power − ${fmt(c.IH.powerFoodFrom)}) above ${fmt(c.IH.powerFoodFrom)}`],
+          ["", "Coming-of-age bonus", `+${fmt(c.IH.grow)} each`],
+          ["", "Extra milk per +1 Power", `(max(100, Power) − 100)² + ${fmt(c.IH.powerBase)}`], ["", "Hunger per −1 Power", `${fmt(c.VM.HUNGER_FOOD)} food a child goes without`],
         ]);
         $("inherit-source").hidden = c.saved.inheritance && c.saved.attribute;
         $("inherit-source").textContent = "Showing defaults. If you changed those pages and it doesn't show here, your browser keeps each local file's settings separate.";
@@ -559,7 +559,7 @@
       if (def.inherit) s += card("Attributes over time", "Attributes over time", "Average Power and Intelligence of this run's adults; children and elders not included.",
         `<svg class="chart" id="attr-chart" height="190" role="img" aria-label="Adults' average Power and Intelligence over 3600 days"></svg>` +
         legend([["pow", "Power (力量)"], ["int", "Intelligence (智力)"], ["settle", def.school ? "Where they settle without extra food or school" : "Where they settle without extra food"]]));
-      if (def.school) s += card("School", "School", "The scholar and the children's lessons in this run.",
+      if (def.school) s += card("School", "School", "The scholars and the children's lessons in this run.",
         `<div class="food-rows"><dl class="rows" id="school-day"></dl><dl class="rows" id="school-run"></dl></div>`);
       s += card("Food", "Food in store", none ? "Rice arrives in one burst each autumn and is eaten through the year. Shaded bands are harvests." : "Rice comes in during the autumn harvest and is eaten through the year. Shaded bands are harvests.",
         `<svg class="chart" id="food-chart" height="190" role="img" aria-label="Milk, rice and starting food in store over 3600 days"></svg>` +
@@ -579,14 +579,14 @@
         `<svg class="chart" id="happy-chart" height="190" role="img" aria-label="Adults' and children's average happiness over 3600 days"></svg>` +
         legend([["happy-adults", "Adults"], ["happy-kids", "Children"]]) +
         `<div class="food-rows"><dl class="rows" id="happy-day"></dl><dl class="rows" id="happy-run"></dl></div>`);
-      if (def.skills) s += card("Skills", "Skills", "Average level (0–4) of this run's grown-ups at each skill. Only the scholar teaches and writes poetry, so those two stay low on average; the rows give the highest anyone has.",
+      if (def.skills) s += card("Skills", "Skills", "Average level (0–4) of this run's grown-ups at each skill. Only scholars teach and write poetry, so those two stay low on average; the rows give the highest anyone has.",
         `<svg class="chart" id="skill-chart" height="220" role="img" aria-label="Grown-ups' average level at each skill over 3600 days"></svg>` +
         legend(VM.SKILLS.map((sk) => [`skill-${sk.id}`, `${sk.zh} ${sk.en}`])) +
         `<div class="food-rows"><dl class="rows" id="skill-day"></dl><dl class="rows" id="skill-run"></dl></div>`);
       if (!none) s += card("Workers", "Workers", "What the adults and elders of this run do each day. Shaded bands are harvests.",
         `<svg class="chart" id="work-chart" height="190" role="img" aria-label="Adults and elders milking and farming over 3600 days"></svg>` +
         legend([["work-milk", "Milking"], ["work-rice", "On the rice"], ...(energy ? [["work-kids", "Children helping"]] : []),
-          ["", def.school ? "Adults and elders, not the scholar" : "Adults and elders"], ["work-cows", "Adult cows to milk"]]));
+          ["", def.school ? "Adults and elders, not the scholars" : "Adults and elders"], ["work-cows", "Adult cows to milk"]]));
       s += `<div class="stats"><section class="card" aria-label="Cow stats" id="stats-cows"></section><section class="card" aria-label="People stats" id="stats-people"></section></div>`;
       s += `<section class="card impl" id="rules" data-page="${def.key}" aria-label="Implementation details"><div class="card-head"><h2>Implementation details</h2><p>Every rule this page runs, for building it into the game. Numbers are the defaults.</p></div><div class="rules-body"></div></section>`;
       return s;
@@ -932,48 +932,48 @@
       const idle = pm.adults[i] - pm.farm[i] - pm.milkers[i];
       const crop = day === 0 ? "—" : `${fmt(pm.crop[i] * 100)}%${doy < HARVEST_FIRST ? " so far" : ""}`;
       const made = none ? "made" : "collected", ration = `<dt>Ration: grown-ups / children</dt><dd>${isFinite(pm.share[i]) ? `${fmt(pm.share[i] * 100)}% / ${fmt(pm.shareKids[i] * 100)}%` : "—"}</dd>`;
-      const cowE = FoodModel.cowEnergyOf(c.F);
+
       $("food-day").innerHTML = `<dt class="sub">Day ${fmt(day)} · day ${doy} of the year${harvest}</dt>` + (none ? "" :
         `<dt>Milking / on the rice / idle</dt><dd>${fmt(pm.milkers[i])} / ${fmt(pm.farm[i])} / ${fmt(idle)}</dd>` +
           `<dt>Children helping</dt><dd>${fmt(pm.kidsWork[i])}</dd>
              <dt>Work done: milking / rice</dt><dd>${fmt(pm.milkWork[i] * DAY_ENERGY)} / ${fmt(pm.farmWork[i] * DAY_ENERGY)} energy</dd>
-             <dt>Walking, all workers</dt><dd>${fmt(pm.walk[i], 1)} h</dd>
-             <dt>Cows not fully milked</dt><dd>${fmt(Math.max(0, pm.cows[i] - Math.floor((pm.milkWork[i] * DAY_ENERGY) / cowE + 1e-6)))} of ${fmt(pm.cows[i])}</dd>`) +
+             <dt>Walking, all workers</dt><dd>${fmt(pm.walk[i], 1)} h</dd>`) +
         `<dt>Milk ${made} / drunk</dt><dd>${milkText(pm.made[i])} / ${milkText(pm.drank[i])}</dd>` + (none ? "" :
           `<dt>This year's crop, of the most</dt><dd>${crop}</dd><dt>Rice still in the field</dt><dd>${milkText(pm.field[i])}</dd>`) +
         `<dt>Rice harvested / eaten</dt><dd>${milkText(pm.riceMade[i])} / ${milkText(pm.riceEaten[i])}</dd>
          <dt>Starting food eaten</dt><dd>${milkText(pm.foodEaten[i])}</dd>
          <dt>In store: milk / rice / starting</dt><dd>${milkText(pm.stored[i])} / ${milkText(pm.riceStored[i])} / ${milkText(pm.foodStored[i])}</dd>${ration}
-         <dt>Fed</dt><dd>${shareText(i)}</dd>` + (inherit() ? `<dt>Extra food to children</dt><dd>${milkText(pm.extra[i])}</dd>` : "");
+         <dt>Fed</dt><dd>${shareText(i)}</dd>` + (inherit() ? `<dt>Extra milk to children</dt><dd>${milkText(pm.extra[i])}</dd>` : "");
       $("food-run").innerHTML = `<dt class="sub">Whole run</dt>
         <dt>Milk ${made} / drunk / spoiled</dt><dd>${milkText(sum(pm.made))} / ${milkText(sum(pm.drank))} / ${milkText(sum(pm.spoiled))}</dd>` +
         (none ? `<dt>Rice harvested</dt><dd>${milkText(sum(pm.riceMade))}</dd>` : `<dt>Rice harvested / left in the field</dt><dd>${milkText(sum(pm.riceMade))} / ${milkText(sum(pm.riceLost))}</dd>`) +
         `<dt>Rice eaten / spoiled</dt><dd>${milkText(sum(pm.riceEaten))} / ${milkText(sum(pm.riceSpoiled))}</dd>
          <dt>Starting food eaten / left</dt><dd>${milkText(sum(pm.foodEaten))} / ${milkText(c.F.foodStart - sum(pm.foodEaten))}</dd>` +
-        (inherit() ? `<dt>Extra food to children</dt><dd>${milkText(sum(pm.extra))}</dd>` : "");
+        (inherit() ? `<dt>Extra milk to children</dt><dd>${milkText(sum(pm.extra))}</dd>` : "");
     }
 
     function drawSchoolRows() {
       const pm = c.result.people.main, day = currentDay(), i = Math.min(day, pm.last);
-      let taught = 0, gained = 0, picked = 0, schoolDays = 0, read = 0, readGained = 0;
+      let taught = 0, gained = 0, picked = 0, schoolDays = 0, read = 0;
       for (let k = 1; k <= pm.last; k++) {
-        taught += pm.taught[k]; gained += pm.gained[k]; picked += pm.picked[k]; read += pm.read[k]; readGained += pm.readGained[k];
+        taught += pm.taught[k]; gained += pm.gained[k]; picked += pm.picked[k]; read += pm.read[k];
         if (isFinite(pm.schInt[k]) && pm.counts[k - 1] > 0) schoolDays++;
       }
       const has = isFinite(pm.schInt[i]) && day > 0;
       $("school-day").innerHTML = `<dt class="sub">Day ${fmt(day)}</dt>
-        <dt>Scholar's Power / Intelligence</dt><dd>${has ? `${fmt(pm.schPow[i])} / ${fmt(pm.schInt[i])}` : "none"}</dd>
+        <dt>Scholars</dt><dd>${has ? fmt(pm.scholars[i]) : "none"}</dd>
+        <dt>Advisor's Power / Intelligence</dt><dd>${has ? `${fmt(pm.schPow[i])} / ${fmt(pm.schInt[i])}` : "—"}</dd>
         <dt>Food advisor's IQ</dt><dd>${isFinite(pm.iq[i]) ? fmt(pm.iq[i]) : "—"}</dd>
         <dt>Children in class</dt><dd>${has ? fmt(pm.kids[i]) : "—"}</dd>
         <dt>Of them, worked first</dt><dd>${has ? fmt(pm.kidsWork[i]) : "—"}</dd>
         <dt>Lesson</dt><dd>${has && pm.kids[i] ? fmt(pm.lesson[i], 1) + " h" : "—"}</dd>
         <dt>Knowledge taken home</dt><dd>${fmt(pm.taught[i])}</dd>
         <dt>Intelligence gained</dt><dd>+${fmt(pm.gained[i])}</dd>
-        <dt>Scholar's poetry</dt><dd>${has ? `${fmt(pm.read[i])} knowledge${pm.readGained[i] ? `, +${fmt(pm.readGained[i])} Intelligence` : ""}` : "—"}</dd>`;
+        <dt>Scholars' poetry</dt><dd>${has ? `${fmt(pm.read[i])} knowledge` : "—"}</dd>`;
       $("school-run").innerHTML = `<dt class="sub">Whole run</dt>
         <dt>Scholars picked</dt><dd>${fmt(picked)}</dd><dt>Days with a scholar</dt><dd>${fmt(schoolDays)}</dd>
         <dt>Knowledge taken home</dt><dd>${fmt(taught)}</dd><dt>Intelligence gained, all children</dt><dd>+${fmt(gained)}</dd>
-        <dt>Scholars' poetry</dt><dd>${fmt(read)} knowledge, +${fmt(readGained)} Intelligence</dd>`;
+        <dt>Scholars' poetry</dt><dd>${fmt(read)} knowledge</dd>`;
     }
 
     // ---------- Farm drawing ----------

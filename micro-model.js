@@ -10,23 +10,27 @@
 //     stone) is carried home (搬運) after every S.load energy and at the end of the job, then back out.
 //     Anyone back at the house with no energy left may go in early once hungry (day-model.js's
 //     dayOut, worked out once the day's share is known: it changes nobody's work).
-//   The board: milking (pooled: cows × cowE energy), the fields (pooled: while tending, the 4 fields'
-//     daily limit; at harvest, the work the rice wants), and from the Resources page on
-//     the loom and the forge (one at a time each), shearing (pooled: the wool on the sheep), quarrying
+//   The board: milking (pooled: one milker to each adult cow for the day, no limit on a cow), the fields
+//     (pooled: one person to each of the 4 for the day; while tending, the 4 fields' daily limit, each at
+//     most one field's; at harvest, the work the rice wants), and from the Resources page on
+//     the loom and the forge (one crafter each a day), shearing (pooled: the wool on the sheep), quarrying
 //     and woodcutting. Taking a pooled job reserves the energy
 //     the person can give it today, so nobody walks out for work someone else has already claimed. As in
 //     the macro model, those who may milk but not do today's field work (elders) milk first: anyone
-//     else leaves them the milk they can still give.
-//   Children fill food work the free grown-ups can't, then go to class while the scholar teaches. The
-//     scholar teaches whenever a child is in class and writes poetry the rest of the time; a child
-//     takes home effectiveness × the smaller of the two's energy spent while both were in class.
-//   From the Resources page on, each energy does the person's effectiveness at the job's skill in work
-//     (x.eff): the jobs' needs and what's reserved are work; what someone could still do is their energy
-//     there × it; knowledge from teaching and poetry is × it too.
-// x: { S, rand, people, p, may, energyOf(h) → { e, r } | null, cows, cowE, fieldE, riceWanted, tending,
-//   order, econ (makeEconomy's state()), school: { scholar, day, params, teaches, reads, pupils,
-//   learn, read } | null, trace: {} | null, happyOf: h → happiness | null, eff: (h, skill) → effectiveness |
-//   null, levelsOf: h → { skill: level } | null }.
+//     else leaves them a cow each.
+//   Children fill food work the free grown-ups can't, then go to their scholar's class while that
+//     scholar teaches. Each scholar teaches whenever a child of their class is in it and writes poetry
+//     the rest of the time; a child takes home effectiveness × the smaller of the two's energy spent while
+//     both were in class, ÷ the children in the class.
+//   From the Resources page on, each energy brings in the person's effectiveness at the job's skill
+//     (x.eff), as a yield: tending and shearing use up the fields' daily limit and the sheep's wool
+//     energy for energy, a cow has no limit, and all three bring in effectiveness × that; timber, stone,
+//     knowledge from teaching and poetry are × it too. At the harvest it's speed (the standing rice is
+//     all there is): its need and what's reserved are work, energy × effectiveness.
+// x: { S, rand, people, p, may, energyOf(h) → { e, r } | null, cows, fieldE, riceWanted, tending,
+//   order, econ (makeEconomy's state()), school: { scholars: [{ h, day, reads }], classOf: Map(child h →
+//   their scholar's h; only children with a class today), params, learn, read } | null, trace: {} | null,
+//   happyOf: h → happiness | null, eff: (h, skill) → effectiveness | null, levelsOf: h → { skill: level } | null }.
 // Returns { work (as assignEnergy's), timelines: Map(h → { Lh, E, out }), left: Map(h → energy left
 // unspent), spent: Map(h → energy spent on each job), walk, lesson, reading, pupils },
 // and fills x.trace with everyone's day if given.
@@ -75,22 +79,27 @@
     const trace = x.trace || null;
 
     // ---------- People ----------
-    const agents = [];
+    const agents = [], byH = new Map(), schOf = new Map(sch ? sch.scholars.map((s) => [s.h, s]) : []);
     for (const h of x.people) {
-      const isScholar = !!sch && h === sch.scholar;
-      const er = isScholar ? { e: sch.day.energy, r: sch.day.rate } : x.energyOf(h);
+      const sd = schOf.get(h), isScholar = !!sd;
+      const er = isScholar ? { e: sd.day.energy, r: sd.day.rate } : x.energyOf(h);
       const kind = isScholar ? "scholar" : HumanModel.stage(h, p) === "child" ? "kid" : "grown";
       const e = er ? er.e : 0;
       agents.push({
         h, kind, e, e0: e, r: er ? er.r : 0, w: 0, loc: "H", st: "asleep", freeAt: S.meal, job: null, res: 0, load: 0,
         lunched: false, Lh: null, E: null, out: null, over: false, walked: 0, ver: 0, unit: 0, cls: false, know: 0, met: false,
         spent: { milk: 0, field: 0, wood: 0, wool: 0, stone: 0, weave: 0, forge: 0, teach: 0, poetry: 0, class: 0 }, blade: undefined, fork: undefined,
-        milkOnly: kind === "grown" && may(h, "milk") && !may(h, fieldJob),
+        milkOnly: kind === "grown" && may(h, "milk") && !may(h, fieldJob), held: new Map(), reads: isScholar && sd.reads, teacher: null, pupils: [], taughtH: 0,
         eff: x.eff ? effTable(h) : ONE,
         tr: trace ? [] : null,
       });
+      byH.set(h, agents[agents.length - 1]);
     }
-    const scholar = agents.find((a) => a.kind === "scholar") || null;
+    // Each child's scholar (teacher), and each scholar's class (pupils, in village order)
+    if (sch) for (const k of agents) {
+      const t = sch.classOf.get(k.h);
+      if (t) { k.teacher = byH.get(t); k.teacher.pupils.push(k); }
+    }
     // Wake-up times: N + 1 exponential gaps, scaled to the window, handed out in a random order
     const n = agents.length, gaps = new Float64Array(n + 1);
     let total = 0;
@@ -104,23 +113,29 @@
     // more(a) is the energy the next unit may take (0 when there's nothing left), hasWork() whether it
     // has any. credit(work): work done.
     // collect: carried home after every S.load energy
-    const pooled = (id, place, need, collect, credit) => ({ id, place, kind: "pool", need, done: 0, res: 0, collect, credit: credit || (() => {}), open() { return this.need - this.done - this.res; } });
-    const milk = pooled("milk", "P", x.cows * x.cowE, true);
+    // A yield job's need, done and reserved are energy, and `out` what it brought in; the harvest's are work.
+    // places: how many may work it today, one to a place (a cow, a field, a sheep, a tile of the mine or
+    // the forest), each keeping theirs all day (a.held: their places, each with the most energy it takes,
+    // capOf(k) for the k-th taken; none: no limit); taken: how many places are held
+    const pooled = (id, place, need, collect, credit, places = Infinity, capOf = null) => ({ id, place, kind: "pool", need, done: 0, res: 0, out: 0, places, taken: 0, capOf, collect, credit: credit || (() => {}), open() { return this.need - this.done - this.res; } });
+    const milk = pooled("milk", "P", Infinity, true, null, x.cows);
     const farmed = E && E.cr ? (w, a, energy) => E.farmed(a, energy) : null;   // farming wears a hayfork
-    const field = tending ? pooled("field", "F", VM.FULL_CREW * x.fieldE, false, farmed)
-      : x.riceWanted > EPS ? pooled("field", "F", Math.ceil(x.riceWanted * VM.DAY_ENERGY - EPS), true, farmed) : null;
+    const field = tending ? pooled("field", "F", VM.FULL_CREW * x.fieldE, false, farmed, VM.FULL_CREW, () => x.fieldE)
+      : x.riceWanted > EPS ? pooled("field", "F", Math.ceil(x.riceWanted * VM.DAY_ENERGY - EPS), true, farmed, VM.FULL_CREW) : null;
     let wood = null, wool = null, stone = null;
     const stations = {};
     if (E) {
       const { today, res } = E;
-      const open = (id, place) => ({ id, place, kind: "open", collect: true, credit: (amt, a, energy) => { today.spent[id] += amt; E.collected(id, a.h, a.blade, amt, energy); } });
-      wool = pooled("wool", "P", Math.ceil(today.woolLeft / res.perEnergy.wool - EPS), true, (amt, a, energy) => { today.spent.wool += amt; today.woolLeft -= amt * res.perEnergy.wool; E.collected("wool", a.h, a.blade, amt, energy); });
-      stone = open("stone", "M"); wood = open("wood", "T");
+      const credit = (id) => (amt, a, energy) => { today.spent[id] += amt; E.collected(id, a.h, a.blade, amt, energy); };
+      wool = pooled("wool", "P", Math.ceil(today.woolLeft / res.perEnergy.wool - EPS), true, (amt, a, energy) => { today.spent.wool += amt; today.woolLeft -= energy * res.perEnergy.wool; E.collected("wool", a.h, a.blade, amt, energy); },
+        today.places.wool, (k) => today.sheepWool[k] / res.perEnergy.wool);
+      stone = pooled("stone", "M", Infinity, true, credit("stone"), today.places.stone);
+      wood = pooled("wood", "T", Infinity, true, credit("wood"), today.places.wood);
       if (E.cr) for (const kind of ["weave", "forge"]) {
         const items = E.cr.items.filter((it) => it.job === kind), st = E.stations[kind];
         if (!items.length) continue;
         stations[kind] = {
-          id: kind, place: "H", kind: "slot", worker: null,
+          id: kind, place: "H", kind: "slot", worker: null, today: null,   // today: the day's one crafter
           hasWork: () => !!st.job || E.canStart(items),
           more: (a) => (st.job || E.startCraft(items, st) ? Math.min(UNIT, a.e, st.job.left / effAt(a, kind)) : 0),
           credit: (amt, a) => E.creditCraft(st, kind, a.h, a.r, amt),
@@ -149,14 +164,19 @@
       if (a.e >= 1 && a.r > 0 && (a.lunched || t < S.lunch - EPS) && t + Math.min(a.e, UNIT) / a.r + S.between(place, "H") <= S.active - EPS) return true;
       return DayModel.canAt(clockOf(a), place, Math.min(a.e, UNIT), a.r, S, collect) > EPS;
     };
-    const estWork = (a, place, collect, id) => est(a, place, collect) * effAt(a, id);
+    // Yield jobs (isYield): what a person can take of one is energy; elsewhere, work. capEff: the measure
+    // of each energy against a job's need
+    const isYield = (id) => id === "milk" || id === "wool" || (tending && (id === "field" || id === "tend"));
+    const capEff = (a, id) => (isYield(id) ? 1 : effAt(a, id));
+    const estWork = (a, place, collect, id) => est(a, place, collect) * capEff(a, id);
     const note = (a, s, more) => { a.st = s; if (a.tr) a.tr.push({ t: now, s, at: a.loc, e: a.e, ...more }); };
 
     // Jobs a person holds: take, keep going, let go
     function take(a, j, amt) {
       a.job = j; a.res = amt;
+      if (j.places < Infinity && !a.held.has(j)) { a.held.set(j, j.capOf ? j.capOf(j.taken) : Infinity); j.taken++; }   // their place for the day
       if (j.kind === "pool") j.res += amt;
-      else if (j.kind === "slot") j.worker = a;
+      else if (j.kind === "slot") { j.worker = a; j.today = a; }
     }
     function drop(a) {
       const j = a.job;
@@ -178,15 +198,16 @@
       const j = a.job;
       if (j.kind === "pool") {
         if (a.res <= EPS && a.kind !== "kid") { const more = Math.min(j.open(), estWork(a, j.place, j.collect, j.id), capFor(a, j)); if (more > EPS) { a.res += more; j.res += more; } }
-        return Math.min(UNIT, a.e, a.res / effAt(a, j.id));
+        return Math.min(UNIT, a.e, a.res / capEff(a, j.id));
       }
       if (j.kind === "slot") return j.worker === a ? j.more(a) : 0;
       return Math.min(UNIT, a.e);   // quarrying never runs out
     }
-    // A unit of amt energy done: amt × effectiveness work for the job
+    // A unit of amt energy done: it uses up amt × capEff of a pooled job's need, and brings in amt ×
+    // effectiveness
     function credit(a, amt) {
-      const j = a.job, work = amt * effAt(a, j.id);
-      if (j.kind === "pool") { j.done += work; j.res -= work; a.res -= work; }
+      const j = a.job, used = amt * capEff(a, j.id), work = amt * effAt(a, j.id);
+      if (j.kind === "pool") { j.done += used; j.res -= used; a.res -= used; j.out += work; }
       j.credit(work, a, amt);
       a.e -= amt; a.spent[j.id] += amt;
       if (a.e < EPS) a.e = 0;
@@ -194,26 +215,38 @@
 
     // ---------- Choosing a job ----------
     const uncommitted = (a) => !a.over && !a.job && a.e > EPS;
-    // Milk the milk-only grown-ups (who may milk but not do today's field work) who haven't taken a job yet can still give
-    const milkOnlyCover = () => { let t = 0; for (const a of agents) if (a.milkOnly && uncommitted(a)) t += estWork(a, "P", true, "milk"); return t; };
-    // The most of a pooled job a person may take: anyone who may do today's field work leaves the milk
-    // the milk-only grown-ups can still give
-    const capFor = (a, j) => (j === milk && !a.milkOnly && may(a.h, fieldJob) ? milk.open() - milkOnlyCover() : Infinity);
-    // What the grown-ups who haven't taken a job yet (awake or not) could give a job, and how many could
-    function grownCover(jobId, place, collect) {
+    // One to a place (a cow, a field, a sheep, a tile): placeFor(a, j, leave): whether they hold one, or one is free with
+    // `leave` more left over for others. At milking, anyone who may do today's field work leaves one for each
+    // milk-only grown-up (who may milk but not do today's field work) who hasn't taken a job or a cow yet
+    // and could still milk
+    const placeFor = (a, j, leave) => a.held.has(j) || j.places - j.taken > leave + EPS;
+    const milkOnlyWaiting = () => { let k = 0; for (const a of agents) if (a.milkOnly && !a.held.has(milk) && uncommitted(a) && estWork(a, "P", true, "milk") > EPS) k++; return k; };
+    // The most of a pooled job a person may take, in energy: what's left of their place's limit (theirs, or
+    // the next free one's), if it has one
+    const capFor = (a, j) => {
+      if (!j.capOf) return Infinity;
+      const most = a.held.has(j) ? a.held.get(j) : j.taken < j.places ? j.capOf(j.taken) : 0;
+      return Math.max(0, most - a.spent[j.id]);
+    };
+    // What the grown-ups who haven't taken a job yet (awake or not) could give a job, and how many of
+    // them could but don't hold one of its places yet
+    function grownCover(j, jobId) {
       let t = 0, k = 0;
-      for (const a of agents) if (a.kind === "grown" && uncommitted(a) && may(a.h, jobId)) { const c = estWork(a, place, collect, jobId); if (c > EPS) { t += c; k++; } }
+      for (const a of agents) if (a.kind === "grown" && uncommitted(a) && may(a.h, jobId)) {
+        const c = Math.min(estWork(a, j.place, j.collect, j.id), capFor(a, j));
+        if (c > EPS) { t += c; if (!a.held.has(j)) k++; }
+      }
       return { energy: t, people: k };
     }
     const tryPool = (a, j, cap = Infinity) => {
       if (!j) return false;
-      const amt = Math.min(j.open(), estWork(a, j.place, j.collect, j.id), cap);
+      const amt = Math.min(j.open(), estWork(a, j.place, j.collect, j.id), capFor(a, j), cap);
       if (amt <= EPS) return false;
       take(a, j, amt);
       return true;
     };
     const trySlot = (a, j) => {
-      if (!j || j.worker || !j.hasWork() || !canUnit(a, j.place, j.collect)) return false;
+      if (!j || j.worker || (j.today && j.today !== a) || !j.hasWork() || !canUnit(a, j.place, j.collect)) return false;
       take(a, j, 0);
       return true;
     };
@@ -230,11 +263,10 @@
     function chooseGrown(a) {
       for (const id of tiers) {
         if (id === "milk") {
-          if (!may(a.h, "milk") || milk.open() <= EPS) continue;
-          const cap = capFor(a, milk);
-          if (cap > EPS && tryPool(a, milk, cap)) return true;
+          if (!may(a.h, "milk") || !placeFor(a, milk, !a.milkOnly && may(a.h, fieldJob) ? milkOnlyWaiting() : 0)) continue;
+          if (tryPool(a, milk)) return true;
         } else if (id === "field") {
-          if (!may(a.h, fieldJob) || !field) continue;
+          if (!may(a.h, fieldJob) || !field || !placeFor(a, field, 0)) continue;
           if (withTool(a, "fork", () => tryPool(a, field))) return true;
         } else if (id === "craft") {
           for (const kind of ["weave", "forge"]) if (stations[kind] && may(a.h, kind) && trySlot(a, stations[kind])) return true;
@@ -243,7 +275,7 @@
             for (const r of VM.collectOrder(a.h, E.store, E.today, E.res)) {
               if (!may(a.h, r)) continue;
               const j = r === "wool" ? wool : r === "stone" ? stone : wood;
-              if (j === wool ? tryPool(a, wool) : canUnit(a, j.place, true) && (take(a, j, 0), true)) return true;
+              if (placeFor(a, j, 0) && tryPool(a, j)) return true;
             }
             return false;
           })) return true;
@@ -255,20 +287,18 @@
     // (Education). Returns "food", "class" or "" (nothing)
     function kidChoose(a) {
       for (const id of tiers) {
-        if (id === "teach" && classOn()) return "class";
-        if (id === "milk" && may(a.h, "milk") && milk.open() > EPS) {
-          const gap = milk.open() - grownCover("milk", "P", true).energy;
-          if (gap > EPS && tryPool(a, milk, gap)) return "food";
+        if (id === "teach" && classOn(a)) return "class";
+        if (id === "milk" && may(a.h, "milk") && placeFor(a, milk, grownCover(milk, "milk").people)) {
+          if (tryPool(a, milk)) return "food";
         } else if (id === "field" && field && may(a.h, fieldJob) && field.open() > EPS) {
-          const gap = field.open() - grownCover(fieldJob, "F", field.collect).energy;
-          if (gap > EPS && withTool(a, "fork", () => tryPool(a, field, gap))) return "food";
+          const cover = grownCover(field, fieldJob), gap = field.open() - cover.energy;
+          if (gap > EPS && placeFor(a, field, cover.people) && withTool(a, "fork", () => tryPool(a, field, gap))) return "food";
         }
       }
       return "";
     }
-    // Class is on while a scholar who teaches before poetry (or may not write) has energy, for children who may go
-    const teachFirst = !!sch && VM.teachesFirst(tiers, sch.reads);
-    const classOn = () => !!sch && sch.pupils && sch.teaches && teachFirst && !!scholar && !scholar.over && scholar.e > EPS;
+    // A child's class is on while their scholar (one who teaches before poetry) has energy and hasn't gone in
+    const classOn = (k) => !!k.teacher && !k.teacher.over && k.teacher.e > EPS;
 
     // ---------- What each person does next ----------
     function decide(a, depth = 0) {
@@ -320,9 +350,10 @@
       a.cls = true; a.since = now;
       note(a, "class", { job: "class" });
       schedule(a, a.w + (a.lunched ? S.active : S.lunch), "decide");
-      if (scholar && !scholar.over && (scholar.st === "idle" || scholar.st === "poetry")) {
-        if (scholar.st === "poetry") { const done = (now - scholar.t0) * scholar.r; scholar.e -= done; scholar.spent.poetry += done; }   // stops mid-poem to teach
-        schedule(scholar, now, "decide");
+      const t = a.teacher;
+      if (t && !t.over && (t.st === "idle" || t.st === "poetry")) {
+        if (t.st === "poetry") { const done = (now - t.t0) * t.r; t.e -= done; t.spent.poetry += done; }   // stops mid-poem to teach
+        schedule(t, now, "decide");
       }
     }
     function idle(a) {
@@ -343,32 +374,34 @@
       arriveHome(a, night);
     }
     function arriveHome(a, night) {
-      if (night) { a.E = rel(a); a.over = true; note(a, "inside"); if (a === scholar) wakeIdle(); return; }
+      if (night) { a.E = rel(a); a.over = true; note(a, "inside"); if (a.kind === "scholar") wakeIdle(); return; }
       a.Lh = rel(a); a.lunched = true; a.freeAt = a.Lh + S.meal;
       note(a, "eat", { meal: "lunch", t1: now + S.meal });
       schedule(a, now + S.meal, "decide");
     }
-    // A child in class learns while the scholar teaches: knowPerEnergy × the smaller of the two's energy
-    // spent over the time, the child spending their own energy as they go. lessonTo(k): up to now.
+    // A child in class learns while their scholar teaches: knowPerEnergy × the smaller of the two's energy
+    // spent over the time ÷ the children in the class, the child spending their own energy as they go.
+    // lessonTo(k): up to now.
     function lessonTo(k) {
-      if (scholar && scholar.st === "teach" && k.cls) {
-        let dt = now - Math.max(k.since, scholar.t0);
+      const t = k.teacher;
+      if (t && t.st === "teach" && k.cls) {
+        let dt = now - Math.max(k.since, t.t0);
         if (dt > EPS && k.e > EPS) {
           dt = Math.min(dt, k.e / k.r);
           const kE = dt * k.r;
-          k.know += sch.params.knowPerEnergy * effAt(scholar, "teach") * Math.min(dt * scholar.r, kE); k.e -= kE; k.spent.class += kE; k.met = true;
+          k.know += (sch.params.knowPerEnergy * effAt(t, "teach") * Math.min(dt * t.r, kE)) / t.pupils.length; k.e -= kE; k.spent.class += kE; k.met = true;
         }
       }
       k.since = now;
     }
     function leaveClass(k) { if (k.cls) { lessonTo(k); k.cls = false; } }
-    // The scholar goes down the order: teaching whoever is in class (Education), or poetry
+    // A scholar goes down the order: teaching whoever of their class is in it (Education), or poetry
     function scholarStep(a) {
       if (a.e <= EPS) { idle(a); wakeIdle(); return; }
-      const pupils = sch.teaches ? agents.filter((k) => k.cls && k.e > EPS) : [];
+      const pupils = a.pupils.filter((k) => k.cls && k.e > EPS);
       for (const id of tiers) {
         const teach = id === "teach" && pupils.length > 0;
-        if (!teach && !(id === "read" && sch.reads)) continue;
+        if (!teach && !(id === "read" && a.reads)) continue;
         a.unit = Math.min(UNIT, a.e); a.t0 = now;
         if (rel(a) + a.unit / a.r > S.active + EPS) break;   // no time to finish it today
         note(a, teach ? "teach" : "poetry", { job: teach ? "teach" : "poetry", t1: now + a.unit / a.r, pupils: pupils.length });
@@ -377,7 +410,6 @@
       }
       idle(a);
     }
-    let teachHours = 0;
 
     for (const a of agents) schedule(a, a.w, "wake");
     while (q.size) {
@@ -408,12 +440,12 @@
           break;
         }
         case "teach":
-          for (const k of agents) {
+          for (const k of a.pupils) {
             if (!k.cls) continue;
             lessonTo(k);
             if (k.e <= EPS) { k.cls = false; k.job = null; schedule(k, now, "decide"); }
           }
-          a.e -= a.unit; a.spent.teach += a.unit; teachHours += a.unit / a.r;
+          a.e -= a.unit; a.spent.teach += a.unit; a.taughtH += a.unit / a.r;
           decide(a);
           break;
         case "poem": a.e -= a.unit; a.spent.poetry += a.unit; decide(a); break;
@@ -428,7 +460,7 @@
       if (a.kind === "grown") { if (f > 0) { if (f >= m) farm++; else milkers++; } else if (m > 0) milkers++; }
       else if (a.kind === "kid" && m + f > 0) kidsWorked++;
     }
-    const farmEnergy = field ? field.done : 0, tendEnergy = tending ? farmEnergy : 0;
+    const farmEnergy = field ? field.done : 0, tendEnergy = tending && field ? field.out : 0, tendBase = tending ? farmEnergy : 0;
     let fieldsWorked = 0;
     for (const a of agents) if (a.spent.field > 0) fieldsWorked++;
     const timelines = new Map();
@@ -437,8 +469,8 @@
     for (const a of agents) { left.set(a.h, Math.max(0, a.e)); spent.set(a.h, a.spent); }
     const out = {
       left, spent,
-      work: { milkers, milkWork: milk.done / VM.DAY_ENERGY, milkEnergy: milk.done, farm, farmWork: farmEnergy / VM.DAY_ENERGY, farmEnergy, tendEnergy, kidsWorked, milkShort: milk.need - milk.done, fields: fieldsWorked },
-      timelines, walk: walked, lesson: { knowledge: 0, gained: 0, hours: 0, spent: 0, energy: 0 }, reading: { read: 0, readGained: 0 }, pupils: 0,
+      work: { milkers, milkWork: milk.out / VM.DAY_ENERGY, milkEnergy: milk.out, farm, farmWork: farmEnergy / VM.DAY_ENERGY, farmEnergy, tendEnergy, tendBase, kidsWorked, fields: fieldsWorked },
+      timelines, walk: walked, lesson: { knowledge: 0, gained: 0, hours: 0, spent: 0, energy: 0 }, reading: { read: 0 }, pupils: 0,
     };
     if (sch) {
       let knowledge = 0, gained = 0, pupils = 0;
@@ -446,9 +478,14 @@
         const got = a.know;
         knowledge += got; gained += sch.learn(a.h, got, sch.params); pupils++;
       }
-      out.lesson = { knowledge, gained, hours: teachHours, spent: scholar.spent.teach, energy: scholar.e0 };
+      let hours = 0, spentT = 0, energy = 0, read = 0;
+      for (const s of agents) if (s.kind === "scholar") {
+        hours = Math.max(hours, s.taughtH); spentT += s.spent.teach; energy += s.e0;
+        if (s.spent.poetry > 0) read += sch.read(s.h, s.spent.poetry, sch.params, effAt(s, "poetry")).read;
+      }
+      out.lesson = { knowledge, gained, hours, spent: spentT, energy };
       out.pupils = pupils;
-      if (scholar.spent.poetry > 0) out.reading = sch.read(scholar.h, scholar.spent.poetry, sch.params, effAt(scholar, "poetry"));
+      out.reading = { read };
     }
     if (trace) {
       trace.people = agents.map((a) => ({ id: a.h.id, sex: a.h.sex, kind: a.kind, stage: HumanModel.stage(a.h, p), power: a.h.power, intel: a.h.intel,

@@ -69,7 +69,7 @@
         </div>
         <div class="param">
           <div class="param-head"><span class="lbl">Milk effectiveness</span><span class="num-wrap" id="eff-text">1 energy = 1 milk</span></div>
-          <p class="hint">The same for everyone; set on the <a href="farm.html#farming">Food page</a>. So are the most a cow gives and the most a field gives. Rice works the same way: its effectiveness (rice per energy of tending) is set there too, and harvesting brings in 25 rice per energy.</p>
+          <p class="hint">The same for everyone; set on the <a href="farm.html#farming">Food page</a>. So is the most a field gives (a cow has no limit: one milker to a cow a day, and it gives as much as they milk). Rice works the same way: its effectiveness (rice per energy of tending) is set there too, and harvesting brings in 25 rice per energy.</p>
         </div>
         <dl class="foods" id="workday"></dl>
         <p class="hint" id="attr-hint"></p>
@@ -112,11 +112,9 @@ VillagePage.start({
     const worked = w.rate > 0 ? done / w.rate : 0, left = w.energy - done;
     const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
     const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;
-    // A day spent at the cows: as many as the energy fully milks, and the energy left for the fields
-    const cowE = FoodModel.cowEnergyOf(F), cows = Math.floor(done / cowE + 1e-9);
+    // A day spent at one cow: it gives as much as is milked from it
     const lo = FoodModel.wholeFood(done, F.milkPerEnergy), hi = Math.ceil(done * F.milkPerEnergy - 1e-7);
-    const milking = cows === 0 ? { text: `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} milk`, rest: 0 }
-      : { text: `${cows} cow${cows === 1 ? "" : "s"}, ${fmt(cows * F.milkCap)} milk`, rest: Math.round((done - cows * cowE) * 10) / 10 };
+    const milking = `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} milk`;
     $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(elder * 100)}%</b> of their Power and Intelligence, and eat ${fmt(elder * 100)}% of an adult's food (${fmt(UP.c * elder, 1)} a day). It isn't passed on to their children.`;
     $("eff-text").textContent = `1 energy = ${c.fmtNum(F.milkPerEnergy)} milk`;
     $("workday").innerHTML =
@@ -125,8 +123,7 @@ VillagePage.start({
       `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} energy/h</dd>` +
       `<dt></dt><dd>Time worked, milking</dd><dd class="v">${hoursText(Math.round(worked * 10) / 10)}</dd>` +
       `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(done)} / ${fmt(left)}</dd>` +
-      `<dt></dt><dd>Milking</dd><dd class="v">${milking.text}</dd>` +
-      `<dt></dt><dd>Left for the fields</dd><dd class="v">${fmt(milking.rest, Number.isInteger(milking.rest) ? 0 : 1)} energy</dd>` +
+      `<dt></dt><dd>Milking</dd><dd class="v">${milking}</dd>` +
       `<dt></dt><dd>An elder (${attrText(S.power * elder)} / ${attrText(S.intel * elder)})</dd><dd class="v">${fmt(we.energy)} energy</dd>`;
     $("attr-hint").innerHTML = left > 1e-9
       ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the day out ends with <b>${fmt(left)}</b> energy unspent. Raising Power alone won't help.`

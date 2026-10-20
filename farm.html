@@ -91,14 +91,7 @@
           <input id="eff-range" type="range" aria-label="Milk that 1 energy collects">
           <p class="hint" id="eff-hint"></p>
         </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="mcap-num">Milk per cow</label>
-            <span class="num-wrap"><span class="unit">at most</span><input id="mcap-num" type="number"><span class="unit">/day</span></span>
-          </div>
-          <input id="mcap-range" type="range" aria-label="The most milk an adult cow gives in a day">
-          <p class="hint" id="mcap-hint"></p>
-        </div>
+
         <dl class="foods two">
           <dt>Milk</dt><dd id="milk-source">10 a day per adult cow</dd>
           <dt>Rice</dt><dd>harvest, days 181–210</dd>
@@ -190,7 +183,7 @@ VillagePage.start({
     { id: "mk", key: "milkKeep", obj: "F", ...lim("milkKeep"), step: 1, round: "int" },
     { id: "rk", key: "riceKeep", obj: "F", ...lim("riceKeep"), step: 10, round: "int" },
     { id: "eff", key: "milkPerEnergy", obj: "F", ...lim("milkPerEnergy"), step: 0.1, round: "none" },
-    { id: "mcap", key: "milkCap", obj: "F", ...lim("milkCap"), step: 10, round: "int" },
+
   ],
   drawPanel(c) {
     const { F, UP, US, fmt, milkText, $, YEAR, R, PERFECT_IQ } = c, HARVEST_FIRST = 181, HARVEST_LAST = 210, HARVEST_DAYS = 30;
@@ -205,15 +198,15 @@ VillagePage.start({
     $("who-hint").innerHTML = R.who === "off" ? "Nobody rations: everyone eats what they need until the food runs out."
       : R.who === "advisor" ? "The advisor plans each day's food: the food in store plus what's still to come, spread evenly over the days until the next harvest. Short of everyone's need, everyone gets the same share. From the Inheritance page on, once everyone's need is met, the children get extra food out of the milk and rice it expects (up to the Inheritance page's cap each); the starting food is kept as a reserve, never given as extra."
       : "You set the two shares. If the stores run short, every share shrinks alike.";
-    $("shares-hint").innerHTML = `Grown-ups (adults and elders) get ${fmt(R.grown)}% of their need, children ${fmt(R.kids)}%. Children's food above 100% is extra food, which buys Power when they come of age; it counts from the Inheritance page on, up to the cap there (30 a day by default: a child needs 70, so about 143%), and only out of milk and rice: the starting food is eaten last, and any extra that comes out of it buys nothing. On this page children get at most their need.`;
+    $("shares-hint").innerHTML = `Grown-ups (adults and elders) get ${fmt(R.grown)}% of their need, children ${fmt(R.kids)}%. Children's food above 100% is extra food, which buys Power when they come of age; it counts from the Inheritance page on, with no limit a day (a child needs 70, so about 143%), and only out of milk and rice: the starting food is eaten last, and any extra that comes out of it buys nothing. On this page children get at most their need.`;
     $("iq-hint").innerHTML = err === 0
       ? "Spot on: the advisor knows exactly how much food there will be, so its ration is the best plan."
       : `Food estimates are typically off by <b>±${fmt(err * 100)}%</b>, with a lasting lean one way. Too high and the food runs out; too low and people go hungry for nothing. At IQ ${PERFECT_IQ}+ it's spot on.`;
     // Food
-    const milkPerCow = FoodModel.milkPerDay(F), cowE = FoodModel.cowEnergyOf(F), fieldE = FoodModel.fieldEnergyOf(F), eats = YEAR * UP.c;
-    $("eff-hint").innerHTML = `The milk 1 energy collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Attribute page and every page after it use it for their milkers.`;
+    const milkPerCow = FoodModel.milkPerDay(F), fieldE = FoodModel.fieldEnergyOf(F), eats = YEAR * UP.c;
+    $("eff-hint").innerHTML = `The milk 1 energy collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Attribute page and every page after it use it for their milkers, and there each adult cow has one milker a day, who gets as much from it as they milk: a cow has no limit.`;
     $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
-    $("mcap-hint").innerHTML = `The most milk an adult cow gives in a day, however strong its milker. At this effectiveness, milking a cow fully takes <b>${fmt(cowE, Number.isInteger(cowE) ? 0 : 1)}</b> energy. From the Attribute page on, a villager with energy to spare milks another cow or works the fields.`;
+
     $("fcap-hint").innerHTML = `The most rice one field gives in a year; there are ${FoodModel.TEND_CREW} fields, so at most <b>${fmt(FoodModel.TEND_CREW * F.fieldCap)}</b>. A field is full at <b>${fmt(fieldE, 1)}</b> energy of tending a day; a standard day (${FoodModel.DAY_ENERGY} energy) gives ${fmt(Math.min(F.fieldCap, FoodModel.wholeFood(FoodModel.DAY_ENERGY * FoodModel.TEND_DAYS, F.ricePerEnergy)))}.`;
     $("rice-hint").innerHTML = `The rice 1 energy of tending grows. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly (in whole rice) over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child 70%), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
     const people = US.men + US.women, dailyNeed = people * UP.c;
