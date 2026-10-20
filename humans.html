@@ -16,17 +16,16 @@
     padding: 0;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1px;
-    background: var(--line);
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 8px;
     overflow: hidden;
   }
   @media (min-width: 900px) {
-    .rules { grid-template-columns: 1.85fr 1fr 1.45fr 1.3fr 0.8fr; }
+    .rules { grid-template-columns: 1.7fr 0.9fr 1.25fr 1.55fr 1fr; }
   }
   .rules li {
-    background: var(--surface);
+    box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line);   /* dividers; the edges clip off */
     padding: 8px 12px 9px;
     display: grid;
     align-content: start;
@@ -135,8 +134,8 @@
       <li><span class="step">1 · Food</span><span><b>F</b> is shared by need: <b>c</b> for an adult, 70% of it for a child, 80% for an elder. Anyone short loses <span class="f">k × (missing food)²</span> days of life.</span></li>
       <li><span class="step">2 · Ageing</span><span>Anyone who reaches their lifespan dies.</span></li>
       <li><span class="step">3 · Couples</span><span><span class="f">min(adult men,</span> <span class="f">adult women)</span>; elders don't have children</span></li>
-      <li><span class="step">4 · Births</span><span>Each couple: chance <b>p</b> of a child. Boy or girl, 50/50.</span></li>
-      <li><span class="step">5 · Life stages</span><span>Children grow up at <b id="rule-adult">360</b> days and become elders at <b id="rule-elder">2,880</b>.</span></li>
+      <li><span class="step">4 · Births</span><span>Each couple: chance <b>p</b> of a child. A boy with chance <span class="f">(♀ + X) ÷ (♂ + ♀ + 2X)</span>, so births lean to the scarcer sex.</span></li>
+      <li><span class="step">5 · Life stages</span><span>Children grow up at <b id="rule-adult">360</b> days and become elders at <b id="rule-elder">3,240</b>.</span></li>
     </ol>
   </header>
 
@@ -155,6 +154,15 @@
           </div>
           <input id="p-range" type="range" aria-label="Birth chance per couple per day">
           <p class="hint" id="p-hint">Chance a couple has a child each day.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="X-num"><span class="sym r">X</span>Birth balance</label>
+            <span class="num-wrap"><input id="X-num" type="number" step="0.05"><span class="unit">0–1</span></span>
+          </div>
+          <input id="X-range" type="range" aria-label="Birth balance: how gently births lean toward the scarcer sex">
+          <p class="hint" id="X-hint">How gently births lean toward the scarcer sex.</p>
         </div>
 
         <div class="param">
@@ -373,6 +381,7 @@
   // L comes before M so M's limit uses the current lifespan
   const SPECS = {
     p:     { min: () => 0, max: () => 0.01, step: 0.0001 },
+    X:     { min: () => 0, max: () => 1, step: 0.05 },
     L:     { min: () => 360, max: () => 10800, step: 30 },
     M:     { min: () => 1, max: () => P.L, step: 1 },
     E:     { min: () => P.M, max: () => 10800, step: 30 },
@@ -489,6 +498,8 @@
       : "No children are born.";
     const dieLo = Math.round(P.L * (1 - P.S / 100)), dieHi = Math.round(P.L * (1 + P.S / 100));
     const deathText = dieLo === dieHi ? fmt(dieLo) : `${fmt(dieLo)}–${fmt(dieHi)}`;
+    const boy = (m, f) => fmt((100 * (f + P.X)) / (m + f + 2 * P.X || 1));
+    $("X-hint").innerHTML = `A boy with chance (females + X) ÷ (males + females + 2X), counting the children and adults alive; the smaller X, the harder births lean toward the scarcer sex. With 5 males and 1 female a newborn is a boy <b>${boy(5, 1)}%</b> of the time; with 3 and 2, <b>${boy(3, 2)}%</b>.`;
     $("M-hint").innerHTML = `Child from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b>, elder from day <b>${fmt(P.E)}</b>, until death at ${deathText} days.`;
     $("E-hint").innerHTML = P.E > dieHi
       ? `Later than anyone lives (at most ${fmt(dieHi)} days), so nobody becomes an elder.`
@@ -540,6 +551,7 @@ const HUMAN_ELDER_AGE = ${P.E};      // E, days
 const FOOD_PER_DAY = ${P.F};         // F, produced each day
 const FOOD_NEED = ${P.c};            // c, per adult per day; children need 70%, elders 80%
 const HUNGER_TOLL = ${P.k};          // k, days of life lost per (missing food)², per person
+const BIRTH_BALANCE = ${P.X};        // X, 0–1: smaller leans births harder toward the scarcer sex
 
 function newPerson(sex) {
   const spread = HUMAN_LIFESPAN_SPREAD * (2 * Math.random() - 1);
@@ -569,9 +581,12 @@ function stepHumans(people) {
   const men = people.filter((h) => isAdult(h) && h.sex === "male").length;
   const women = people.filter((h) => isAdult(h) && h.sex === "female").length;
   const couples = Math.min(men, women);
+  // A boy with chance (females + X) ÷ (males + females + 2X), counting children and adults
   for (let i = 0; i < couples; i++) {
     if (Math.random() < HUMAN_BIRTH_CHANCE) {
-      people.push(newPerson(Math.random() < 0.5 ? "male" : "female"));
+      const young = people.filter((h) => !isElder(h)), m = young.filter((h) => h.sex === "male").length;
+      const all = young.length + 2 * BIRTH_BALANCE, boy = all > 0 ? (young.length - m + BIRTH_BALANCE) / all : 0.5;
+      people.push(newPerson(Math.random() < boy ? "male" : "female"));
     }
   }
   return people;

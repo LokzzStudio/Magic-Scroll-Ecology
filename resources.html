@@ -25,7 +25,7 @@
   <div class="topbar-inner">
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
-      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page, the pages it follows, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -33,7 +33,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Resources</h1>
-    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. Once every food job is filled, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (N, R, SR or SSR), from the collector's skill and the tier of the sheep, the forest or the mine it came from. And everyone has a level from 1 to 5 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level above 1 makes each energy there 5% more effective.</p>
+    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. After the food work, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. One person to a place for the day: a shearer to each sheep, one to each tile of the mine or the forest. Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (N, R, SR or SSR), from the collector's skill and the tier of the sheep, the forest or the mine it came from. And everyone has a level from 0 to 4 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level brings in more for the same energy (+10%, +20%, +30%, +40% by default).</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Wool per sheep, how fast it regrows, what 1 energy collects, the forest's and the mine's tier; the exp each skill level takes and what each level adds</dd>
@@ -50,7 +50,7 @@
           <h2>Resources</h2>
           <p class="scope">Sheep, forest and mine; this page only</p>
         </div>
-        <p class="hint">Sheep follow the cows' herd rules exactly (same settings, their own luck) and live on the pasture. Only energy left after every food job is filled goes to resources, so resources never cost food. Each idle grown-up picks between their own (women wool, men stone) and timber, whichever there's less of; anyone whose pick isn't possible (no wool left on the sheep, or barred in the <b>Jobs</b> table) turns to the next.</p>
+        <p class="hint">Sheep follow the cows' herd rules exactly (same settings, their own luck) and live on the pasture. Collecting comes after the food work in the default <b>Priority</b>, so it's the grown-ups without a cow or a field, or with energy left after theirs, who collect, and resources don't cost food. Each of them picks between their own (women wool, men stone) and timber, whichever there's less of; anyone whose pick isn't possible (no sheep or tile left for them, or barred in the <b>Jobs</b> table) turns to the next.</p>
         <div class="param">
           <div class="param-head">
             <label for="fl-num">Wool per sheep</label>

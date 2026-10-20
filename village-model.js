@@ -1,5 +1,5 @@
 // Shared village simulation for the Food, Attribute, Inheritance, Education, Happiness, Resources and
-// Craft pages. VillageModel.run(cfg) plays one village for 3,600 days; cfg switches on each page's rules:
+// Craft pages. VillageModel.run(cfg) plays one village for 18,000 days (50 years); cfg switches on each page's rules:
 //   work      "none"   nobody works: each adult cow gives a standard day's milk, and the year's rice
 //                      comes in evenly over days 181–210 (Food)
 //             "energy" everyone spends their own day's energy, from Power and Intelligence (Attribute on)
@@ -23,10 +23,9 @@
 //             forest's and the mine's; SR without) } with cfg.sheepAdults (and
 //             cfg.sheepTiers, runHerd's tiers; all SR without): grown-ups' energy left after the
 //             food work shears wool, quarries stone and cuts wood, each in lots of a tier (Resources)
-//   craft     null, or { items: [{ id, job, needs: { material: amount }, energy, wear }], keep }: one loom
-//             and one forge at the house turn stores into crafts, each lasting wear energy of its use;
-//             keep[t]: the chance a finished craft keeps tier t (SUCCESS without); bonus[t]: a 刀 or 叉
-//             of tier t's bonus to effectiveness (toolBonus without) (Craft)
+//   craft     null, or { items: [{ id, job, needs: { material: amount }, energy, wear }], bonus }: one loom
+//             and one forge at the house turn stores into crafts (N to UR), each lasting wear energy of its use;
+//             bonus[t]: a 刀 or 叉 of tier t's bonus to effectiveness (toolBonus without) (Craft)
 //   priority  the order of the day's jobs from the Attribute page on: "milk", "field", "craft",
 //             "collect", "teach", "read" (DEFAULT_ORDER without one)
 //   happiness null, or { iqStep }: each person's happiness (0–100) sets their own chance of a
@@ -36,7 +35,7 @@
 // Needs herd-model.js, human-model.js, food-model.js, ration-model.js, roles-model.js and day-model.js (the day: the
 // clock, walking, lunch, carrying and hunger) loaded first, and micro-model.js for Micro mode.
 (function () {
-  const T = 3600, YEAR = 360;
+  const T = 18000, YEAR = 360;
   const RUNS = 20;                 // runs per page; the first is the one drawn
   const MAX_ICONS = 90;            // people or animals drawn per group
   const MAX_PEOPLE = 2000;         // a run stops once it grows past this, to keep the page fast
@@ -227,11 +226,11 @@
   const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor((rate * 10 - 1) / 10 - 8 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
   // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding its bonus (cr.bonus, by tier) to
-  // the holder's effectiveness there (a yield, as skill's); by default +25%, +50%, +75%, +100% (toolFor:
+  // the holder's effectiveness there (a yield, as skill's); by default +20%, +40%, +60%, +80%, +100% (toolFor:
   // the one w has for a skill, or none)
-  const toolBonus = (tier) => 0.25 * tier;
-  // By default a finished craft keeps its drawn tier with this chance (N to SSR), else it's one tier lower
-  const SUCCESS = [0, 1, 0.75, 0.5, 0.25];
+  const toolBonus = (tier) => 0.2 * tier;
+  // A craft's tier goes up to UR: SSR inputs all round make one 1% of the time
+  const CRAFT_MAX_TIER = 5;
   const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" ? w.b : null);
 
   // ---------- Resources ----------
@@ -330,12 +329,12 @@
     const nextCraft = (items) => { let best = items[0]; for (const it of items) if (started[it.id] < started[best.id]) best = it; return best; };
     const ready = (it) => { for (const m in it.needs) if (store[m] < it.needs[m]) return false; return true; };
     const crafted = {}, started = {};   // crafted[id]: [all, tier 1, …, tier 4]
-    if (cr) for (const it of cr.items) { crafted[it.id] = new Int32Array(5); started[it.id] = 0; }
+    if (cr) for (const it of cr.items) { crafted[it.id] = new Int32Array(CRAFT_MAX_TIER + 1); started[it.id] = 0; }
     const stations = cr ? { weave: { job: null, holder: null }, forge: { job: null, holder: null } } : null;
-    // Each craft in store: { tier, used (energy spent using it), day (last taken) }, oldest first. 刀
-    // blades go out with collectors, 叉 hayforks with farmers, 衣 and 笠 with everyone (dress)
+    // Each craft in store: { tier, used (energy spent using it), day (last taken) }, by tier (tools[id][t]),
+    // oldest first. 刀 blades go out with collectors, 叉 hayforks with farmers, 衣 and 笠 with everyone (dress)
     const tools = {}, wearOf = {};
-    if (cr) for (const it of cr.items) { tools[it.id] = []; wearOf[it.id] = it.wear; }
+    if (cr) for (const it of cr.items) { tools[it.id] = Array.from({ length: CRAFT_MAX_TIER + 1 }, () => []); wearOf[it.id] = it.wear; }
     let dayNow = 0;
     const woolOnSheep = () => { let s = 0; for (let t = 1; t <= 4; t++) for (let k = 1; k <= res.fleece; k++) s += k * fleece[t][k]; return s; };
     let today = null;
@@ -354,9 +353,11 @@
       },
       // The best of a craft nobody has taken today (the oldest of its tier), kept for the day; null: none left
       takeTool(id) {
+        const byTier = tools[id];
+        if (!byTier) return null;
         let best = null;
-        for (const b of tools[id] || []) if (b.day !== dayNow && (!best || b.tier > best.tier)) best = b;
-        if (best) { best.day = dayNow; today.out[id] = (today.out[id] || 0) + 1; }
+        for (let t = CRAFT_MAX_TIER; t >= 1 && !best; t--) for (const b of byTier[t]) if (b.day !== dayNow) { best = b; break; }
+        if (best) { best.day = dayNow; today.out[id] = (today.out[id] || 0) + 1; today.taken.push(best); }
         return best;
       },
       // Back in store untouched (taken for a job they didn't get)
@@ -375,9 +376,8 @@
       creditCraft(st, kind, h, rate, work) {
         const j = st.job;
         j.left -= work; j.w += work; j.s += work * adjSkill(h, kind); j.h += work * humanTier(rate); today.craftEnergy += work;
-        if (j.left <= 1e-6) {   // done, but for rounding: its tier, then the roll to keep it
-          let tier = HerdModel.drawTier((j.s / j.w + j.h / j.w + j.mat) / 3, trand);
-          if (tier > 1 && trand() >= (cr.keep || SUCCESS)[tier]) tier--;
+        if (j.left <= 1e-6) {   // done, but for rounding: its tier
+          const tier = HerdModel.drawTier((j.s / j.w + j.h / j.w + j.mat) / 3, trand, CRAFT_MAX_TIER);
           today.done.push(j.id, tier); st.job = null;
         }
       },
@@ -404,7 +404,7 @@
         const sheepWool = [];
         for (let k = full; k >= 1; k--) for (let t = 1; t <= 4; t++) for (let n = fleece[t][k]; n > 0; n--) sheepWool.push(k);
         today = { woolLeft: woolOnSheep(), sheepWool, places: { wool: sheepWool.length, stone: tiles.stone, wood: tiles.wood },
-          spent: { wool: 0, stone: 0, wood: 0 }, craftEnergy: 0, done: [], out: {}, worn: {}, dressed: [],
+          spent: { wool: 0, stone: 0, wood: 0 }, craftEnergy: 0, done: [], out: {}, worn: {}, dressed: [], taken: [],
           fac: Object.fromEntries(RESOURCES.map((r) => [r, { w: 0, s: 0 }])) };
         return {
           craft: cr ? (pool, ops) => craftAtStations(pool, ops, cr, stations, E, may) : null,
@@ -422,18 +422,17 @@
       state: () => ({ today, store, stations, res, cr, takeTool: E.takeTool, untake: E.untake, farmed: E.farmed, collected: E.collected, canStart: E.canStart, startCraft: E.startCraft, creditCraft: E.creditCraft }),
       endDay() {
         let craftDone = 0, work = 0;
-        // Crafts worn out today are gone; today's new ones join the store
-        for (const id in tools) {
-          const lim = wearOf[id] - 1e-9;
-          if (!tools[id].some((b) => b.used >= lim)) continue;
-          const c = crafted[id];
-          for (const b of tools[id]) if (b.used >= lim) { c[0]--; c[b.tier]--; today.worn[id] = (today.worn[id] || 0) + 1; }
-          tools[id] = tools[id].filter((b) => b.used < lim);
+        // Crafts worn out today are gone (only those taken today were used); today's new ones join the store
+        for (const b of today.taken) {
+          if (b.gone || b.used < wearOf[b.id] - 1e-9) continue;
+          const c = crafted[b.id];
+          b.gone = true; c[0]--; c[b.tier]--; today.worn[b.id] = (today.worn[b.id] || 0) + 1;
+          tools[b.id][b.tier] = tools[b.id][b.tier].filter((x) => !x.gone);
         }
         for (let i = 0; i < today.done.length; i += 2) {
           const id = today.done[i], tier = today.done[i + 1], c = crafted[id];
           c[0]++; c[tier]++; craftDone++;
-          tools[id].push({ id, tier, used: 0, day: 0, bonus: cr.bonus ? cr.bonus[tier] : toolBonus(tier) });
+          tools[id][tier].push({ id, tier, used: 0, day: 0, bonus: cr.bonus ? cr.bonus[tier] : toolBonus(tier) });
         }
         const made = {};
         for (const r of RESOURCES) {
@@ -466,7 +465,7 @@
         for (let t = 1; t <= 4; t++) { let n = 0; for (let k = 0; k <= res.fleece; k++) n += fleece[t][k]; d.sheepTiers[t - 1][day] = n; }
         if (cr) cr.items.forEach((it, k) => {
           d.crafts[k][day] = crafted[it.id][0];
-          for (let t = 1; t <= 4; t++) d.craftTiers[k][t - 1][day] = crafted[it.id][t];
+          for (let t = 1; t <= CRAFT_MAX_TIER; t++) d.craftTiers[k][t - 1][day] = crafted[it.id][t];
           if (food && today) { d.out[k][day] = today.out[it.id] || 0; d.worn[k][day] = today.worn[it.id] || 0; }
         });
         if (!food) return;
@@ -605,7 +604,7 @@
   // Everyone has a level, 0 to MAX_LEVEL, at each skill, from the exp they've earned at it: 1 exp for
   // each energy spent on that job (fractions kept). Going from level L to L + 1 takes exp[L] more exp
   // (100, 1,000, 10,000, 100,000: level 4 at 111,100 in all). At level L ≥ 1 each energy there brings in
-  // 1 + bonus[L − 1]% (+10%, +20%, +30%, +40%): more milk, rice from the same field (tending), wool
+  // 1 + bonus[L − 1]% (by default +5%, +10%, +20%, +40%): more milk, rice from the same field (tending), wool
   // from the same sheep, more timber, stone, knowledge or poetry; at the harvest and at crafts, it's
   // done that much faster. Levels go up at the
   // end of the day, for the next day's work. Skills aren't passed on: the born start at level 0.
@@ -748,7 +747,7 @@
       wool: f32(), stone: f32(), wood: f32(), woolMade: f32(), stoneMade: f32(), woodMade: f32(), resWork: f32(), woolOnSheep: i32(),   // resources
       lots: res ? RESOURCES.map(() => [f32(), f32(), f32(), f32()]) : null, sheepTiers: res ? [i32(), i32(), i32(), i32()] : null,   // wool, timber, stone in closed lots by tier; adult sheep by tier
       crafts: cfg.craft ? cfg.craft.items.map(() => i32()) : null, craftWork: f32(), craftDone: i32(), crafting: i32(),   // crafts in store, energy, finished, under way
-      craftTiers: cfg.craft ? cfg.craft.items.map(() => [i32(), i32(), i32(), i32()]) : null,   // crafts in store by tier
+      craftTiers: cfg.craft ? cfg.craft.items.map(() => Array.from({ length: CRAFT_MAX_TIER }, i32)) : null,   // crafts in store by tier
       out: cfg.craft ? cfg.craft.items.map(i32) : null, worn: cfg.craft ? cfg.craft.items.map(i32) : null,   // crafts in use, and worn out, each day
       happy: nan(), happyKids: nan(), chance: f32(), joyAdults: nan(), happyNight: nan(), pairs: i32(),   // happiness: adults' and children's by day, fertile couples' chances together, adults' from energy left, adults' at night; all couples
       skillAvg: skills ? SKILLS.map(nan) : null, skillTop: skills ? SKILLS.map(i32) : null, skillExp: skills ? SKILLS.map(f32) : null,   // skills: grown-ups' average level, the highest anyone has, exp earned that day
@@ -972,8 +971,8 @@
       // 4. The day's ration, as shares of need for the grown-ups and the children. The advisor plans the
       //    day's food: food in store plus what's still to come before the next harvest, spread over the
       //    days until then, with an error that shrinks with IQ (a lean plus a wobble). Short of everyone's
-      //    need, all get the same share; past it, the children get extra food, up to the cap each
-      //    (Inheritance), out of the milk and rice it plans (planOwn): the starting food doesn't count as
+      //    need, all get the same share; past it, the children get all the extra food it
+      //    plans out of the milk and rice (planOwn), split evenly (Inheritance): the starting food doesn't count as
       //    extra food. Or the player sets both shares (cfg.shares).
       const need = HumanModel.foodNeed(st.people, p);
       const kidCountNow = st.people.reduce((n, h) => n + (h.age < p.M ? 1 : 0), 0), kidNeed = kidCountNow * p.c * HumanModel.CHILD_FOOD, grownNeed = need - kidNeed;

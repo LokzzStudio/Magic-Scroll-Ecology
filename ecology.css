@@ -253,7 +253,6 @@ body[data-mode="macro"] .micro-only { display: none; }
 .btn.roll:active { transform: translateY(1px); }
 .btn.reset { font-size: 12px; padding: 5px 10px; color: var(--muted); white-space: nowrap; }
 .btn.reset:hover { color: var(--ink); }
-.btn.reset.confirm { color: var(--crash); border-color: var(--crash); }
 @media (max-width: 860px) {
   .top-actions { width: 100%; }
   .btn.roll { flex: 1; justify-content: center; }
@@ -458,7 +457,7 @@ main { display: grid; gap: 20px; min-width: 0; }
   padding: 3px 8px;
 }
 .tag-box.readout { left: 12px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.tag-box.scale { right: 12px; color: var(--muted); }
+.tag-box.scale { top: auto; bottom: 10px; right: 12px; color: var(--muted); }   /* bottom corner: clear of the readout however long it gets */
 @media (max-width: 560px) { .tag-box.scale { display: none; } }
 
 .playbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

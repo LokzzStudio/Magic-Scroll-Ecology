@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Food</h1>
-    <p class="lede">Cows and people on one farm for 3600 days (ten years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. A <b>food advisor</b> decides how much is eaten each day, rationing the stores to last until the next harvest; without one, everyone eats what they need until the food runs out.</p>
+    <p class="lede">Cows and people on one farm for 18,000 days (fifty years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. A <b>food advisor</b> decides how much is eaten each day, rationing the stores to last until the next harvest; without one, everyone eats what they need until the food runs out.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), food in store at start, how long food keeps, and the food advisor</dd>
@@ -196,7 +196,7 @@ VillagePage.start({
       if (document.activeElement !== $(id + "-num")) $(id + "-num").value = R[key];
     }
     $("who-hint").innerHTML = R.who === "off" ? "Nobody rations: everyone eats what they need until the food runs out."
-      : R.who === "advisor" ? "The advisor plans each day's food: the food in store plus what's still to come, spread evenly over the days until the next harvest. Short of everyone's need, everyone gets the same share. From the Inheritance page on, once everyone's need is met, the children get extra food out of the milk and rice it expects (up to the Inheritance page's cap each); the starting food is kept as a reserve, never given as extra."
+      : R.who === "advisor" ? "The advisor plans each day's food: the food in store plus what's still to come, spread evenly over the days until the next harvest. Short of everyone's need, everyone gets the same share. From the Inheritance page on, once everyone's need is met, the children get all the extra milk and rice it expects, split evenly; the starting food is kept as a reserve, never given as extra."
       : "You set the two shares. If the stores run short, every share shrinks alike.";
     $("shares-hint").innerHTML = `Grown-ups (adults and elders) get ${fmt(R.grown)}% of their need, children ${fmt(R.kids)}%. Children's food above 100% is extra food, which buys Power when they come of age; it counts from the Inheritance page on, with no limit a day (a child needs 70, so about 143%), and only out of milk and rice: the starting food is eaten last, and any extra that comes out of it buys nothing. On this page children get at most their need.`;
     $("iq-hint").innerHTML = err === 0

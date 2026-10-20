@@ -5,19 +5,20 @@
   const DEFAULTS = {
     p: 0.003,  // chance a fertile couple has a child each day
     M: 360,    // adult at age, days. Younger people are children.
-    E: 2880,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
+    E: 3240,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
     L: 3600,   // average lifespan, days
     S: 10,     // lifespan spread, ± percent of L
     F: 2000,   // food produced per day, shared by everyone in proportion to need
     c: 100,    // food an adult needs per day; a child needs 70%, an elder 80%
     k: 0.1,    // hunger toll: days of lifespan lost per (missing food)², per person per day
+    X: 1,      // birth balance: a newborn is a boy with chance (females + X) ÷ (males + females + 2X), 0 to 1
   };
 
   // Where the Humans page saves its sliders. Settings saved at 10 food a day (v10) come over with food
   // ×10 and k ÷ 100, so the same share missing costs the same; those saved before k became 10 (v9),
   // without k.
-  // v12: the birth chance became 0.003; saved settings keep everything else.
-  const STORE_KEY = "human-params-v12", V11 = "human-params-v11";
+  // v12: the birth chance became 0.003; v13: elder at 3,240 days. Saved settings keep everything else.
+  const STORE_KEY = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
   try {
     if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
@@ -31,7 +32,9 @@
       }
     }
     const v11 = JSON.parse(localStorage.getItem(V11) || "null");
-    if (!localStorage.getItem(STORE_KEY) && v11 && typeof v11 === "object") { delete v11.p; localStorage.setItem(STORE_KEY, JSON.stringify(v11)); }
+    if (!localStorage.getItem(V12) && v11 && typeof v11 === "object") { delete v11.p; localStorage.setItem(V12, JSON.stringify(v11)); }
+    const v12 = JSON.parse(localStorage.getItem(V12) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v12 && typeof v12 === "object") { delete v12.E; localStorage.setItem(STORE_KEY, JSON.stringify(v12)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
@@ -94,7 +97,9 @@
   // 1. food is shared in proportion to need. If each share falls short by a gap g (0 to 1), each
   //    person's lifespan shrinks by hungerLoss of their own missing food (g × their need).
   // 2. everyone ages a day; those reaching their lifespan die
-  // 3. each fertile couple has a child with chance p; each child is a boy or girl at random
+  // 3. each fertile couple has a child with chance p; each child is a boy with chance
+  //    (W + X) ÷ (M + W + 2X), M and W the living males and females under elder age, so births lean
+  //    toward the scarcer sex (the harder the smaller X; nobody to count: even)
   // lossOf(h), if given, is each person's hunger toll instead (the village pages with a day schedule);
   // chancesOf(people), if given, returns the day's couples as each one's chance of a child instead
   // (the Happiness page: its lasting couples of two adults, each with their own chance), called with the survivors.
@@ -120,11 +125,14 @@
     }
 
     const chances = chancesOf ? chancesOf(people) : null, couples = chances ? chances.length : census(people, p).couples;
-    let born = 0;
+    let born = 0, males = 0, females = 0;   // the living boys + men and girls + women, tonight's newborns too
+    const x = p.X ?? 1;
+    for (const h of people) if (h.age < p.E) h.sex === MALE ? males++ : females++;
     for (let i = 0; i < couples; i++) {
       if (rand() < (chances ? chances[i] : p.p)) {
-        const life = lifespan(p, rand);
-        people.push({ id: state.nextId++, sex: rand() < 0.5 ? MALE : FEMALE, age: 0, life, life0: life });
+        const all = males + females + 2 * x, life = lifespan(p, rand), sex = rand() < (all > 0 ? (females + x) / all : 0.5) ? MALE : FEMALE;
+        sex === MALE ? males++ : females++;
+        people.push({ id: state.nextId++, sex, age: 0, life, life0: life });
         born++;
       }
     }

@@ -35,7 +35,7 @@
   <div class="topbar-inner">
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
-      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page, the pages it follows, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -43,10 +43,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Craft</h1>
-    <p class="lede">The Resources page, plus <b>crafts</b> at the house. Once the jobs above crafts in the <b>Priority</b> order are filled, women <b>weave (紡織)</b> wool and timber into <b>衣 clothes</b> and <b>笠 hats</b>, and men <b>forge (鍛造)</b> stone and timber into <b>刀 blades</b> and <b>叉 hayforks</b>. Each craft has a <b>tier</b>, from its crafters and its materials. Crafts are used until they wear out: everyone wears 衣 and 笠, and collectors carry 刀 and farmers 叉, which make their work go further.</p>
+    <p class="lede">The Resources page, plus <b>crafts</b> at the house. After the jobs above crafts in the <b>Priority</b> order, women <b>weave (紡織)</b> wool and timber into <b>衣 clothes</b> and <b>笠 hats</b>, and men <b>forge (鍛造)</b> stone and timber into <b>刀 blades</b> and <b>叉 hayforks</b>. Each craft has a <b>tier</b>, from its crafters and its materials. Crafts are used until they wear out: everyone wears 衣 and 笠, and collectors carry 刀 and farmers 叉, which bring in more for the same energy.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>What each craft takes and how long it lasts; the chance a craft keeps its tier</dd>
+        <dt>Set here</dt><dd>What each craft takes and how long it lasts; each tier's 刀 / 叉 bonus</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> (cows and sheep alike) · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="happiness.html">Happiness</a> · <a href="resources.html">Resources</a>, and the Jobs table</dd>
         <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
       </dl>
@@ -60,7 +60,7 @@
           <h2>Craft</h2>
           <p class="scope">What each craft takes; this page only</p>
         </div>
-        <p class="hint">At the house, so there's no walking: one loom (紡織, women) and one forge (鍛造, men), one person at each. Who may is set with <b>Jobs</b>.</p>
+        <p class="hint">At the house, so there's no walking: one loom (紡織, women) and one forge (鍛造, men), one crafter at each a day. Who may is set with <b>Jobs</b>.</p>
         <div class="craft-list">
           <div class="craft-card">
             <div class="craft-name"><b>衣 Clothes</b><span>紡織 · worn by everyone</span></div>
@@ -102,15 +102,16 @@
         <p class="hint">Lasts: the energy of use before it's gone (at the end of that day). 衣 and 笠: all the energy their wearer spends; 刀: collecting; 叉: farming.</p>
         <h3 class="sub-h">Tiers</h3>
         <table class="mm-table tier-set">
-          <thead><tr><th>Tier</th><th class="n">刀 / 叉 bonus</th><th class="n">Keeps tier</th></tr></thead>
+          <thead><tr><th>Tier</th><th class="n">刀 / 叉 bonus</th></tr></thead>
           <tbody>
-            <tr><td><b>N</b><small>Normal</small></td><td class="n"><input id="tb1-num" type="number" aria-label="Bonus a N 刀 or 叉 gives"> %</td><td class="n">100%</td></tr>
-            <tr><td><b>R</b><small>Rare</small></td><td class="n"><input id="tb2-num" type="number" aria-label="Bonus a R 刀 or 叉 gives"> %</td><td class="n"><input id="k2-num" type="number" aria-label="Chance a R craft keeps its tier"> %</td></tr>
-            <tr><td><b>SR</b><small>Super Rare</small></td><td class="n"><input id="tb3-num" type="number" aria-label="Bonus a SR 刀 or 叉 gives"> %</td><td class="n"><input id="k3-num" type="number" aria-label="Chance a SR craft keeps its tier"> %</td></tr>
-            <tr><td><b>SSR</b><small>Super Super Rare</small></td><td class="n"><input id="tb4-num" type="number" aria-label="Bonus a SSR 刀 or 叉 gives"> %</td><td class="n"><input id="k4-num" type="number" aria-label="Chance a SSR craft keeps its tier"> %</td></tr>
+            <tr><td><b>N</b><small>Normal</small></td><td class="n"><input id="tb1-num" type="number" aria-label="Bonus a N 刀 or 叉 gives"> %</td></tr>
+            <tr><td><b>R</b><small>Rare</small></td><td class="n"><input id="tb2-num" type="number" aria-label="Bonus a R 刀 or 叉 gives"> %</td></tr>
+            <tr><td><b>SR</b><small>Super Rare</small></td><td class="n"><input id="tb3-num" type="number" aria-label="Bonus a SR 刀 or 叉 gives"> %</td></tr>
+            <tr><td><b>SSR</b><small>Super Super Rare</small></td><td class="n"><input id="tb4-num" type="number" aria-label="Bonus a SSR 刀 or 叉 gives"> %</td></tr>
+            <tr><td><b>UR</b><small>Ultra Rare</small></td><td class="n"><input id="tb5-num" type="number" aria-label="Bonus a UR 刀 or 叉 gives"> %</td></tr>
           </tbody>
         </table>
-        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft rolls its tier, then keeps it with this chance; otherwise it comes out one tier lower.</p>
+        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft's tier is <b>draw(the average of its materials' tier, its crafters' skill tier and their human tier)</b>: the average plus a random −0.49 to +0.50 (in steps of 0.01), rounded, from N up to <b>UR</b>. Materials and skill only go up to SSR, so UR takes SSR on all three, and even then it's 1 in 100.</p>
         <details class="craft-how"><summary>How the loom and forge work</summary><p class="hint" id="craft-hint"></p></details>
       </section>
     </aside>
@@ -135,8 +136,7 @@ VillagePage.start({
   key: "craft", work: "energy", inherit: true, school: true, happiness: true, resources: true, skills: true, craft: true,
   inputs: [
     ...VillagePage.CRAFTS.map((it) => ({ id: IDS[it.id] + "l", key: it.id + "Wear" })),
-    { id: "k2", key: "keep2" }, { id: "k3", key: "keep3" }, { id: "k4", key: "keep4" },
-    { id: "tb1", key: "bonus1" }, { id: "tb2", key: "bonus2" }, { id: "tb3", key: "bonus3" }, { id: "tb4", key: "bonus4" },
+    { id: "tb1", key: "bonus1" }, { id: "tb2", key: "bonus2" }, { id: "tb3", key: "bonus3" }, { id: "tb4", key: "bonus4" }, { id: "tb5", key: "bonus5" },
     ...VillagePage.CRAFTS.flatMap((it) => [...Object.keys(it.needs).map((m) => ({ id: IDS[it.id] + MAT[m], key: VillagePage.needKey(it, m) })), { id: IDS[it.id] + "e", key: it.id + "Energy" }]),
   ],
   drawPanel(c) {

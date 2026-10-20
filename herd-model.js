@@ -27,10 +27,10 @@
   }
 
   // Tiers: every animal (and, from the Resources page on, wool, timber, stone and crafts) is 1 N
-  // (Normal), 2 R (Rare), 3 SR (Super Rare) or 4 SSR (Super Super Rare). drawTier(x): x plus a random −0.49 to
-  // 0.50 (in steps of 0.01), rounded, held to 1–4. Tiers have their own dice (state.trand, from the herd's
-  // seed + TIER_SALT), so they change no other draw.
-  const TIERS = [null, { code: "N", en: "Normal" }, { code: "R", en: "Rare" }, { code: "SR", en: "Super Rare" }, { code: "SSR", en: "Super Super Rare" }];
+  // (Normal), 2 R (Rare), 3 SR (Super Rare) or 4 SSR (Super Super Rare); crafts can also be 5 UR (Ultra
+  // Rare). drawTier(x): x plus a random −0.49 to 0.50 (in steps of 0.01), rounded, held to 1–max (4 unless
+  // given). Tiers have their own dice (state.trand, from the herd's seed + TIER_SALT), so they change no other draw.
+  const TIERS = [null, { code: "N", en: "Normal" }, { code: "R", en: "Rare" }, { code: "SR", en: "Super Rare" }, { code: "SSR", en: "Super Super Rare" }, { code: "UR", en: "Ultra Rare" }];
   const TIER_SALT = 0x3c6ef372;
   // (held to 1–max: cows and sheep are at most SR, HERD_MAX_TIER)
   const drawTier = (x, rand, max = 4) => Math.min(max, Math.max(1, Math.floor(x + (Math.floor(rand() * 100) - 49) / 100 + 0.5 + 1e-9)));

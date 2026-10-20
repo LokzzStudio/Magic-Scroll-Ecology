@@ -61,7 +61,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Map</h1>
-    <p class="lede">Where the village's places are, and the shape of everyone's day. People wake between 4 and 8 o'clock and are out of the house for 12 hours. They eat breakfast by the house, walk out to work, and, from 5½ hours after waking, come home for lunch once the energy they're on is done. Whatever they collect they carry home (搬運) after every energy of it, then walk back out. Nobody starts work they couldn't finish and be home from by the end of the 12 hours. Walking eats into the working day, and a meal keeps them full for only so long, so a late walk home is a hungry one.</p>
+    <p class="lede">Where the village's places are, and the shape of everyone's day. People wake between 4 and 8 o'clock and are out of the house for 12 hours. They eat breakfast by the house, walk out to work, and, from 5½ hours after waking, come home for lunch once the energy they're on is done. Whatever they collect they carry home (搬運) after every 10 energy of it, then walk back out. Nobody starts work they couldn't finish and be home from by the end of the 12 hours. Walking eats into the working day, and a meal keeps them full for only so long, so a late walk home is a hungry one.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The map, walking speed, carrying, and the day: waking, hours out, lunch and meals</dd>
@@ -298,17 +298,7 @@
   // ---------- Buttons ----------
   $("default-map").addEventListener("click", () => { M.tiles = MapModel.defaultTiles(); draw(); save(); });
   $("clear-map").addEventListener("click", () => { M.tiles = ".".repeat(W * H); draw(); save(); });
-  let resetTimer = 0;
-  const disarmReset = () => { clearTimeout(resetTimer); $("reset").classList.remove("confirm"); $("reset").textContent = "Reset to defaults"; };
   $("reset").addEventListener("click", () => {
-    const b = $("reset");
-    if (!b.classList.contains("confirm")) {
-      b.classList.add("confirm");
-      b.textContent = "Click again to also reset the pages it follows";
-      resetTimer = setTimeout(disarmReset, 4000);
-      return;
-    }
-    disarmReset();
     try { for (const k of UPSTREAM) localStorage.removeItem(k); localStorage.removeItem(STORE_KEY); } catch (e) {}
     M = { ...DEFAULTS };
     draw();

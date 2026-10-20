@@ -78,12 +78,12 @@
 
   // The order of the day's jobs (the Priority button), from the Attribute page on
   const TIERS = [
-    { id: "milk", zh: "採牛奶", en: "Milking" },
-    { id: "field", zh: "耕田 · 收割", en: "Fields: tending, or the harvest" },
-    { id: "craft", zh: "紡織 · 鍛造", en: "Crafts, when the materials are in store (one weaver, one smith)", page: "Craft" },
+    { id: "milk", zh: "採牛奶", en: "Milking (one milker to each adult cow)" },
+    { id: "field", zh: "耕田 · 收割", en: "Fields: tending, or the harvest (one person to each of the 4 fields)" },
+    { id: "craft", zh: "紡織 · 鍛造", en: "Crafts, when the materials are in store (one weaver, one smith a day)", page: "Craft" },
     { id: "collect", zh: "採羊毛 · 採石 · 伐木", en: "Collecting: women shear or cut wood, men quarry or cut wood, whichever there's less of", page: "Resources" },
-    { id: "teach", zh: "教育", en: "Education: children go to class, the scholar teaches", page: "Education" },
-    { id: "read", zh: "吟詩", en: "Poetry: the scholar writes", page: "Education" },
+    { id: "teach", zh: "教育", en: "Education: children go to class, scholars teach", page: "Education" },
+    { id: "read", zh: "吟詩", en: "Poetry: scholars write", page: "Education" },
   ];
   const PRIORITY_DEFAULT = TIERS.map((t) => t.id);
   const PRIORITY_KEY = "priority-v1";
