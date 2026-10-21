@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rulebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<style>
+  /* The two halves of the book, each a run of topic cards */
+  .book { display: grid; gap: 28px; }
+  .half-head { display: grid; gap: 4px; margin-bottom: 12px; }
+  .half-head h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .half-head h2 .kind { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .half-head p { margin: 0; color: var(--muted); max-width: 80ch; font-size: 14px; }
+  .topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; align-items: start; }
+  .topic { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; }
+  .topic h3 { font-family: var(--display); font-weight: 600; font-size: 15.5px; margin: 0 0 6px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .topic h3 a { font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); }
+  .topic ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+  .topic li { margin: 4px 0; }
+  .topic li::marker { color: var(--muted); }
+  .topic b { font-weight: 600; }
+  /* Who decides an implicit rule: the player (with the control named) or nobody yet */
+  .who { display: inline-block; font-size: 11px; line-height: 1.4; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; margin-left: 4px; vertical-align: 1px; }
+  .who.you { color: var(--herd); border-color: var(--herd); }
+  .key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .explicit .topic { border-left: 3px solid var(--herd); }
+  .implicit .topic { border-left: 3px solid var(--muted); }
+</style>
+</head>
+<body>
+<nav class="sidenav" aria-label="Pages" data-page="rulebook.html"></nav>
+<script src="roles-model.js"></script>
+<script src="site.js"></script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="top-actions"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Rulebook</h1>
+    <p class="lede">The whole game, sorted two ways. <b>Rules of the game</b> are the facts of the world: what Power and Intelligence do, what a day's work makes, how people are born, grow up and die. A player can learn them and plan around them. <b>How the simulation runs</b> is everything else the villagers need to act on their own: the order they take jobs in, how they share the work, when they walk home, how the numbers are rounded. Some of those are the player's to change; the rest are choices made for them, for now. Numbers are the defaults; each page's Implementation details has the exact rules.</p>
+  </header>
+
+  <main class="book">
+    <section class="explicit" aria-labelledby="explicit-h">
+      <div class="half-head">
+        <h2 id="explicit-h">Rules of the game <span class="kind">explicit</span></h2>
+        <p>What the world is like. These would hold whoever ran the village.</p>
+      </div>
+      <div class="topics">
+        <div class="topic">
+          <h3>Time and place <a href="map.html">Map</a></h3>
+          <ul>
+            <li>A year is 360 days: spring, summer, autumn and winter, 90 days each. A run lasts 50 years.</li>
+            <li>The map is 16 × 16 tiles: houses, a farm, a pasture, a forest and a mine (the well and the river do nothing yet). Walking takes 1 minute a tile.</li>
+            <li>A standard day's work is 100 energy.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Life <a href="humans.html">Humans</a></h3>
+          <ul>
+            <li>People live about 3,600 days (±10%). Children until day 360, adults until 3,240, then elders.</li>
+            <li>An adult man and woman pair for life; only couples of two adults have children.</li>
+            <li>Each person's chance of a child is 0.003 a day × happiness ÷ 50; a couple's is the average of the two.</li>
+            <li>Births lean toward the scarcer sex: a boy with chance (females + X) ÷ (males + females + 2X), birth balance X = 1.</li>
+            <li>A day's food need: 100 for an adult, 70 for a child, 80 for an elder.</li>
+            <li>Hunger shortens life: the longer someone is out with an empty stomach in a day, the more days it costs, growing with the square of the hungry time.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Power and Intelligence <a href="attribute.html">Attribute</a></h3>
+          <ul>
+            <li><b>Power</b> is a day's energy: ⌊Power⌋ a day.</li>
+            <li><b>Intelligence</b> is speed: Intelligence ÷ 10 energy an hour, so the clever get more done before the day ends.</li>
+            <li>Elders work at 80% of both. Scholars have 90% of their Power and 110% of their Intelligence.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Growing up <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a></h3>
+          <ul>
+            <li>A newborn's Power and Intelligence are 0.7 × the average of a random adult man and woman, give or take 15%.</li>
+            <li>Children turn extra milk into Power and lessons into Intelligence, one point at a time. The next point costs <b>(max(100, A) − 100)² + 100</b>: cheap below 100, then dearer and dearer.</li>
+            <li>A child going hungry loses 1 Power for every 100 food missed.</li>
+            <li>At 360 days they come of age: +30 to both. After that, attributes don't change.</li>
+            <li>Scholars teach at the house: a child learns the scholar's speed × the time in class × teaching skill, shared among the class. Scholars do no other work.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Happiness <a href="happiness.html">Happiness</a></h3>
+          <ul>
+            <li>Happiness = 100 − ⌊Intelligence ÷ 2⌋, plus ⌊√(energy left unspent yesterday)⌋, at most 100.</li>
+            <li>So the clever are less happy and have fewer children, and rest makes people happier.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Food <a href="farm.html">Food</a></h3>
+          <ul>
+            <li>1 energy milking an adult cow gives 1 milk. One milker to a cow a day, but no limit on what one cow gives. Calves (under 60 days) give none.</li>
+            <li>4 fields, one person to each a day. Tending (days 1–180): 1 energy grows 1 rice, at most 50,000 a field a year. Harvest (days 181–270): 1 energy brings in 25 rice; whatever's left after day 270 is lost.</li>
+            <li>Milk keeps 1 day, rice 360. The village starts with 200,000 food that never spoils.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Herds <a href="index.html">Herd</a></h3>
+          <ul>
+            <li>Cows and sheep live about 360 days (±15%). A herd grows by r·N·(N/A − 1)·(1 − N/K) a day (r 0.02, A 2, K 10): it shrinks when very small or crowded, grows in between.</li>
+            <li>Sheep grow back 10 wool a day, up to 100.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Resources <a href="resources.html">Resources</a></h3>
+          <ul>
+            <li>1 energy gives 1 wool (shearing a sheep), 1 timber (forest) or 1 stone (mine). The forest and mine never run out.</li>
+            <li>One person to a place a day: a shearer to each sheep with wool, one to each mine tile (4 on the default map) and each forest tile (10).</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Skills <a href="resources.html">Resources</a></h3>
+          <ul>
+            <li>Nine skills: milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Every energy spent at a job is 1 exp in its skill.</li>
+            <li>Levels 1–4 take 100, 1,000, 10,000 and 100,000 more exp. Each level makes the work more effective: +5%, +10%, +20%, +40%.</li>
+            <li>Effectiveness is more out of the same work (milk, rice, wool, timber, stone, knowledge), or more speed where the amount is fixed (the harvest, crafts).</li>
+            <li>Skills aren't inherited: everyone starts at level 0.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Crafts and tools <a href="craft.html">Craft</a></h3>
+          <ul>
+            <li>Women weave 衣 clothes (200 wool + 100 timber) and 笠 hats (100 wool + 200 timber); men forge 刀 blades (200 stone + 100 timber) and 叉 hayforks (100 stone + 200 timber). Each takes 300 energy.</li>
+            <li>One loom and one forge, one crafter at each a day.</li>
+            <li>A hayfork adds to farming effectiveness and a blade to collecting: +20% to +100%, by tier. Clothes and hats are worn by everyone.</li>
+            <li>Tools wear out with use: clothes and hats after 30,000 energy, blades and hayforks after 3,000.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Tiers <a href="resources.html">Resources</a> · <a href="craft.html">Craft</a></h3>
+          <ul>
+            <li>N, R, SR, SSR, and for crafts only UR. Animals are at most SR.</li>
+            <li>A tier is drawn from the average of what went in, give or take up to half a tier: wool from the shearer's skill and the sheep, timber and stone from the skill and the place, a craft from its materials, its maker's skill and their Intelligence.</li>
+            <li>With everything SSR, a craft comes out UR 1 time in 100.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Weather <a href="weather.html">Weather</a></h3>
+          <ul>
+            <li>Clouds blow across the map; the more clouds, the likelier rain, and it snows below 0 °C.</li>
+            <li>Each season has its own clouds, wind, rain and temperature. Cloudy and rainy days are cooler, and the temperature swings through the day, coldest at 06:00 and warmest at 15:00.</li>
+            <li>Rain raises the water level and dry hours drain it: at 0 a drought, at 10 a flood.</li>
+            <li>The village doesn't feel the weather yet.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="implicit" aria-labelledby="implicit-h">
+      <div class="half-head">
+        <h2 id="implicit-h">How the simulation runs <span class="kind">implicit</span></h2>
+        <p>What the villagers need so they can act without being told: habits, timing and bookkeeping. Change these and the world stays the same, but the village behaves differently.</p>
+        <div class="key"><span><span class="who you">you: Priority</span> the player sets it, with the control named</span><span><span class="who">fixed</span> chosen for the villagers, for now</span></div>
+      </div>
+      <div class="topics">
+        <div class="topic">
+          <h3>Choosing work</h3>
+          <ul>
+            <li>Jobs are taken in an order: milking, fields, crafts, collecting, education, poetry. <span class="who you">you: Priority</span></li>
+            <li>Who may do which job: by default children milk and go to class, men and women farm and cut wood, women shear and weave, men quarry and forge. <span class="who you">you: Jobs</span></li>
+            <li>Those who can only milk get the cows first; anyone who could also farm takes a cow only if one is spare. <span class="who">fixed</span></li>
+            <li>Children do only the food work the grown-ups can't cover, and spend the rest of the day in class. <span class="who">fixed</span></li>
+            <li>Collecting: each grown-up starts with their own (women wool, men stone) or timber, whichever the village has less of, then the other, then the other sex's. <span class="who">fixed</span></li>
+            <li>A station makes next whichever of its items has been started fewest times; its crafter keeps it for the day. <span class="who">fixed</span></li>
+            <li>Tools: everyone takes the best clothes and hat left; the best hayfork or blade is taken on the way to the job and put back if they don't get it. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Food and the advisor <a href="farm.html">Food</a></h3>
+          <ul>
+            <li>Who rations the food: nobody (everyone eats their need), the advisor, or you with your own shares for grown-ups and children. <span class="who you">you: Food page</span></li>
+            <li>The advisor spreads the food in store, and what's still to come before the next harvest, over the days until then. Their plan errs, less the higher their IQ. <span class="who">fixed</span></li>
+            <li>Short of everyone's need, all get the same share; any surplus goes to the children as extra food. <span class="who">fixed</span></li>
+            <li>The food that spoils soonest is eaten first, the starting food last. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Scholars and class <a href="education.html">Education</a></h3>
+          <ul>
+            <li>The village appoints one scholar per child: the adult with the highest Intelligence, but only if it can spare them. At least 4 grown-ups must still be able to tend, and from the second scholar on, the milkers left must cover the village's need. <span class="who">fixed</span></li>
+            <li>The scholar with the highest Intelligence is the food advisor. <span class="who">fixed</span></li>
+            <li>Children are split evenly and at random among the scholars. <span class="who">fixed</span></li>
+            <li>Teaching or poetry first follows the Priority order. <span class="who you">you: Priority</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>The shape of a day <a href="map.html">Map</a></h3>
+          <ul>
+            <li>People wake between 4 and 8 o'clock, spread at random. <span class="who">fixed</span></li>
+            <li>Everyone is out of the house for 12 hours. <span class="who you">you: Map page</span></li>
+            <li>Breakfast at the house (24 minutes); from 5½ hours, home for lunch once the work under way is done. <span class="who you">you: Map page</span></li>
+            <li>A meal keeps someone full for 6 hours on a full share, less on less. <span class="who">fixed</span></li>
+            <li>Idle, out of energy and hungry, they go in early rather than wait outside. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Working, step by step</h3>
+          <ul>
+            <li>Work goes 10 energy at a time, and a unit starts only if they could finish it and be home by the end of the day. <span class="who">fixed</span></li>
+            <li>Whatever they collect (milk, the harvest, wool, timber, stone) is carried home after every 10 energy of it, and at the end of the job. <span class="who you">you: Map page</span></li>
+            <li>Taking a shared job reserves what they could still do there, so two people don't plan the same work. <span class="who">fixed</span></li>
+            <li>With nothing to do they wait at the house. When someone gives up a job with work left, everyone waiting chooses again. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Pairing <a href="happiness.html">Happiness</a></h3>
+          <ul>
+            <li>Each night, single adult men and women pair up at random, as many as the smaller group. <span class="who">fixed</span></li>
+            <li>A couple ends only when a partner dies. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Bookkeeping</h3>
+          <ul>
+            <li>Each day goes in order: food ages and spoils, everyone works, the day's take goes into store, everyone eats, then hunger, deaths, pairing and births.</li>
+            <li>Energy, food made and attributes round down; fractions of food from work carry over to the next day.</li>
+            <li>Wool, timber and stone are stored in lots of 100, each lot one tier. Crafts use the lowest tiers first.</li>
+            <li>Skill levels are counted at the end of the day, for the next.</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Running the simulation</h3>
+          <ul>
+            <li>Each page plays the same 20 villages, on separate dice for cows, sheep, people, the advisor, births, waking, classes, pairing and tiers, so every setting faces the same luck.</li>
+            <li>A village survives if anyone is alive after 50 years. A run stops past 2,000 people, counted as surviving.</li>
+            <li><b>Micro mode</b> is the game's rules, person by person. <b>Macro mode</b> is a quick copy for the whole village: it averages over wake-up times for class hours, for example. It runs by default.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

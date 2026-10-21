@@ -13,6 +13,7 @@
     ["resources.html", "Resources", "Sheep, timber, stone &amp; skills"],
     ["craft.html", "Craft", "Weaving &amp; forging"],
     ["weather.html", "Weather", "Clouds &amp; wind"],
+    ["rulebook.html", "Rulebook", "Game rules vs simulation"],
   ];
   const nav = document.querySelector("nav.sidenav");
   const here = nav.dataset.page;

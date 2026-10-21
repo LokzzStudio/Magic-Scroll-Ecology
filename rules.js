@@ -3,7 +3,8 @@
 // with the groups that page uses, then a footer of simulation notes (how the page runs, not game rules).
 // Numbers are the defaults. Keep this in step with the models: from the Attribute page on, these are
 // Micro mode's rules (micro-model.js), complete enough to rebuild it and as short as that allows; worked
-// examples belong in page hints.
+// examples belong in page hints. The Rulebook page (rulebook.html) says the same in plain words, sorted
+// into the game's rules and the simulation's; a change here may need it there too.
 (function () {
   const ORDER = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft"];
 
