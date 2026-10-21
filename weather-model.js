@@ -37,6 +37,13 @@
 // over the rampDays either side of each season's start (half-way at the boundary), so the temperature
 // doesn't jump overnight. The ramps pull each season's average a little toward its neighbours'.
 //
+// Through the day (for Micro mode later; nothing in the weather depends on it): the day's temperature
+// is its average over the 24 hours, coldest at COLDEST_HOUR and warmest at WARMEST_HOUR, the warmest
+// hour the day's swing above the coldest. It warms from the coldest hour to the warmest along half a
+// cosine, and cools from the warmest to the next coldest along another, so the hours average the day's
+// temperature exactly. The swing is the season's daily swing on a clear day; clouds hold it down: a
+// full sky all day keeps 1 − SWING_CLOUD of it.
+//
 // Water level, 0 to 10, one for the whole year: each hour of rain (or snow) adds rainfall ÷ perLevel;
 // each hour with no clouds drains sunnyDrain and each cloudy, dry hour cloudyDrain, both at level 5, and
 // more above it, less below (× 1 + slope × (level − 5) ÷ 5), which pulls the level back toward the
@@ -50,6 +57,8 @@
   const TEMP_PERSIST = 0.6; // the share of a day's random temperature part that carries to the next
   const RAMP_DAYS = 15;     // season ramp: days each side of a season's start the base temperature ramps over
   const RAMP_LIMITS = [0, 45, 1];
+  const COLDEST_HOUR = 6, WARMEST_HOUR = 15;   // clock hours (0–24) of the day's lowest and highest temperature
+  const SWING_CLOUD = 0.6;  // the share of the daily swing a full sky all day takes away
   const WATER_MAX = 10, WATER_START = 5;   // the water level's top (flood) and where a year run starts it
   // Water settings, for the whole year: rain per +1 water level (rainfall × hours); the levels an hour a
   // sunny and a cloudy, dry hour take off at level 5; and the drain slope (0: the same at every level)
@@ -74,15 +83,16 @@
   //   tempSd      temperature spread: the standard deviation of the day's temperature, °C
   //   cloudCool   cloud cooling: °C cooler for a day under a full sky (10 clouds) all day
   //   rainCool    rain cooling: °C cooler, on top, for a day raining all day
+  //   swing       daily swing: °C from the coldest hour to the warmest on a clear day
   const TEMP = { tempSd: 5, cloudCool: 10, rainCool: 10 };
   const DEFAULTS = {
-    spring: { spawnRate: 0.45, wind: 3, windVol: 0.5, cloudiness: 70, rainChange: 2, temp: 15, ...TEMP },     // steady modest clouds, short showers
-    summer: { spawnRate: 0.6, wind: 2.5, windVol: 1, cloudiness: 25, rainChange: 0.5, temp: 30, ...TEMP },    // long clear spells
-    autumn: { spawnRate: 1.8, wind: 7, windVol: 2, cloudiness: 40, rainChange: 0.2, temp: 15, ...TEMP },      // clear spells, then fronts of medium rain
-    winter: { spawnRate: 1.6, wind: 7, windVol: 3, cloudiness: 70, rainChange: 0.3, temp: -5, ...TEMP },        // full, gusty skies
+    spring: { spawnRate: 0.45, wind: 3, windVol: 0.5, cloudiness: 70, rainChange: 2, temp: 15, swing: 10, ...TEMP },     // steady modest clouds, short showers
+    summer: { spawnRate: 0.6, wind: 2.5, windVol: 1, cloudiness: 25, rainChange: 0.5, temp: 30, swing: 12, ...TEMP },    // long clear spells
+    autumn: { spawnRate: 1.8, wind: 7, windVol: 2, cloudiness: 40, rainChange: 0.2, temp: 15, swing: 10, ...TEMP },      // clear spells, then fronts of medium rain
+    winter: { spawnRate: 1.6, wind: 7, windVol: 3, cloudiness: 70, rainChange: 0.3, temp: -5, swing: 8, ...TEMP },        // full, gusty skies
   };
   const LIMITS = { spawnRate: [0, 10, 0.05], wind: [0, 32, 0.5], windVol: [0, 16, 0.5], cloudiness: [0, 100, 5], rainChange: [0.05, 5, 0.05],
-    temp: [-30, 45, 1], tempSd: [0, 15, 0.5], cloudCool: [0, 20, 0.5], rainCool: [0, 20, 0.5] };   // lowest, highest, step
+    temp: [-30, 45, 1], tempSd: [0, 15, 0.5], cloudCool: [0, 20, 0.5], rainCool: [0, 20, 0.5], swing: [0, 25, 0.5] };   // lowest, highest, step
   // The chance of rain with n clouds, and the rainfall while it rains
   const rainChance = (n) => (n > 1 ? Math.log10(n) : 0);
   // Weather v3: a set for each season, every default new, so nothing came over from v1 or v2. v4 (spring
@@ -289,6 +299,14 @@
     if (pos > SEASON_DAYS - h) return mu(k) + ((mu(k + 1) - mu(k)) * (pos - (SEASON_DAYS - h))) / (2 * h);
     return mu(k);
   }
+  // A day's swing, held down by its clouds (its average over the day)
+  const daySwing = (P, d) => P.swing * (1 - (SWING_CLOUD * d.clouds) / MAX_CLOUDS);
+  // The temperature at clock hour h (0–24) of a day whose temperature is temp and swing is swing
+  function hourTemp(temp, swing, h) {
+    const lo = COLDEST_HOUR, hi = WARMEST_HOUR, warm = hi - lo, cool = 24 - warm;
+    const f = h >= lo && h <= hi ? -Math.cos((Math.PI * (h - lo)) / warm) : Math.cos((Math.PI * ((h - hi + 24) % 24)) / cool);
+    return temp + (swing * f) / 2;
+  }
   // Each season's average base temperature through the year, ramps and all (the weather and random
   // parts average 0), in SEASONS order
   const seasonAverages = (sets) => SEASONS.map((s, k) => {
@@ -322,8 +340,8 @@
   }
 
   // One year through the seasons (sets: by season id, and rampDays), from a sky warmed up on spring's: each
-  // day's rain (rainfall × hours, summed), hours raining, average clouds, average wind, base temperature and
-  // temperature, and whether it snowed ([{ rain, wet, clouds, wind, base, temp, snow }]). stats: each season's tempStats, from its long run
+  // day's rain (rainfall × hours, summed), hours raining, average clouds, average wind, base temperature,
+  // temperature and swing through the day, and whether it snowed ([{ rain, wet, clouds, wind, base, temp, swing, snow }]). stats: each season's tempStats, from its long run
   // (a season without them gets no temperatures)
   // years: that many years in a row (the days of all of them); water: the water settings (sets.water by
   // default), each day also giving the level at its end and its hours of drought and of flood
@@ -343,6 +361,7 @@
       const id = SEASONS[seasonOf(day)].id, st = stats && stats[id];
       d.base = baseTemp(sets, day);
       d.temp = st ? tempOf(sets[id], st, d, u, d.base) : NaN;
+      d.swing = daySwing(sets[id], d);
       d.snow = d.wet > 0 && d.temp < 0;
       u = nextU(u, trand);
       days.push(d);
@@ -438,5 +457,5 @@
     return sets;
   }
 
-  window.WeatherModel = { MAX_CLOUDS, SPELL_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, crossHours, meanRate, loadOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, WATER, WATER_LIMITS, flowWater, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal };
+  window.WeatherModel = { MAX_CLOUDS, SPELL_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, crossHours, meanRate, loadOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, WATER, WATER_LIMITS, flowWater, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal, COLDEST_HOUR, WARMEST_HOUR, SWING_CLOUD, daySwing, hourTemp };
 })();

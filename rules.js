@@ -48,6 +48,7 @@
         "One temperature a day (midnight to midnight). The day's weather part <b>x = −(c × its average clouds ÷ 10 + k × its hours raining ÷ 24)</b>.",
         "<b>T = b(d) + x − x̄ + e × u</b>, where x̄ is the average of x over the season's long run (so T averages the season's average b), e = √(max(0, s² − the variance of x over it)) (so T's standard deviation is s), and u carries over: u ← 0.6u + 0.8z each day (z a standard normal draw, on the temperature's own dice; start u = z).",
         "Precipitation on a day below 0 °C is snow (snowfall = clouds, as rainfall).",
+        "<b>Through the day</b> (nothing above depends on it): at clock hour t the temperature is <b>T + (D ÷ 2) × f(t)</b>, f = −cos(π (t − 6) ÷ 9) from 06:00 to 15:00 and cos(π ((t − 15) mod 24) ÷ 15) otherwise: lowest T − D ÷ 2 at 06:00, highest T + D ÷ 2 at 15:00, averaging T over the day. D = the season's daily swing × (1 − 0.6 × its average clouds ÷ 10); daily swing 10 / 12 / 10 / 8 °C (spring / summer / autumn / winter).",
         "A day's type, by what most of its hours were: sunny (no clouds), cloudy (clouds, no rain) or rainy / snowy (raining); a tie goes to the wetter. Sunny days average warmest and rainy ones coolest; one day's random part can still turn that round.",
       ]);
       add("Water level", "Weather", [

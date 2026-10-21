@@ -69,6 +69,14 @@
   .chart .base-line { fill: none; stroke: var(--herd); stroke-width: 2.2; stroke-dasharray: 7 4; }
   .chart .zero-line { stroke: var(--cows); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart .temp-line { fill: none; stroke: var(--ink); stroke-width: 1; opacity: 0.45; }
+  .chart .hour-line { fill: none; stroke: var(--ink); stroke-width: 2.2; }
+  .key-hour, .key-base, .key-zero { width: 16px; display: inline-block; vertical-align: middle; }
+  .key-hour { border-top: 2.2px solid var(--ink); }
+  .key-base { border-top: 2px dashed var(--herd); }
+  .key-zero { border-top: 1px dashed var(--cows); }
+  .hday-pick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; }
+  .hday-pick input[type="range"] { flex: 1 1 160px; }
+  .hday-year { color: var(--muted); }
   .chart .tday { stroke: none; }
   .chart .tday.sunny, .key-dot.sunny { fill: var(--allee); background: var(--allee); }
   .chart .tday.cloudy, .key-dot.cloudy { fill: var(--muted); background: var(--muted); }
@@ -229,6 +237,14 @@
           <input id="rcl-range" type="range" aria-label="How much cooler again a day raining all day is">
           <p class="hint" id="rcl-hint"></p>
         </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="dsw-num">Daily swing</label>
+            <span class="num-wrap"><input id="dsw-num" type="number"><span class="unit">°C</span></span>
+          </div>
+          <input id="dsw-range" type="range" aria-label="Degrees from the coldest hour to the warmest on a clear day">
+          <p class="hint" id="dsw-hint"></p>
+        </div>
       </section>
       <section class="panel-section" id="water">
         <div class="section-head">
@@ -317,6 +333,19 @@
         <div class="legend"><span><i class="key-dot sunny"></i>Sunny day</span><span><i class="key-dot cloudy"></i>Cloudy</span><span><i class="key-dot wet"></i>Rainy</span><span><i class="key-dot snow"></i>Snowy</span></div>
         <p class="hint" id="year-hint"></p>
       </section>
+      <section class="card" aria-label="Through the day">
+        <div class="card-head"><h2>Through the day</h2><p>One day of <span class="season-name lc"></span> in the simulated year above, hour by hour. Pick the day.</p></div>
+        <div class="hday-pick">
+          <label for="hday-num">Day of <span class="season-name lc"></span></label>
+          <input id="hday-range" type="range" min="1" max="90" step="1" aria-label="Day of the season to show">
+          <span class="num-wrap"><input id="hday-num" type="number" min="1" max="90" step="1"><span class="unit">of 90</span></span>
+          <span class="hday-year" id="hday-year"></span>
+        </div>
+        <dl class="facts" id="hday-facts"></dl>
+        <svg class="chart" id="hday-chart" height="220" role="img" aria-label="The picked day's temperature hour by hour"></svg>
+        <div class="legend"><span><i class="key-hour"></i>Temperature</span><span><i class="key-base"></i>The day's temperature (its average)</span><span id="hday-zero"><i class="key-zero"></i>0 °C</span></div>
+        <p class="hint" id="hday-hint"></p>
+      </section>
       <section class="card" aria-label="Drought and flood">
         <div class="card-head"><h2>Drought and flood</h2><p>The water level through the year, and how often it reaches 0 or 10.</p></div>
         <dl class="facts" id="water-facts"></dl>
@@ -339,6 +368,7 @@
   const $ = (id) => document.getElementById(id);
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const pct = (v) => (v > 0 && v < 0.001 ? "<0.1%" : fmt(v * 100, 1) + "%");
+  const clock = (h) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;   // clock hour h as hh:mm
   const hours = (h) => (!isFinite(h) ? "never" : h < 1 ? `${fmt(h * 60)} min` : `${fmt(h, 1)} h`);
 
   // The four seasons' sets (ALL, by season id) and the one picked (P: ALL[season], changed in place)
@@ -371,7 +401,7 @@
   const hasSim = (S) => sims.has(JSON.stringify(S));
 
   // ---------- Settings ----------
-  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"]];
+  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"], ["dsw", "swing"]];
   function syncInputs() {
     for (const [id, key] of INPUTS) {
       const [lo, hi, step] = WM.LIMITS[key], range = $(id + "-range"), num = $(id + "-num");
@@ -514,6 +544,7 @@
     $("ramp-hint").innerHTML = ALL.rampDays > 0 ? `Through the year, the temperature ramps in a straight line from one season's to the next over the <b>${fmt(ALL.rampDays)}</b> days either side of each season's start, instead of jumping overnight. The ramps pull each season's average toward its neighbours': now ${WM.SEASONS.map((s, k) => `${s.en.toLowerCase()} ${fmt(WM.seasonAverages(ALL)[k], 1)}`).join(", ")} °C. Clouds, wind and rain still change with the season at once.` : "0: each season's temperature starts on its first day, all at once.";
     $("tsd-hint").innerHTML = `How far a day's temperature typically is from the average (its standard deviation): about two days in three within <b>${fmt(P.temp - P.tempSd)}</b> to <b>${fmt(P.temp + P.tempSd)}</b> °C.`;
     $("ccl-hint").innerHTML = `A day under a full sky (10 clouds) all day is this much cooler than a sunny one; fewer clouds, or for less of the day, cool it in proportion.`;
+    $("dsw-hint").innerHTML = `On a clear day the warmest hour (${clock(WM.WARMEST_HOUR)}) is this much above the coldest (${clock(WM.COLDEST_HOUR)}); the day's temperature is their average over the hours. Clouds hold it down: a full sky all day keeps ${fmt((1 - WM.SWING_CLOUD) * 100)}% of it, <b>${fmt(P.swing * (1 - WM.SWING_CLOUD), 1)}</b> °C. Nothing in the weather depends on it: it's for Micro mode's hours.`;
     $("rcl-hint").innerHTML = `A day raining all day is this much cooler again, on top of its clouds' cooling; a shower cools it in proportion. The average stays put: the weather only moves days above and below it.`;
     $("load-hint").innerHTML = isFinite(a) ? `On average over both spells, <b>${fmt(a, 2)}</b> clouds come in the time one takes to cross (rate × cloudiness × crossing time).` : "";
     $("dist-hint").innerHTML = `The dots are the same clouds coming evenly with no spells and a steady wind: then the count is exactly a Poisson distribution with mean ${isFinite(a) ? fmt(a, 2) : "∞"} cut off at 10, one hump around the average. Spells bunch the clouds up, and a volatile wind adds calm stretches when they pile up, so the sky is clear more often (the clear spells, and the last clouds blowing away) and full more often (cloudy spells pile them up). A cloud due when the sky is full doesn't come.`;
@@ -552,7 +583,7 @@
       `<tr class="grp"><th colspan="5">Settings</th></tr>` +
       row("Cloud spawn rate", (x) => `${fmt(x.spawnRate, 2)}/h`) + row("Average wind speed", (x) => fmt(x.wind, 1)) + row("Wind volatility", (x) => fmt(x.windVol, 1)) +
       row("Cloudiness", (x) => `${fmt(x.cloudiness)}%`) + row("Rain changeability", (x) => `${fmt(x.rainChange, 2)}/h`) +
-      row("Average temperature", (x) => `${fmt(x.temp)} °C`) + row("Temperature spread", (x) => `${fmt(x.tempSd, 1)} °C`) + row("Cloud cooling", (x) => `${fmt(x.cloudCool, 1)} °C`) + row("Rain cooling", (x) => `${fmt(x.rainCool, 1)} °C`) +
+      row("Average temperature", (x) => `${fmt(x.temp)} °C`) + row("Temperature spread", (x) => `${fmt(x.tempSd, 1)} °C`) + row("Cloud cooling", (x) => `${fmt(x.cloudCool, 1)} °C`) + row("Rain cooling", (x) => `${fmt(x.rainCool, 1)} °C`) + row("Daily swing", (x) => `${fmt(x.swing, 1)} °C`) +
       `<tr class="grp"><th colspan="5">Weather</th></tr>` +
       res("Average clouds", (s) => fmt(WM.meanOf(s.share), 1)) + res("Clear sky", (s) => pct(s.share[0])) + res("Raining", (s) => pct(wet(s))) +
       res("Rainfall while raining", (s) => (wet(s) > 0 ? fmt(fall(s) / wet(s), 1) : "—")) + res("A rain lasts", (s) => (s.starts ? hours((wet(s) * s.hours) / s.starts) : "—")) +
@@ -643,6 +674,44 @@
     s += `<path class="base-line" d="${year.map((d, i) => `${i ? "L" : "M"}${x(i + 0.5).toFixed(1)} ${y(d.base).toFixed(1)}`).join("")}"/>`;
     svg.innerHTML = s;
   }
+  // The picked day of the picked season, hour by hour (clock hours, midnight to midnight)
+  let hday = 45;
+  function syncHday() { hday = Math.min(90, Math.max(1, Math.round(Number(hday)) || 1)); $("hday-range").value = hday; if (document.activeElement !== $("hday-num")) $("hday-num").value = hday; }
+  $("hday-range").addEventListener("input", (e) => { hday = Number(e.target.value); $("hday-num").value = hday; drawHourDay(true); });
+  $("hday-num").addEventListener("input", (e) => { if (e.target.value !== "" && isFinite(e.target.value)) { hday = Number(e.target.value); drawHourDay(true); } });
+  $("hday-num").addEventListener("change", () => drawHourDay(true));
+  function drawHourDay(ready) {
+    syncHday();
+    const svg = $("hday-chart"), H0 = 220, w = svgSize(svg, H0), m = { l: 44, r: 16, t: 22, b: 38 };
+    const k = WM.SEASONS.findIndex((s) => s.id === season), d = year && year[k * WM.SEASON_DAYS + hday - 1];
+    if (!ready || !d || !isFinite(d.temp)) {
+      svg.innerHTML = `<text x="${w / 2}" y="${H0 / 2}" text-anchor="middle">Temperatures come once every season has been simulated…</text>`;
+      $("hday-facts").innerHTML = ""; $("hday-hint").innerHTML = ""; return;
+    }
+    const at = (h) => WM.hourTemp(d.temp, d.swing, h), lo = at(WM.COLDEST_HOUR), hi = at(WM.WARMEST_HOUR);
+    const bot = Math.floor(lo / 5) * 5, top = Math.max(bot + 5, Math.ceil(hi / 5) * 5);
+    const x = (h) => m.l + (h / 24) * (w - m.l - m.r), y = (v) => m.t + (1 - (v - bot) / (top - bot)) * (H0 - m.t - m.b);
+    let s = "";
+    for (let v = bot; v <= top + 1e-9; v += 5) s += `<line class="gridline" x1="${m.l}" x2="${w - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}°</text>`;
+    for (let h = 0; h <= 24; h += w < 500 ? 6 : 3) s += `<text x="${x(h)}" y="${H0 - m.b + 15}" text-anchor="middle">${clock(h)}</text>`;
+    const zero = bot < 0 && top > 0;
+    $("hday-zero").style.display = zero ? "" : "none";
+    if (zero) s += `<line class="zero-line" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
+    s += `<line class="base-line" x1="${m.l}" x2="${w - m.r}" y1="${y(d.temp)}" y2="${y(d.temp)}"/>`;
+    let path = "";
+    for (let i = 0; i <= 96; i++) { const h = i / 4; path += `${i ? "L" : "M"}${x(h).toFixed(1)} ${y(at(h)).toFixed(1)}`; }
+    const ty = WM.dayType(d), cls = ty === "wet" && d.temp < 0 ? "snow" : ty;
+    s += `<path class="hour-line" d="${path}"/>`;
+    s += `<circle class="tday ${cls}" cx="${x(WM.COLDEST_HOUR)}" cy="${y(lo)}" r="4"/><text class="pct" x="${x(WM.COLDEST_HOUR)}" y="${y(lo) + 16}" text-anchor="middle">${fmt(lo, 1)}°</text>`;
+    s += `<circle class="tday ${cls}" cx="${x(WM.WARMEST_HOUR)}" cy="${y(hi)}" r="4"/><text class="pct" x="${x(WM.WARMEST_HOUR)}" y="${y(hi) - 9}" text-anchor="middle">${fmt(hi, 1)}°</text>`;
+    s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${H0 - m.b}" y2="${H0 - m.b}"/><text class="axis-title" x="${m.l + (w - m.l - m.r) / 2}" y="${H0 - 4}" text-anchor="middle">Time of day</text>`;
+    svg.innerHTML = s;
+    const TYPE = { sunny: "Sunny", cloudy: "Cloudy", wet: d.temp < 0 ? "Snowy" : "Rainy" };
+    $("hday-year").textContent = `day ${fmt(k * WM.SEASON_DAYS + hday)} of the year · ${TYPE[ty].toLowerCase()}`;
+    $("hday-facts").innerHTML = [["Day's temperature", `${fmt(d.temp, 1)} °C`],
+      [`Low, ${clock(WM.COLDEST_HOUR)}`, `${fmt(lo, 1)} °C`], [`High, ${clock(WM.WARMEST_HOUR)}`, `${fmt(hi, 1)} °C`]].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join("");
+    $("hday-hint").innerHTML = `The day's temperature is its average over the 24 hours. It's coldest around dawn (${clock(WM.COLDEST_HOUR)}), warms along half a cosine to the afternoon high (${clock(WM.WARMEST_HOUR)}), and cools along another through the evening and night. This day swings <b>${fmt(d.swing, 1)}</b> °C: the season's ${fmt(P.swing, 1)} °C on a clear day, held down by its clouds (it averaged ${fmt(d.clouds, 1)} of 10; a full sky all day takes off ${fmt(WM.SWING_CLOUD * 100)}%). Nothing in the weather depends on the hour's temperature: whether it rains or snows goes by the day's.`;
+  }
   function drawYear() {
     // Temperatures once every season's long run is in (they give each season's figures)
     const ready = WM.SEASONS.every((s) => hasSim(ALL[s.id])), key = JSON.stringify(ALL) + ready;
@@ -664,6 +733,7 @@
     s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
     svg.innerHTML = s;
     drawYearTemp(ready);
+    drawHourDay(ready);
     drawYearWater();
     drawWater();
     const dry = (a) => year.slice(a, a + WM.SEASON_DAYS).filter((d) => d.wet === 0).length;
@@ -710,11 +780,12 @@
   let today = null;
   const newDay = () => { today = { day: Math.floor(sky.t / 24 + 1e-9), clouds: 0, sun: 0, wet: 0, hours: 0, u: today ? WM.nextU(today.u, Math.random) : WM.normal(Math.random), n: sky.clouds.length, r: WM.rainfall(sky), last: sky.t }; };
   const tallyTo = (t) => { const dt = t - today.last; today.clouds += today.n * dt; if (today.n === 0) today.sun += dt; if (today.r > 0) today.wet += dt; today.hours += dt; today.last = t; };
-  function tempNow() {
+  // (and the hour's, clock hour h, from the day's swing so far)
+  function tempNow(h) {
     const sim = hasSim(P) ? simFor(P) : null;
-    if (!sim || !today) return NaN;
-    const h = Math.max(1e-6, today.hours), d = { clouds: today.clouds / h, wet: (today.wet / h) * 24, sun: (today.sun / h) * 24 };
-    return WM.tempOf(P, sim.temp.stats, d, today.u);
+    if (!sim || !today) return { day: NaN, hour: NaN };
+    const n = Math.max(1e-6, today.hours), d = { clouds: today.clouds / n, wet: (today.wet / n) * 24, sun: (today.sun / n) * 24 }, day = WM.tempOf(P, sim.temp.stats, d, today.u);
+    return { day, hour: WM.hourTemp(day, WM.daySwing(P, d), h) };
   }
   const dropsSvg = (c) => [-0.4, 0, 0.4].map((dx) => {
     const x0 = c.x + dx * c.size, y0 = c.y + 0.35 * c.size;
@@ -727,10 +798,9 @@
   waterOn();
   newDay();
   function drawSky() {
-    const rain = WM.rainfall(sky), T = tempNow(), snow = rain > 0 && T < 0;
+    const t = sky.t + 6, day = Math.floor(t / 24) + 1, h = t % 24, rain = WM.rainfall(sky), tn = tempNow(h), T = tn.day, snow = rain > 0 && T < 0;
     $("sky").innerHTML = tiles + (rain ? sky.clouds.map(snow ? flakesSvg : dropsSvg).join("") : "") + sky.clouds.map(cloudSvg).join("");
-    const t = sky.t + 6, day = Math.floor(t / 24) + 1, h = t % 24;
-    $("sky-stats").innerHTML = `Day ${day}, ${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor((h % 1) * 60)).padStart(2, "0")} · ${sky.cloudy ? "<b>cloudy spell</b>" : "clear spell"} · wind ${fmt(sky.v, 1)} · <b>${sky.clouds.length}</b> cloud${sky.clouds.length === 1 ? "" : "s"} · ${isFinite(T) ? `<span${T < 0 ? ' class="cold"' : ""}>${fmt(T, 1)} °C</span>` : "… °C"} · ${rain ? (snow ? `<span class="cold">snowing, snowfall ${rain}</span>` : `<span class="wet">raining, rainfall ${rain}</span>`) : `dry (${fmt(WM.rainChance(sky.clouds.length) * 100)}% chance)`} · water <b>${fmt(sky.water.level, 2)}</b>${sky.water.level <= 0 ? ' <span class="dry">drought</span>' : sky.water.level >= WM.WATER_MAX ? ' <span class="cold">flood</span>' : ""} · ${fmt(sky.came)} came, ${fmt(sky.lost)} turned away`;
+    $("sky-stats").innerHTML = `Day ${day}, ${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor((h % 1) * 60)).padStart(2, "0")} · ${sky.cloudy ? "<b>cloudy spell</b>" : "clear spell"} · wind ${fmt(sky.v, 1)} · <b>${sky.clouds.length}</b> cloud${sky.clouds.length === 1 ? "" : "s"} · ${isFinite(T) ? `<span${tn.hour < 0 ? ' class="cold"' : ""}>${fmt(tn.hour, 1)} °C</span> (day ${fmt(T, 1)} °C)` : "… °C"} · ${rain ? (snow ? `<span class="cold">snowing, snowfall ${rain}</span>` : `<span class="wet">raining, rainfall ${rain}</span>`) : `dry (${fmt(WM.rainChance(sky.clouds.length) * 100)}% chance)`} · water <b>${fmt(sky.water.level, 2)}</b>${sky.water.level <= 0 ? ' <span class="dry">drought</span>' : sky.water.level >= WM.WATER_MAX ? ' <span class="cold">flood</span>' : ""} · ${fmt(sky.came)} came, ${fmt(sky.lost)} turned away`;
   }
   // Playback: real seconds per game hour
   const SPEEDS = [["Game speed", 60 / MapModel.GAME_MIN_PER_REAL_SEC], ["1 h = 5 s", 5], ["1 h = 1 s", 1]];
