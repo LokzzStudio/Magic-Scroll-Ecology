@@ -33,7 +33,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Resources</h1>
-    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. After the food work, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. One person to a place for the day: a shearer to each sheep, one to each tile of the mine or the forest. Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (N, R, SR or SSR), from the collector's skill and the tier of the sheep, the forest or the mine it came from. And everyone has a level from 0 to 4 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level brings in more for the same energy (+10%, +20%, +30%, +40% by default).</p>
+    <p class="lede">The Happiness page, plus a flock of <b>sheep</b> on the pasture, a <b>forest</b>, a <b>mine</b>, and <b>skills</b>. After the food work, grown-ups with energy to spare go out to collect: women <b>shear wool (採羊毛)</b> and men <b>quarry stone (採石)</b>, or <b>cut wood (伐木)</b> when there's less timber. One person to a place for the day: a shearer to each sheep, and a few quarriers and woodcutters (2 and 3). Nothing uses them yet, so they pile up. Each comes in lots of 100 with a <b>tier</b> (N, R, SR or SSR), from the collector's skill and the tier of the sheep, the forest or the mine it came from. From the Craft page on, the collector's <b>刀 blade</b> counts too: a lot's tier comes from the average of all three, and a collector without a 刀 counts as N. And everyone has a level from 0 to 4 at each of nine skills (milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching and poetry): every energy spent on a job is 1 exp in its skill, and each level brings in more for the same energy (+5%, +10%, +20%, +40% by default).</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Wool per sheep, how fast it regrows, what 1 energy collects, the forest's and the mine's tier; the exp each skill level takes and what each level adds</dd>
@@ -50,7 +50,7 @@
           <h2>Resources</h2>
           <p class="scope">Sheep, forest and mine; this page only</p>
         </div>
-        <p class="hint">Sheep follow the cows' herd rules exactly (same settings, their own luck) and live on the pasture. Collecting comes after the food work in the default <b>Priority</b>, so it's the grown-ups without a cow or a field, or with energy left after theirs, who collect, and resources don't cost food. Each of them picks between their own (women wool, men stone) and timber, whichever there's less of; anyone whose pick isn't possible (no sheep or tile left for them, or barred in the <b>Jobs</b> table) turns to the next.</p>
+        <p class="hint">Sheep follow the cows' herd rules exactly (same settings, their own luck) and live on the pasture. Collecting comes after the food work in the default <b>Priority</b>, so it's the grown-ups without a cow or a field, or with energy left after theirs, who collect, and resources don't cost food. Each of them picks between their own (women wool, men stone) and timber, whichever there's less of; anyone whose pick isn't possible (no sheep or place left for them, or barred in the <b>Jobs</b> table) turns to the next.</p>
         <div class="param">
           <div class="param-head">
             <label for="fl-num">Wool per sheep</label>
@@ -84,6 +84,11 @@
             <span class="hint">The forest's tier</span>
             <div class="seg" role="group" aria-label="The forest's tier" id="ft-seg"></div>
           </div>
+          <div class="param-head">
+            <label for="fc-num" class="hint">Woodcutters at most</label>
+            <span class="num-wrap"><input id="fc-num" type="number"><span class="unit">a day</span></span>
+          </div>
+          <input id="fc-range" type="range" aria-label="The most people who may cut wood in a day">
         </div>
         <div class="param">
           <div class="param-head eq">
@@ -95,7 +100,12 @@
             <span class="hint">The mine's tier</span>
             <div class="seg" role="group" aria-label="The mine's tier" id="mt-seg"></div>
           </div>
-          <p class="hint">The forest and the mine never run out.</p>
+          <div class="param-head">
+            <label for="mc-num" class="hint">Quarriers at most</label>
+            <span class="num-wrap"><input id="mc-num" type="number"><span class="unit">a day</span></span>
+          </div>
+          <input id="mc-range" type="range" aria-label="The most people who may quarry in a day">
+          <p class="hint" id="crew-hint"></p>
         </div>
         <p class="hint" id="assign-hint"></p>
       </section>
@@ -145,6 +155,8 @@ VillagePage.start({
     { id: "spe", key: "stonePerEnergy" },
     { id: "ft", key: "forestTier", tiers: true },
     { id: "mt", key: "mineTier", tiers: true },
+    { id: "fc", key: "forestCrew" },
+    { id: "mc", key: "mineCrew" },
     { id: "ex1", key: "exp1" }, { id: "ex2", key: "exp2" }, { id: "ex3", key: "exp3" }, { id: "ex4", key: "exp4" },
     { id: "bn1", key: "bonus1" }, { id: "bn2", key: "bonus2" }, { id: "bn3", key: "bonus3" }, { id: "bn4", key: "bonus4" },
   ],
@@ -153,7 +165,8 @@ VillagePage.start({
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
-    $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. Each, in turn, looks at the stores (counting what's been brought in today): women go to the sheep or the forest, men to the mine or the forest, whichever of the two has less, their own on a tie; so timber keeps up with wool and with stone. One person to a place for the day: a shearer to each sheep with wool on it (the fullest first, getting at most its wool), a quarrier or woodcutter to each tile of the mine or the forest on the map. When the sheep are bare, women cut wood, then turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
+    $("crew-hint").innerHTML = `The forest and the mine never run out, but only so many can work them: once ${fmt(S.forestCrew)} ${S.forestCrew === 1 ? "person has" : "people have"} cut wood and ${fmt(S.mineCrew)} quarried today, the rest of the village has to find other work, or rest.`;
+    $("assign-hint").innerHTML = `<b>Who collects what.</b> Grown-ups with energy left after the food work go out until their energy or the day runs out. Each, in turn, looks at what was in store this morning: women go to the sheep or the forest, men to the mine or the forest, whichever of the two has less, their own on a tie; so timber keeps up with wool and with stone. One person to a place for the day: a shearer to each sheep with wool on it (the fullest first, getting at most its wool), at most ${fmt(S.mineCrew)} quarrier${S.mineCrew === 1 ? "" : "s"} and ${fmt(S.forestCrew)} woodcutter${S.forestCrew === 1 ? "" : "s"} a day, each keeping their place for the day. When the sheep are bare, women cut wood, then turn to the mine if the Jobs table lets them; men turn to the sheep only if it lets them. The mine is far on the default map: a quarrier still there at the end of the day walks home late, and hungry.`;
     const { VM } = c, K = { exp: [S.exp1, S.exp2, S.exp3, S.exp4], bonus: [S.bonus1, S.bonus2, S.bonus3, S.bonus4] };
     // Each level's exp in all
     let total = 0;

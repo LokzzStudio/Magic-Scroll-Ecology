@@ -13,6 +13,7 @@
     ["resources.html", "Resources", "Sheep, timber, stone &amp; skills"],
     ["craft.html", "Craft", "Weaving &amp; forging"],
     ["weather.html", "Weather", "Clouds &amp; wind"],
+    ["clothing.html", "Clothing", "Cold, rain, 衣 &amp; 笠"],
     ["rulebook.html", "Rulebook", "Game rules vs simulation"],
   ];
   const nav = document.querySelector("nav.sidenav");
@@ -69,7 +70,7 @@
           return `<li><span class="prio-n">${k + 1}</span><span class="prio-name"><span class="zh">${t.zh}</span><small>${t.en}${t.page ? ` · ${t.page} page on` : ""}</small></span>
             <span class="prio-move"><button type="button" class="btn" data-up="${k}"${k === 0 ? " disabled" : ""} aria-label="Move ${t.en} up">↑</button><button type="button" class="btn" data-down="${k}"${k === order.length - 1 ? " disabled" : ""} aria-label="Move ${t.en} down">↓</button></span></li>`;
         }).join("")}</ol>
-        <p class="hint">Each person goes down the list and takes the first job they may do (see Jobs) that has work and a free place for them (a cow, a field, a sheep, a tile of the mine or forest, the loom or the forge: one person each a day). Children only fill food work the grown-ups can't cover; with Education above it, they go to class first while their scholar teaches. Scholars teach when Education comes before Poetry, and only write poetry otherwise.</p>
+        <p class="hint">Each person goes down the list and takes the first job they may do (see Jobs) that has work and a free place for them (a cow, a field, a sheep, a place at the mine or forest, the loom or the forge: one person each a day). Children only fill food work the grown-ups can't cover; with Education above it, they go to class first while their scholar teaches. Scholars teach when Education comes before Poetry, and only write poetry otherwise.</p>
         <div class="btn-row"><button type="button" class="btn" data-act="defaults">Back to the default order</button><button type="button" class="btn primary" data-act="close">Done</button></div>`;
     };
     dlg.addEventListener("click", (e) => {

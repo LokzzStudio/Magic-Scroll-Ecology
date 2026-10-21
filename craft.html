@@ -25,6 +25,17 @@
   .tier-set td small { display: block; font-size: 11px; color: var(--muted); }
   .craft-how summary { cursor: pointer; font-size: 13px; font-weight: 600; }
   .craft-how p { margin-top: 6px; }
+  /* How a craft's tier is drawn: tiers N to UR in the gacha colours */
+  .ct-rule { font-family: var(--mono); font-size: 14px; margin: 4px 0 2px; }
+  .ct-pick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; margin: 10px 0 8px; }
+  .ct-pick input[type="range"] { flex: 1 1 160px; }
+  .ct-pick .muted { color: var(--muted); }
+  .ct-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 6px; }
+  .ct-bar span { display: grid; place-items: center; font-size: 12px; font-family: var(--mono); color: #fff; min-width: 0; white-space: nowrap; overflow: hidden; }
+  .ct1 { background: var(--muted); fill: var(--muted); } .ct2 { background: var(--cows); fill: var(--cows); } .ct3 { background: var(--sheep); fill: var(--sheep); }
+  .ct4 { background: var(--allee); fill: var(--allee); } .ct5 { background: var(--crash); fill: var(--crash); }
+  .ct-key { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .chart .ct-mark { stroke: var(--ink); stroke-width: 1.5; fill: none; }
 </style>
 </head>
 <body>
@@ -43,10 +54,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Craft</h1>
-    <p class="lede">The Resources page, plus <b>crafts</b> at the house. After the jobs above crafts in the <b>Priority</b> order, women <b>weave (紡織)</b> wool and timber into <b>衣 clothes</b> and <b>笠 hats</b>, and men <b>forge (鍛造)</b> stone and timber into <b>刀 blades</b> and <b>叉 hayforks</b>. Each craft has a <b>tier</b>, from its crafters and its materials. Crafts are used until they wear out: everyone wears 衣 and 笠, and collectors carry 刀 and farmers 叉, which bring in more for the same energy.</p>
+    <p class="lede">The Resources page, plus <b>crafts</b> at the house. After the jobs above crafts in the <b>Priority</b> order, women <b>weave (紡織)</b> wool and timber into <b>衣 clothes</b> and <b>笠 hats</b>, and men <b>forge (鍛造)</b> stone and timber into <b>刀 blades</b> and <b>叉 hayforks</b>. Each craft has a <b>tier</b>, from its crafters and its materials. Crafts are used until they wear out: everyone wears 衣 and 笠, and collectors carry 刀 and farmers 叉, which bring in more for the same energy. A collector's 刀 also counts toward the tier of the wool, timber and stone they bring in (no 刀: N).</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>What each craft takes and how long it lasts; each tier's 刀 / 叉 bonus</dd>
+        <dt>Set here</dt><dd>What each craft takes and how long it lasts; each tier's 刀 / 叉 bonus; the R 刀, 叉, 衣 and 笠 in store on day 1</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> (cows and sheep alike) · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="happiness.html">Happiness</a> · <a href="resources.html">Resources</a>, and the Jobs table</dd>
         <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
       </dl>
@@ -100,6 +111,14 @@
           </div>
         </div>
         <p class="hint">Lasts: the energy of use before it's gone (at the end of that day). 衣 and 笠: all the energy their wearer spends; 刀: collecting; 叉: farming.</p>
+        <h3 class="sub-h">To start with</h3>
+        <div class="craft-grid">
+          <label class="cf"><span>R 刀 in store</span><input id="sbl-num" type="number"></label>
+          <label class="cf"><span>R 叉 in store</span><input id="sfk-num" type="number"></label>
+          <label class="cf"><span>R 衣 in store</span><input id="scl-num" type="number"></label>
+          <label class="cf"><span>R 笠 in store</span><input id="sht-num" type="number"></label>
+        </div>
+        <p class="hint">In store on day 1, as if just made, and worn out like made ones; every page after this one starts with them too. An R 刀 or 叉 adds the R bonus below; an R 衣 or 笠 keeps off the cold or the rain on the Clothing page.</p>
         <h3 class="sub-h">Tiers</h3>
         <table class="mm-table tier-set">
           <thead><tr><th>Tier</th><th class="n">刀 / 叉 bonus</th></tr></thead>
@@ -111,7 +130,7 @@
             <tr><td><b>UR</b><small>Ultra Rare</small></td><td class="n"><input id="tb5-num" type="number" aria-label="Bonus a UR 刀 or 叉 gives"> %</td></tr>
           </tbody>
         </table>
-        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft's tier is <b>draw(the average of its materials' tier, its crafters' skill tier and their human tier)</b>: the average plus a random −0.49 to +0.50 (in steps of 0.01), rounded, from N up to <b>UR</b>. Materials and skill only go up to SSR, so UR takes SSR on all three, and even then it's 1 in 100.</p>
+        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft's tier is <b>round((score + roll) ÷ 2)</b>: halfway between its score (the average of its materials' tier, its crafters' skill tier and their human tier) and a lucky roll from 1.01 up to one more than the score. The better the inputs, the harder the roll pulls the tier down; UR takes SSR on all three, and even then it's 1 in 400. See <b>How a craft's tier is drawn</b>.</p>
         <details class="craft-how"><summary>How the loom and forge work</summary><p class="hint" id="craft-hint"></p></details>
       </section>
     </aside>
@@ -135,13 +154,63 @@ const IDS = { clothes: "cl", hat: "ht", blade: "bl", fork: "fk" }, MAT = { wool:
 VillagePage.start({
   key: "craft", work: "energy", inherit: true, school: true, happiness: true, resources: true, skills: true, craft: true,
   inputs: [
-    ...VillagePage.CRAFTS.map((it) => ({ id: IDS[it.id] + "l", key: it.id + "Wear" })),
+    ...VillagePage.CRAFTS.map((it) => ({ id: IDS[it.id] + "l", key: it.id + "Wear" })), { id: "sbl", key: "startBlades" }, { id: "sfk", key: "startForks" }, { id: "scl", key: "startClothes" }, { id: "sht", key: "startHats" },
     { id: "tb1", key: "bonus1" }, { id: "tb2", key: "bonus2" }, { id: "tb3", key: "bonus3" }, { id: "tb4", key: "bonus4" }, { id: "tb5", key: "bonus5" },
     ...VillagePage.CRAFTS.flatMap((it) => [...Object.keys(it.needs).map((m) => ({ id: IDS[it.id] + MAT[m], key: VillagePage.needKey(it, m) })), { id: IDS[it.id] + "e", key: it.id + "Energy" }]),
   ],
+  // How a craft's tier is drawn: a card after Crafts in store, with a score to try and every score's odds
+  setup(c) {
+    const { $, fmt, VM } = c, NAMES = ["", "N", "R", "SR", "SSR", "UR"];
+    document.querySelector('section[aria-label="Crafts"]').insertAdjacentHTML("afterend", `<section class="card" aria-label="Craft tier rule">
+      <div class="card-head"><h2>How a craft's tier is drawn</h2><p>Halfway between how good its inputs are and a lucky roll.</p></div>
+      <p class="ct-rule">Tier = round((Score + Roll) ÷ 2)</p>
+      <p class="hint">Score: the average of its materials' tier, its crafters' skill tier and their human tier, 1.00 (all N) to 4.00 (all SSR). Roll: any of 1.01, 1.02, … up to Score + 1, evenly. The roll always starts near the bottom, so the better the inputs, the harder it pulls the tier down: high tiers are rare and hard-won.</p>
+      <div class="ct-pick"><label for="ct-num">Score</label><input id="ct-range" type="range" min="1" max="4" step="0.01" aria-label="Score to try">
+        <span class="num-wrap"><input id="ct-num" type="number" min="1" max="4" step="0.01"></span><span class="muted" id="ct-rolls"></span></div>
+      <div class="ct-bar" id="ct-bar" role="img"></div>
+      <p class="hint" id="ct-line"></p>
+      <svg class="chart" id="ct-chart" height="230" role="img" aria-label="The chance of each tier at every score from 1 to 4"></svg>
+      <div class="legend">${NAMES.slice(1).map((n, t) => `<span><i class="ct-key ct${t + 1}"></i>${n}</span>`).join("")}</div>
+      <p class="hint" id="ct-hint"></p>
+    </section>`);
+    let score = 3.5;
+    const pc = (v) => (v <= 0 ? "0%" : v < 0.01 ? `${fmt(v * 100, 2)}%` : `${fmt(v * 100, v < 0.1 ? 1 : 0)}%`);
+    function draw() {
+      score = Math.min(4, Math.max(1, Math.round(Number(score) * 100) / 100 || 1));
+      $("ct-range").value = score; if (document.activeElement !== $("ct-num")) $("ct-num").value = score.toFixed(2);
+      const odds = VM.craftTierOdds(score), own = Math.floor(score + 0.5 + 1e-9), n = Math.round(score * 100);
+      $("ct-rolls").textContent = `rolls 1.01–${fmt(score + 1, 2)} (${fmt(n)} of them)`;
+      $("ct-bar").innerHTML = odds.map((p, t) => (t && p > 0 ? `<span class="ct${t}" style="flex:${p}" title="${NAMES[t]} ${pc(p)}">${p >= 0.08 ? `${NAMES[t]} ${pc(p)}` : ""}</span>` : "")).join("");
+      $("ct-bar").setAttribute("aria-label", odds.map((p, t) => (t && p > 0 ? `${NAMES[t]} ${pc(p)}` : "")).filter(Boolean).join(", "));
+      const down = odds.slice(1, own).reduce((a, b) => a + b, 0), up = odds.slice(own + 1).reduce((a, b) => a + b, 0);
+      $("ct-line").innerHTML = odds.map((p, t) => (t && p > 0 ? `${NAMES[t]} <b>${pc(p)}</b>` : "")).filter(Boolean).join(" · ") +
+        `. Against its own tier (${NAMES[own]}, the score rounded): down <b>${pc(down)}</b>, the same ${pc(1 - down - up)}, up <b>${pc(up)}</b>.`;
+      // Every score's odds, stacked N (bottom) to UR (top), the tried score marked
+      const svg = $("ct-chart"), H0 = 230, w = Math.max(280, svg.clientWidth || 640), m = { l: 40, r: 10, t: 10, b: 36 };
+      svg.setAttribute("viewBox", `0 0 ${w} ${H0}`);
+      const STEPS = 60, bw = (w - m.l - m.r) / (STEPS + 1), x = (sc) => m.l + ((sc - 1) / 3) * STEPS * bw, y = (v) => m.t + (1 - v) * (H0 - m.t - m.b);
+      let s = "";
+      for (const v of [0, 0.25, 0.5, 0.75, 1]) s += `<line class="gridline" x1="${m.l}" x2="${w - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v * 100)}%</text>`;
+      for (let k = 0; k <= STEPS; k++) {
+        const sc = 1 + (3 * k) / STEPS, o = VM.craftTierOdds(sc);
+        let acc = 0;
+        for (let t = 1; t <= 5; t++) if (o[t] > 0) { s += `<rect class="ct${t}" x="${(x(sc) + 0.5).toFixed(1)}" y="${y(acc + o[t]).toFixed(1)}" width="${Math.max(1, bw - 1).toFixed(1)}" height="${(y(acc) - y(acc + o[t])).toFixed(1)}"/>`; acc += o[t]; }
+      }
+      for (const sc of [1, 2, 3, 4]) s += `<text x="${x(sc) + bw / 2}" y="${H0 - m.b + 15}" text-anchor="middle">${fmt(sc, 1)} ${NAMES[sc]}</text>`;
+      s += `<rect class="ct-mark" x="${(x(score) - 1).toFixed(1)}" y="${m.t - 2}" width="${(bw + 2).toFixed(1)}" height="${H0 - m.t - m.b + 4}" rx="2"/>`;
+      s += `<text class="axis-title" x="${m.l + (w - m.l - m.r) / 2}" y="${H0 - 4}" text-anchor="middle">Score</text>`;
+      svg.innerHTML = s;
+      $("ct-hint").innerHTML = `For any score, the chance of at least tier T is about <b>2 × (Score + 1 − T) ÷ Score</b>. Low scores are lifted a little (a 1.4 is R more often than N); from 2 up, the roll drags the tier down, harder the higher it goes: all SSR (4.00) gives SSR 50% and SR 49.75%, and UR only with the very top roll, <b>1 in 400</b>. Below 4.00, UR can't happen. In these villages, materials are rarely better than SR (sheep, forest and mine are SR at most), so scores stay below about 3.7.`;
+    }
+    $("ct-range").addEventListener("input", (e) => { score = Number(e.target.value); $("ct-num").value = score.toFixed(2); draw(); });
+    $("ct-num").addEventListener("input", (e) => { if (e.target.value !== "" && isFinite(e.target.value)) { score = Number(e.target.value); draw(); } });
+    $("ct-num").addEventListener("change", draw);
+    new ResizeObserver(() => draw()).observe($("ct-chart"));
+    draw();
+  },
   drawPanel(c) {
     const { S, $, fmt } = c;
-    $("craft-hint").innerHTML = `A craft takes its materials up front, worst tier first, and is worked until it's done, even across days: by its crafter if they have energy left after the jobs above crafts in the <b>Priority</b> order, otherwise by the next idle grown-up who may. Each station has one crafter a day: when they stop, it waits for tomorrow. With nothing under way, a station's next item is the one the village has started fewest of; it waits until all that item's materials are in store, so clothes and hats take turns, and so do blades and hayforks. Its tier comes from its crafters' skill and Intelligence and its materials' tier.`
+    $("craft-hint").innerHTML = `A craft takes its materials up front, worst tier first, and is worked until it's done, even across days, by whoever has the station that day: the first grown-up who's free of the jobs above crafts in the <b>Priority</b> order. Each station has one crafter a day: when they stop, it waits for tomorrow. With nothing under way, a station's next item is the one the village has started fewest of; it waits until all that item's materials are in store, so clothes and hats take turns, and so do blades and hayforks. Its tier comes from its crafters' skill and Intelligence and its materials' tier.`
       + ` A standard worker (${fmt(c.VM.DAY_ENERGY)} energy a day) on their own, at skill level 0, finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / c.VM.DAY_ENERGY))} days; weavers and forgers get better at it as they go (see the Resources page's skills).`;
   },
 });

@@ -39,8 +39,8 @@
   // use it lasts (wear: 衣 and 笠 anything, 刀 collecting, 叉 farming). needKey: the setting for one of its
   // materials ("hatWood")
   const CRAFTS = [
-    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 30000 },
-    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 30000 },
+    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 3000 },
+    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 3000 },
     { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 200, wood: 100 }, wear: 3000 },
     { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 200 }, wear: 3000 },
   ];
@@ -49,13 +49,15 @@
   // its defaults and slider ranges from here; the pages after it read what it saved.
   const SPECS = {
     attribute: { key: "attribute-v4", fields: { power: [100, 0, 300, 5], intel: [100, 0, 300, 5], elderPenalty: [20, 0, 50, 5] } },
-    inheritance: { key: "inheritance-v9", fields: { share: [0.7, 0, 1, 0.05], variation: [15, 0, 50, 1], grow: [30, 0, 100, 5], powerBase: [100, 10, 1000, 10] } },
-    education: { key: "education-v4", fields: { knowPerEnergy: [1, 0.1, 5, 0.1], knowBase: [100, 10, 1000, 10], scholarShift: [10, 0, 50, 5] } },
+    inheritance: { key: "inheritance-v9", fields: { bornPower: [70, 0, 300, 5], share: [0.7, 0, 1, 0.05], variation: [15, 0, 50, 1], grow: [30, 0, 100, 5], powerBase: [100, 10, 1000, 10] } },
+    education: { key: "education-v4", fields: { maxScholars: [1, 1, 10, 1], knowPerEnergy: [1, 0.1, 5, 0.1], knowBase: [100, 10, 1000, 10], scholarShift: [10, 0, 50, 5] } },
     happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5] } },
-    resources: { key: "resources-v7", fields: { fleece: [100, 10, 500, 10], regrow: [10, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1],
+    resources: { key: "resources-v8", fields: { fleece: [300, 10, 500, 10], regrow: [30, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1], forestCrew: [3, 0, 20, 1], mineCrew: [2, 0, 20, 1],
       exp1: [100, 10, 1000000, 10], exp2: [1000, 10, 1000000, 10], exp3: [10000, 10, 1000000, 10], exp4: [100000, 10, 1000000, 10],
       bonus1: [5, 0, 500, 5], bonus2: [10, 0, 500, 5], bonus3: [20, 0, 500, 5], bonus4: [40, 0, 500, 5] } },
-    craft: { key: "craft-v10", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [300, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, it.wear * 10, 1000]]])),       bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
+    clothing: { key: "clothing-v3", fields: { coldK: [1, 0, 5, 0.05], clothStep: [5, 0, 20, 1], fireStep: [5, 0, 20, 1], fireHours: [2, 0.25, 4, 0.25], fireReach: [4, 0, 16, 1], fireEnergy: [1, 0, 20, 1],
+      hatStep: [2, 0, 10, 1], rainLimit: [5, 1, 11, 1] } },
+    craft: { key: "craft-v11", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [300, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, 300000, 1000]]])),       startBlades: [200, 0, 1000, 10], startForks: [200, 0, 1000, 10], startClothes: [200, 0, 1000, 10], startHats: [200, 0, 1000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
   // ×10 (scale), happiness's Intelligence step ÷ 10. Each new key takes from the first of its old keys
@@ -65,7 +67,7 @@
   // +1 Intelligence) keeps the rest of v2; Happiness v3 and v4 (each a new
   // default step) keep the rest; Craft v6 (new wear limits) keeps all but the wear,
   // v7 (new tool bonuses) all but the bonuses, v8 (new bonuses and wear) all but those; Resources v5
-  // (skill levels 0–4) all but the old skill fields; v6 (skill bonuses as yields, +10–40%) all but the bonuses, v7 (+5 / 10 / 20 / 40%) all but the first three.
+  // (skill levels 0–4) all but the old skill fields; v6 (skill bonuses as yields, +10–40%) all but the bonuses, v7 (+5 / 10 / 20 / 40%) all but the first three, v8 (300 wool a sheep, 30 a day) all but those two.
   // Inheritance v9 (variation 15%, base cost 100) and Education v4 (base cost 100) keep the rest.
   try {
     const keyed = (k) => { const v = JSON.parse(localStorage.getItem(k) || "null"); return v && typeof v === "object" ? v : null; };
@@ -93,6 +95,9 @@
       ["resources-v5", [() => scaled(keyed("resources-v4") || keyed("resources-v3") || {}, { expPerLevel: 0, perLevel: 0, exp2: 0, exp3: 0, bonus2: 0, bonus3: 0 })]],
       ["resources-v6", [() => scaled(keyed("resources-v5") || {}, { bonus1: 0, bonus2: 0, bonus3: 0, bonus4: 0 })]],
       ["resources-v7", [() => scaled(keyed("resources-v6") || {}, { bonus1: 0, bonus2: 0, bonus3: 0 })]],
+      ["resources-v8", [() => scaled(keyed("resources-v7") || {}, { fleece: 0, regrow: 0 })]],
+      ["clothing-v2", [() => scaled(keyed("clothing-v1") || {}, { fireHours: 0 })]],
+      ["clothing-v3", [() => scaled(keyed("clothing-v2") || {}, { coldK: 0 })]],
       ["craft-v2", [() => scaled(pick(resV2(), crafts), ten(...crafts))]],
       ["craft-v5", [() => pick(keyed("craft-v4") || keyed("craft-v3") || keyed("craft-v2") || {}, energies)]],
       ["craft-v6", [() => { const v5 = keyed("craft-v5") || {}; return pick(v5, Object.keys(v5).filter((k) => !k.endsWith("Wear"))); }]],
@@ -102,6 +107,7 @@
       ["craft-v9", [() => { const v8 = keyed("craft-v8") || {}; return pick(v8, Object.keys(v8).filter((k) => !["clothesWool", "hatWood", "bladeStone", "forkWood"].includes(k) && !k.endsWith("Energy"))); }]],
       // v10: tool bonuses 20 / 40 / 60 / 80 / 100%
       ["craft-v10", [() => { const v9 = keyed("craft-v9") || {}; return pick(v9, Object.keys(v9).filter((k) => !k.startsWith("bonus"))); }]],
+      ["craft-v11", [() => scaled(keyed("craft-v10") || {}, { clothesWear: 0, hatWear: 0 })]],
     ];
     for (const [key, from] of MOVES) {
       if (keyed(key)) continue;
@@ -126,17 +132,27 @@
     }
   }
   // Simulation options from the Education, Happiness, Resources and Craft pages' settings
-  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowBase: E.knowBase, shift: E.scholarShift });
-  const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier } });
+  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowBase: E.knowBase, shift: E.scholarShift, most: E.maxScholars });
+  const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier }, crew: { wood: R.forestCrew, stone: R.mineCrew } });
   const happinessOf = (H) => ({ iqStep: H.iqStep });
   const skillsOf = (K) => ({ exp: [K.exp1, K.exp2, K.exp3, K.exp4], bonus: [K.bonus1, K.bonus2, K.bonus3, K.bonus4] });
   const craftOf = (C) => ({ items: CRAFTS.map((it) => ({ id: it.id, job: it.job, needs: Object.fromEntries(Object.keys(it.needs).map((m) => [m, C[needKey(it, m)]])), energy: C[it.id + "Energy"], wear: C[it.id + "Wear"] })),
     bonus: [0, C.bonus1 / 100, C.bonus2 / 100, C.bonus3 / 100, C.bonus4 / 100, C.bonus5 / 100] });
+  // The cold (the Clothing page): the Weather page's sets, with each season's temperature figures from a
+  // ten-year run of it, worked out once for each set of settings
+  const coldStats = new Map();
+  function coldOf(K) {
+    const sets = WeatherModel.savedParams(), key = JSON.stringify(sets);
+    if (!coldStats.has(key)) coldStats.set(key, Object.fromEntries(WeatherModel.SEASONS.map((s) => [s.id, WeatherModel.simulate({ ...sets[s.id] }, 360 * 24 * 10, 1, 0).temp.stats])));
+    return { sets, stats: coldStats.get(key), k: K.coldK, clothStep: K.clothStep, fireStep: K.fireStep, fireHours: K.fireHours, fireReach: K.fireReach, fireEnergy: K.fireEnergy };
+  }
+  // The rain (the Clothing page too): the same weather, with its 笠 and limit
+  const rainOf = (K) => { const { sets, stats } = coldOf(K); return { sets, stats, hatStep: K.hatStep, limit: K.rainLimit }; };
 
   // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
   // (the Food page keeps the food and the rationing settings)
-  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft"];
-  const KEYS = { herd: [HerdModel.STORE_KEY], humans: [HumanModel.STORE_KEY], food: [FoodModel.STORE_KEY, RationModel.STORE_KEY], map: [MapModel.STORE_KEY],
+  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing"];
+  const KEYS = { herd: [HerdModel.STORE_KEY], humans: [HumanModel.STORE_KEY], food: [FoodModel.STORE_KEY, RationModel.STORE_KEY], map: [MapModel.STORE_KEY], weather: window.WeatherModel ? [WeatherModel.STORE_KEY] : [],
     ...Object.fromEntries(Object.entries(SPECS).map(([name, spec]) => [name, [spec.key]])) };
   const SHEEP_SALT = 500000;   // keeps the sheep's dice apart from the cows'
 
@@ -159,7 +175,7 @@
     if (def.key === "food") { c.F = FoodModel.savedParams() || { ...FoodModel.DEFAULTS }; c.R = RationModel.savedParams() || { ...RationModel.DEFAULTS }; }
     let perIcon = 1, cursor = null, playing = false, rafId = 0;
     // Macro or Micro mode, from the Attribute page on
-    const hasModes = at("attribute");
+    const hasModes = at("attribute"), microOnly = !!def.microOnly;   // microOnly: the Clothing page, whose weather is Micro's alone
     let mode = "macro";
     // Micro for the next recompute only: pressing Micro (or ?mode=micro in the address) asks for it
     let microAsked = hasModes && new URLSearchParams(location.search).get("mode") === "micro";
@@ -197,7 +213,8 @@
       if (at("education")) o.school = schoolOf(c.ED);
       if (at("happiness")) o.happiness = happinessOf(c.set.happiness);
       if (at("resources")) { o.resources = resourcesOf(c.RS); o.skills = skillsOf(c.RS); }
-      if (at("craft")) o.craft = craftOf(c.CR);
+      if (at("craft")) { o.craft = craftOf(c.CR); o.kit = { tier: 2, blade: c.CR.startBlades, fork: c.CR.startForks, clothes: c.CR.startClothes, hat: c.CR.startHats }; }
+      if (at("clothing")) { const K = c.set.clothing; o.cold = coldOf(K); o.rain = rainOf(K); }
       return o;
     }
 
@@ -258,7 +275,7 @@
         let got = false;
         while (performance.now() < until) {
           if (!cur) { const next = queued.entries().next(); if (next.done) break; cur = next.value; i = 0; n = 0; }
-          if (VM.run({ ...cur[1], seed: c.base + i, detailed: false, cowAdults: c.result.cows.runs[i].adults, cowTiers: c.result.cows.runs[i].tiers, sheepAdults: sheepOf(i), sheepTiers: sheepTiersOf(i) }).survived) n++;
+          if (VM.run({ ...cur[1], ...(microOnly ? { mode: "micro" } : {}), seed: c.base + i, detailed: false, cowAdults: c.result.cows.runs[i].adults, cowTiers: c.result.cows.runs[i].tiers, sheepAdults: sheepOf(i), sheepTiers: sheepTiersOf(i) }).survived) n++;
           if (++i === RUNS) { aliveCache.set(cur[0], n); queued.delete(cur[0]); cur = null; got = true; }
         }
         if (got) drawPanelsAll();
@@ -268,7 +285,7 @@
     }
     const sheepOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].adults : null), sheepTiersOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].tiers : null);
 
-    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills]);
+    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills, cfg.cold ? { ...cfg.cold, stats: null } : null, cfg.rain ? { ...cfg.rain, sets: null, stats: null } : null, cfg.kit || null]);
     let job = 0;   // each recompute's number, so a computation still under way stops once it's stale
     const SLICE_MS = 50;   // how long the villages run before the page gets a turn
     function recompute() {
@@ -276,7 +293,7 @@
       loadSettings();
       syncInputs();
       if (def.beforeRun) def.beforeRun(c);
-      if (hasModes) { mode = microAsked ? "micro" : "macro"; microAsked = false; syncMode(); }
+      if (hasModes) { mode = microOnly || microAsked ? "micro" : "macro"; microAsked = false; syncMode(); }
       const herdBase = S.seed * 7919, base = herdBase + HUMAN_SALT;
       const herd = (salt, tier) => {
         const runs = [];
@@ -300,15 +317,15 @@
         while (runs.length < RUNS && performance.now() < until) {
           const i = runs.length, one = { ...cfg, seed: base + i, cowAdults: herds.cows.runs[i].adults, cowTiers: herds.cows.runs[i].tiers, sheepAdults: herds.sheep ? herds.sheep.runs[i].adults : null, sheepTiers: herds.sheep ? herds.sheep.runs[i].tiers : null };
           runs.push(VM.run({ ...one, mode: isMicro ? "micro" : "macro", detailed: i === 0 }));
-          if (isMicro) macro.push(VM.run({ ...one, mode: "macro", detailed: false }));
+          if (isMicro && !microOnly) macro.push(VM.run({ ...one, mode: "macro", detailed: false }));
         }
         if (runs.length < RUNS) { showProgress(runs.length, isMicro); setTimeout(step, 0); return; }
         c.cfg = cfg; c.base = base;
         c.result.cows = herds.cows;
         if (herds.sheep) c.result.sheep = herds.sheep;
         c.result.people = { main: runs[0], runs, alive: runs.filter((r) => r.survived).length };
-        c.result.compare = isMicro ? { macro, micro: runs } : null;
-        finish(isMicro ? macro.filter((r) => r.survived).length : c.result.people.alive, token);
+        c.result.compare = isMicro && !microOnly ? { macro, micro: runs } : null;
+        finish(isMicro && !microOnly ? macro.filter((r) => r.survived).length : c.result.people.alive, token);
       };
       setTimeout(step, 0);
     }
@@ -375,7 +392,7 @@
       let s = "";
       if (at("craft")) s += section("resources", "Resources and skills", from("resources.html#resources", "Resources page"),
         `<dl class="params" id="res-params"></dl>
-        <p class="hint">After the food work, grown-ups with energy to spare collect, one to a sheep or a tile of the mine or forest: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 0 brings in more for the same energy: more milk, more rice from a field, more wool from a sheep.</p>
+        <p class="hint">After the food work, grown-ups with energy to spare collect, one to a sheep and a few at a time at the mine and the forest: women wool or timber, men stone or timber, whichever there's less of. Every energy spent on a job is 1 exp in its skill, and each level above 0 brings in more for the same energy: more milk, more rice from a field, more wool from a sheep.</p>
         <p class="source" id="res-source" hidden></p>${change("resources.html#resources", "Resources")}`);
       if (at("resources")) s += section("happiness", "Happiness", from("happiness.html#happiness", "Happiness page"),
         `<dl class="params" id="happy-params"></dl>
@@ -524,14 +541,14 @@
       }
       if ($("edu-params")) {
         $("edu-params").innerHTML = paramRows([
-          ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", `(max(100, Intelligence) − 100)² + ${fmt(c.ED.knowBase)}`], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
+          ["", "Most scholars", fmt(c.ED.maxScholars)], ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", `(max(100, Intelligence) − 100)² + ${fmt(c.ED.knowBase)}`], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
         ]);
         source("edu-source", c.saved.education);
       }
       if (at("education")) {
         $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(c.A.power)}</b> and <b>Intelligence ${fmt(c.A.intel)}</b>, from the Attribute page.`;
         $("inherit-params").innerHTML = paramRows([
-          ["", "Share passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
+          ["", "Power at birth", fmt(c.IH.bornPower)], ["", "Intelligence passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
           ["", "Coming-of-age bonus", `+${fmt(c.IH.grow)} each`],
           ["", "Extra milk per +1 Power", `(max(100, Power) − 100)² + ${fmt(c.IH.powerBase)}`], ["", "Hunger per −1 Power", `${fmt(c.VM.HUNGER_FOOD)} food a child goes without`],
         ]);
@@ -549,7 +566,7 @@
       if (hasModes) {
         s += card("A day, person by person", "A day, person by person", "Micro mode: run 1 on one day. Everyone wakes, eats, walks out and works on their own clock. Pick a day and press Play; click a row to find that person on the map.",
           `<div class="mv-pick"><button type="button" class="btn" id="mv-prev" aria-label="Day before">←</button><label for="mv-day">Day</label><input type="number" id="mv-day" min="1" max="${T}" step="1"><button type="button" class="btn" id="mv-next" aria-label="Day after">→</button><button type="button" class="btn" id="mv-farm" title="The day the Farm card is on">Farm's day</button><span class="mv-note" id="mv-note"></span></div><div id="micro-view" class="micro-view"></div>`, "micro-only");
-        s += card("Macro and Micro", "Macro and Micro", "The same 20 villages, worked out for the village as a whole (Macro) and person by person (Micro). Macro is what the other mode draws.",
+        if (!microOnly) s += card("Macro and Micro", "Macro and Micro", "The same 20 villages, worked out for the village as a whole (Macro) and person by person (Micro). Macro is what the other mode draws.",
           `<div class="table-scroll"><table class="mm-table" id="mm-table"></table></div><p class="hint" id="mm-hint"></p>`, "micro-only");
       }
       s += card("Farm", "Farm", "Press Play or drag the slider. Young animals and children are drawn smaller.",
@@ -737,16 +754,18 @@
 
     // Adults' average Power and Intelligence, with where they settle without extra food (or school)
     function drawAttrChart() {
-      const pm = c.result.people.main, IH = c.cfg.inherit, settle = IH.share < 1 ? IH.grow / (1 - IH.share) : Infinity;
+      const pm = c.result.people.main, IH = c.cfg.inherit;
+      const settles = [["Power", IH.bornPower + IH.grow], ["Int", IH.share < 1 ? IH.grow / (1 - IH.share) : Infinity]].filter(([, v]) => isFinite(v));
       const end = pm.extinctDay !== null ? pm.extinctDay : pm.last;
-      let yMax = Math.max(c.A.power, c.A.intel, isFinite(settle) ? settle : 0, 10);
+      let yMax = Math.max(c.A.power, c.A.intel, ...settles.map(([, v]) => v), 10);
       for (let i = 0; i <= end; i++) { if (pm.pow[i] > yMax) yMax = pm.pow[i]; if (pm.int[i] > yMax) yMax = pm.int[i]; }
       const f = frame("attr-chart", 190, yMax * 1.1), { x, y, W, m, step } = f;
       let s = f.s;
-      if (settle <= yMax * 1.1) {
-        s += `<line class="settle-line" x1="${m.l}" x2="${W - m.r}" y1="${y(settle)}" y2="${y(settle)}"/>`;
-        s += `<text class="reflabel" x="${W - m.r + 6}" y="${y(settle) + 4}">settle ${fmt(settle)}</text>`;
-      }
+      settles.forEach(([name, v], k) => {
+        const close = k === 1 && Math.abs(v - settles[0][1]) < yMax * 0.06;   // nudge a label that would sit on the other
+        s += `<line class="settle-line" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+        s += `<text class="reflabel" x="${W - m.r + 6}" y="${y(v) + (close ? (v < settles[0][1] ? 13 : -5) : 4)}">${name} ${fmt(v)}</text>`;
+      });
       const path = (arr) => {   // gaps where there are no adults
         let d = "", pen = false;
         for (let i = 0; i <= end; i += step) {
@@ -1183,17 +1202,19 @@
     document.querySelector("aside.panel").insertAdjacentHTML("beforeend", panelHTML());
     document.querySelector("main").innerHTML = mainHTML();
     if (hasModes) {
-      // Macro | Micro, next to Roll new runs
-      const seg = document.createElement("div");
-      seg.className = "seg mode-seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Simulation mode");
-      seg.innerHTML = `<button type="button" data-mode="macro" title="The village worked out as a whole each day: quick">Macro</button><button type="button" data-mode="micro" title="Person by person through the day, with a day viewer: slower">Micro</button>`;
-      document.querySelector(".top-actions").insertBefore(seg, $("reroll"));
-      seg.addEventListener("click", (e) => {
-        const b = e.target.closest("[data-mode]");
-        if (!b || b.dataset.mode === mode) return;
-        microAsked = b.dataset.mode === "micro";
-        recompute();
-      });
+      // Macro | Micro, next to Roll new runs (not on a Micro-only page)
+      if (!microOnly) {
+        const seg = document.createElement("div");
+        seg.className = "seg mode-seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Simulation mode");
+        seg.innerHTML = `<button type="button" data-mode="macro" title="The village worked out as a whole each day: quick">Macro</button><button type="button" data-mode="micro" title="Person by person through the day, with a day viewer: slower">Micro</button>`;
+        document.querySelector(".top-actions").insertBefore(seg, $("reroll"));
+        seg.addEventListener("click", (e) => {
+          const b = e.target.closest("[data-mode]");
+          if (!b || b.dataset.mode === mode) return;
+          microAsked = b.dataset.mode === "micro";
+          recompute();
+        });
+      }
       syncMode();
       $("mv-day").addEventListener("change", (e) => showDay(e.target.value));
       $("mv-prev").addEventListener("click", () => showDay((S.microDay || 100) - 1));

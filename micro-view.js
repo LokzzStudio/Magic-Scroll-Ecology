@@ -87,7 +87,8 @@
       return { full: Math.max(0, until - time) / S.active, lost };
     }
     // Hunger status: at HUNGRY_AT or less, out of the house; empty: losing life
-    const statusOf = (a, st, fl) => (st.inside || t < a.w ? "" : fl.full <= 1e-9 ? "empty" : fl.full <= DayModel.HUNGRY_AT + 1e-9 ? "hungry" : "");
+    // Hypothermia (the Clothing page) shows over hunger
+    const statusOf = (a, st, fl) => (a.cold && a.cold.some(([s0, s1]) => t >= s0 && t < s1) ? "cold" : st.inside || t < a.w ? "" : fl.full <= 1e-9 ? "empty" : fl.full <= DayModel.HUNGRY_AT + 1e-9 ? "hungry" : "");
     const nameOf = (a) => {
       const sex = a.sex === HumanModel.MALE;
       if (a.kind === "scholar") return `Scholar (${sex ? "man" : "woman"})`;
@@ -102,8 +103,11 @@
         case "early": return "Gone in early: hungry, no energy left";
         case "eat": return st.meal === "breakfast" ? "Breakfast by the house" : "Lunch by the house";
         case "idle": return a.e0 > 0 && st.e > 0.01 ? "Waiting by the house" : "Done for the day, by the house";
-        case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
+        case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : st.why === "warm" ? "Walking home to warm up" : st.why === "rain" ? "Walking home out of the rain" : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
         case "class": return "In class";
+        case "cold-in": return "Staying in from the cold";
+        case "rain-in": return "Staying in from the rain";
+        case "fire": return `Lighting a fire at ${PLACE[st.at]}`;
         default: return `${JOB[st.job] || st.job}${st.at !== "H" ? ` at ${PLACE[st.at]}` : ""}`;
       }
     };
@@ -117,7 +121,7 @@
       const ctx = canvas.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, size, size);
-      const col = { ground: cssVar("--ground"), line: cssVar("--line"), surface: cssVar("--surface"), ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), crash: cssVar("--crash"), muted: cssVar("--muted"), allee: cssVar("--allee") };
+      const col = { ground: cssVar("--ground"), line: cssVar("--line"), surface: cssVar("--surface"), ink: cssVar("--ink"), men: cssVar("--men"), women: cssVar("--women"), crash: cssVar("--crash"), muted: cssVar("--muted"), allee: cssVar("--allee"), cows: cssVar("--cows") };
       for (let i = 0; i < W * H; i++) {
         const c = tr.S.tiles[i], x = (i % W) * tile, y = Math.floor(i / W) * tile;
         if (c === ".") { ctx.globalAlpha = 1; ctx.fillStyle = col.ground; ctx.fillRect(x + 1, y + 1, tile - 2, tile - 2); continue; }
@@ -149,7 +153,7 @@
           const status = statusOf(a, st, fullAt(a, t));
           ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
           ctx.fillStyle = a.sex === HumanModel.MALE ? col.men : col.women; ctx.fill();
-          ctx.lineWidth = status ? 2.4 : 1; ctx.strokeStyle = status === "empty" ? col.crash : status === "hungry" ? col.allee : col.ink; ctx.stroke();
+          ctx.lineWidth = status ? 2.4 : 1; ctx.strokeStyle = status === "cold" ? col.cows : status === "empty" ? col.crash : status === "hungry" ? col.allee : col.ink; ctx.stroke();
           if (k === selected) { ctx.beginPath(); ctx.arc(cx, cy, rr + 3, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = col.ink; ctx.stroke(); }
           const g = st.s === "work" || st.s === "class" || st.s === "teach" || st.s === "poetry" ? GLYPH[st.job] : st.s === "eat" ? "食" : "";
           if (g && rr >= 6) { ctx.fillStyle = col.surface; ctx.font = `${Math.round(rr * 1.15)}px sans-serif`; ctx.fillText(g, cx, cy + 0.5); }
@@ -174,7 +178,7 @@
         R.f.style.width = `${Math.min(100, 100 * fl.full)}%`;
         const status = statusOf(a, st, fl);
         R.f.classList.toggle("empty", status === "empty");
-        R.tag.hidden = !status; R.tag.textContent = status === "empty" ? "Starving" : "Hungry"; R.tag.className = `mv-tag ${status}`;
+        R.tag.hidden = !status; R.tag.textContent = status === "cold" ? "Hypothermia" : status === "empty" ? "Starving" : "Hungry"; R.tag.className = `mv-tag ${status}`;
         R.lost.textContent = fl.lost > 0.005 ? `−${fmt(fl.lost, 2)} d` : "";
         R.row.classList.toggle("sel", k === selected);
       });

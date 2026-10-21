@@ -117,10 +117,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Weather</h1>
-    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Four settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, and how much of the time is cloudy. Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C. A water level from 0 to 10 rises with rain and falls in dry hours: at 0 it's a drought, at 10 a flood.</p>
+    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Five settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, how much of the time is cloudy, and how long a spell lasts (the longer, the likelier the sky you see is still the same half a day later). Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C. A water level from 0 to 10 rises with rain and falls in dry hours: at 0 it's a drought, at 10 a flood.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness, how changeable the rain is, and the temperature; for the year, the season ramp and the water level's settings</dd>
+        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness and spell length, how changeable the rain is, and the temperature; for the year, the season ramp and the water level's settings</dd>
         <dt>Follows</dt><dd><a href="map.html">Map</a> (drawn under the sky)</dd>
         <dt>Used by</dt><dd class="none">No page yet</dd>
       </dl>
@@ -182,12 +182,20 @@
           <input id="cl-range" type="range" aria-label="Share of the time in cloudy spells">
           <p class="hint" id="cl-hint"></p>
         </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="sp-num">Spell length</label>
+            <span class="num-wrap"><input id="sp-num" type="number"><span class="unit">h</span></span>
+          </div>
+          <input id="sp-range" type="range" aria-label="Hours a clear spell and a cloudy one last together, on average">
+          <p class="hint" id="sp-hint"></p>
+        </div>
         <p class="hint" id="load-hint"></p>
       </section>
       <section class="panel-section" id="rain">
         <div class="section-head">
           <h2>Rain</h2>
-          <p class="scope"><span class="season-name"></span>'s weather; this page only, for now</p>
+          <p class="scope"><span class="season-name"></span>'s weather; also felt on the <b><a href="clothing.html">Clothing</a></b> page</p>
         </div>
         <p class="hint">With n clouds in the sky, the chance it's raining is <b>log₁₀(n)</b>; while it rains, the rainfall is <b>n</b>.</p>
         <ul class="chance" id="chance" aria-label="Chance of rain by number of clouds"></ul>
@@ -203,7 +211,7 @@
       <section class="panel-section" id="temperature">
         <div class="section-head">
           <h2>Temperature</h2>
-          <p class="scope"><span class="season-name"></span>'s weather; this page only, for now</p>
+          <p class="scope"><span class="season-name"></span>'s weather; also felt on the <b><a href="clothing.html">Clothing</a></b> page</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -401,7 +409,7 @@
   const hasSim = (S) => sims.has(JSON.stringify(S));
 
   // ---------- Settings ----------
-  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"], ["dsw", "swing"]];
+  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["sp", "spell"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"], ["dsw", "swing"]];
   function syncInputs() {
     for (const [id, key] of INPUTS) {
       const [lo, hi, step] = WM.LIMITS[key], range = $(id + "-range"), num = $(id + "-num");
@@ -537,7 +545,9 @@
       $("wv-hint").innerHTML = `The wind holds a speed for about ${fmt(WM.WIND_HOURS)} h, then shifts to a new one at random around the average. With these settings it's between <b>${fmt(xs[400], 1)}</b> and <b>${fmt(xs[3600], 1)}</b> tiles/h 80% of the time. Calm stretches hold clouds overhead and let them pile up, gusts clear them away: the more volatile, the more clouds on average and the more full skies.`;
     }
     $("cl-hint").innerHTML = P.cloudiness >= 100 ? "Always a cloudy spell: clouds come all the time, evenly at random." : P.cloudiness <= 0 ? "Always a clear spell: no clouds ever come." :
-      `The share of time in cloudy spells. A clear spell and a cloudy one last ${fmt(WM.SPELL_HOURS)} hours together on average, so now a cloudy spell lasts about <b>${hours(sp.cloudy)}</b> and a clear one <b>${hours(sp.clear)}</b> (each a random length around that). The lower it is, the more the clouds come in bunches.`;
+      `The share of time in cloudy spells: how much of the time is cloudy, not how long it stays so (that's the spell length). The lower it is, the more the clouds come in bunches.`;
+    $("sp-hint").innerHTML = P.cloudiness >= 100 || P.cloudiness <= 0 ? "With cloudiness at " + fmt(P.cloudiness) + "% the spell never changes." :
+      `A clear spell and a cloudy one last this long together on average, so now a cloudy spell lasts about <b>${hours(sp.cloudy)}</b> and a clear one <b>${hours(sp.clear)}</b> (each a random length around that). The longer, the steadier the weather: a sky that's cloudy now is likelier to be cloudy ${WM.LAG_HOURS} h later, and a clear one clear (the figures in How many clouds). Shorter: the sky changes its mind more often, with the same share of cloudy time.`;
     $("rc-hint").innerHTML = `The sky keeps a rain die, re-rolled on average every <b>${hours(1 / P.rainChange)}</b>: it's raining whenever the die is under the chance for the clouds there are. So rain starts or stops when the die is re-rolled, or when clouds come or go. Higher: rain comes and goes in short showers; lower: longer rains and longer dry stretches. The share of time raining stays the same.`;
     const ramped = WM.seasonAverages(ALL)[WM.SEASONS.findIndex((s) => s.id === season)];
     $("tmp-hint").innerHTML = `The season's temperature away from its ends; below 0 °C, rain falls as snow.` + (ALL.rampDays > 0 ? ` Through the year it ramps to its neighbours' near the season's ends (Season ramp), so the season as a whole averages <b>${fmt(ramped, 1)}</b> °C.` : "");
@@ -582,10 +592,11 @@
       `<tr class="feel"><th></th>${S.map((s) => cell(s.id, s.feel)).join("")}</tr>` +
       `<tr class="grp"><th colspan="5">Settings</th></tr>` +
       row("Cloud spawn rate", (x) => `${fmt(x.spawnRate, 2)}/h`) + row("Average wind speed", (x) => fmt(x.wind, 1)) + row("Wind volatility", (x) => fmt(x.windVol, 1)) +
-      row("Cloudiness", (x) => `${fmt(x.cloudiness)}%`) + row("Rain changeability", (x) => `${fmt(x.rainChange, 2)}/h`) +
+      row("Cloudiness", (x) => `${fmt(x.cloudiness)}%`) + row("Spell length", (x) => `${fmt(x.spell)} h`) + row("Rain changeability", (x) => `${fmt(x.rainChange, 2)}/h`) +
       row("Average temperature", (x) => `${fmt(x.temp)} °C`) + row("Temperature spread", (x) => `${fmt(x.tempSd, 1)} °C`) + row("Cloud cooling", (x) => `${fmt(x.cloudCool, 1)} °C`) + row("Rain cooling", (x) => `${fmt(x.rainCool, 1)} °C`) + row("Daily swing", (x) => `${fmt(x.swing, 1)} °C`) +
       `<tr class="grp"><th colspan="5">Weather</th></tr>` +
-      res("Average clouds", (s) => fmt(WM.meanOf(s.share), 1)) + res("Clear sky", (s) => pct(s.share[0])) + res("Raining", (s) => pct(wet(s))) +
+      res("Average clouds", (s) => fmt(WM.meanOf(s.share), 1)) + res("Clear sky", (s) => pct(s.share[0])) +
+      res(`Clouds, still ${WM.LAG_HOURS} h later`, (s) => pct(s.steady.cloudy)) + res(`Clear, still ${WM.LAG_HOURS} h later`, (s) => pct(s.steady.clear)) + res("Raining", (s) => pct(wet(s))) +
       res("Rainfall while raining", (s) => (wet(s) > 0 ? fmt(fall(s) / wet(s), 1) : "—")) + res("A rain lasts", (s) => (s.starts ? hours((wet(s) * s.hours) / s.starts) : "—")) +
       res("Dry between rains", (s) => (s.stops ? hours(((1 - wet(s)) * s.hours) / s.stops) : "—")) +
       res("Average temperature", (s) => `${fmt(s.temp.mean, 1)} °C`) +
@@ -652,7 +663,7 @@
       s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/><text class="axis-title" x="${m.l + (w - m.l - m.r) / 2}" y="${H0 - 4}" text-anchor="middle">Water level at the end of the day</text>`;
       svg.innerHTML = s;
     }
-    $("water-run-hint").innerHTML = r ? `Over ${fmt(r.years)} years in a row: a drought ${fmt(r.droughtSpells, 1)} times a year on average, lasting about <b>${fmt(r.droughtDays, 1)}</b> days (days with some drought, in a row); a flood ${fmt(r.floodSpells, 1)} times a year, about <b>${fmt(r.floodDays, 1)}</b> days. In all, ${pd(r.drought)} of drought and ${pd(r.flood)} of flood. The level carries over from one season to the next, so a dry summer leaves autumn short of water, and a wet winter can carry a flood into spring. Droughts and floods are rare, so one century is a small sample: another can differ by several points (over 1,000 years the defaults give a drought in about 9% of years and a flood in about 11%).` : "";
+    $("water-run-hint").innerHTML = r ? `Over ${fmt(r.years)} years in a row: a drought ${fmt(r.droughtSpells, 1)} times a year on average, lasting about <b>${fmt(r.droughtDays, 1)}</b> days (days with some drought, in a row); a flood ${fmt(r.floodSpells, 1)} times a year, about <b>${fmt(r.floodDays, 1)}</b> days. In all, ${pd(r.drought)} of drought and ${pd(r.flood)} of flood. The level carries over from one season to the next, so a dry summer leaves autumn short of water, and a wet winter can carry a flood into spring. Droughts and floods are rare, so one century is a small sample: another can differ by several points (over 1,000 years the defaults give a drought in about 11% of years and a flood in about 10%).` : "";
   }
   // The same year's temperatures, each day a dot by its type
   function drawYearTemp(ready) {
@@ -757,7 +768,8 @@
       .map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
     $("rain-hint").innerHTML = sim ? `Average rainfall over all the time, dry included: <b>${fmt(fall(sim), 2)}</b> an hour. Rain needs at least 2 clouds (log₁₀(1) = 0), and it always rains under a full sky. A rain's rainfall changes as clouds blow in and out; it lasts on average until the die is re-rolled high or the clouds thin out, whichever is first. Averages over the simulated years.` : "";
     $("facts").innerHTML = [["Average clouds", v((s) => fmt(WM.meanOf(s.share), 1))], ["Clear sky (0)", v((s) => pct(s.share[0]))], ["Full sky (10)", v((s) => pct(s.share[MAX]))],
-      ["Clouds turned away", v((s) => pct(s.lost / Math.max(1, s.came + s.lost)))]].map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
+      ["Clouds turned away", v((s) => pct(s.lost / Math.max(1, s.came + s.lost)))],
+      [`Clouds now, still clouds ${WM.LAG_HOURS} h later`, v((s) => pct(s.steady.cloudy))], [`Clear now, still clear ${WM.LAG_HOURS} h later`, v((s) => pct(s.steady.clear))]].map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
   }
 
   // ---------- Sky ----------

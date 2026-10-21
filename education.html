@@ -26,10 +26,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Education</h1>
-    <p class="lede">The Inheritance page, with a school. The village appoints its adults with the highest <b>Intelligence (智力)</b> as <b>Scholars (文人)</b>, one for each child, but only while it can spare them from the food work, and a scholar does no food work until they become an elder: they teach the children, and spend any energy the lessons leave on poetry (吟詩). The children are split evenly among the scholars, and a class shares its lesson out: a scholar with two children gives each half as much. A child takes home knowledge by how much energy they keep up with, and it buys Intelligence for life, dearer the brighter they already are. The brightest scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
+    <p class="lede">The Inheritance page, with a school. The village appoints its adult with the highest <b>Intelligence (智力)</b> as its <b>Scholar (文人)</b>, if it can spare them from the food work, and a scholar does no food work until they become an elder: they teach the children, and spend any energy the lessons leave on poetry (吟詩). A class shares its lesson out: a scholar with two children gives each half as much. More scholars are possible (Most scholars): then the children are split evenly among them. A child takes home knowledge by how much energy they keep up with, and it buys Intelligence for life, dearer the brighter they already are. The brightest scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Knowledge effectiveness, the base cost of +1 Intelligence and the scholar adjustment</dd>
+        <dt>Set here</dt><dd>Most scholars, knowledge effectiveness, the base cost of +1 Intelligence and the scholar adjustment</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a></dd>
         <dt>Used by</dt><dd><a href="happiness.html">Happiness</a> builds on it</dd>
       </dl>
@@ -43,7 +43,15 @@
           <h2>Education</h2>
           <p class="scope">Scholars teach the children; this page only</p>
         </div>
-        <p class="hint">Each morning, while there are fewer scholars than children (or none at all), the village appoints its adult with the highest Intelligence as <b>Scholar (文人)</b>, if it can spare them: without the scholars and the children, there must still be a full crew of 4 grown-ups who may tend the fields. Once appointed, a scholar stays, even if food work later runs short or the children grow up, until they become an elder (then they're like any other elder) or die. Scholars do no other work: any energy the lessons leave, they spend on poetry. In the job, they work with more Intelligence and less Power (the scholar adjustment). Every child comes to class, to a scholar drawn each day: the children are split as evenly as can be. The brightest scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
+        <div class="param">
+          <div class="param-head">
+            <label for="ms-num">Most scholars</label>
+            <span class="num-wrap"><input id="ms-num" type="number"><span class="unit">scholars</span></span>
+          </div>
+          <input id="ms-range" type="range" aria-label="The most scholars the village appoints">
+          <p class="hint" id="ms-hint"></p>
+        </div>
+        <p class="hint">Each morning, while there are fewer scholars than this and than the children (or none at all), the village appoints its adult with the highest Intelligence as <b>Scholar (文人)</b>, if it can spare them: without the scholars and the children, there must still be a full crew of 4 grown-ups who may tend the fields, and from a second scholar on, enough milkers left to milk the village's need. Once appointed, a scholar stays, even if food work later runs short or the children grow up, until they become an elder (then they're like any other elder) or die. Scholars do no other work: any energy the lessons leave, they spend on poetry. In the job, they work with more Intelligence and less Power (the scholar adjustment). Every child comes to class; with more than one scholar, each day the children are split among them as evenly as can be, at random. The brightest scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
         <div class="param">
           <div class="param-head eq">
             <label for="kpe-num">Knowledge effectiveness</label>
@@ -93,6 +101,7 @@
 VillagePage.start({
   key: "education", work: "energy", inherit: true, school: true,
   inputs: [
+    { id: "ms", key: "maxScholars" },
     { id: "kpe", key: "knowPerEnergy" },
     { id: "kpb", key: "knowBase" },
     { id: "sch", key: "scholarShift" },
@@ -103,11 +112,14 @@ VillagePage.start({
   drawPanel(c) {
     const { S, A, IH, UP, $, fmt, VM } = c, school = VillagePage.schoolOf(S), p = { M: UP.M, E: UP.E };
     const cost = (v) => VM.nextIntelCost(v, school);
+    $("ms-hint").innerHTML = S.maxScholars > 1
+      ? `Up to <b>${fmt(S.maxScholars)}</b> scholars, one for each child, while the village can spare them. Each one is a worker taken off the food work for good, so a small village can't afford many; in the game, appointing more is the player's call.`
+      : `One scholar teaches every child, and advises on food. In the game, appointing more is the player's call; here, raise this to see what more would do.`;
     $("sch-hint").innerHTML = `In the job, a scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>, and advises on food with that Intelligence. It isn't passed on to their children.`;
     $("kc-hint").innerHTML = `Knowledge buys Intelligence one point at a time as it comes, for life. The next point costs <b>(max(100, Intelligence) − 100)² + ${fmt(S.knowBase)}</b> knowledge (the base cost, plus the square of how far Intelligence is past 100): ${fmt(cost(100))} up to Intelligence 100, ${fmt(cost(110))} at 110, ${fmt(cost(130))} at 130, ${fmt(cost(150))} at 150, ${fmt(cost(200))} at 200.`;
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const scholar = { power: A.power, intel: A.intel, age: UP.M };
-    const child = { power: Math.floor(IH.share * A.power + 1e-9), intel: Math.floor(IH.share * A.intel + 1e-9), age: 0, knowledge: 0, learned: 0 };
+    const child = { power: IH.bornPower, intel: Math.floor(IH.share * A.intel + 1e-9), age: 0, knowledge: 0, learned: 0 };
     const sc = VM.scholarDay(scholar, p, 1, school), w = VM.workDay(child.power, child.intel);
     // On average over wake-up times (the Map page's day), and if the two woke together
     const t = VM.teach({ ...scholar }, [{ ...child }], p, 1, school, c.travel), together = VM.teach({ ...scholar }, [{ ...child }], p, 1, school);

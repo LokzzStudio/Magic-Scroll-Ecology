@@ -18,7 +18,8 @@
   // ×10 and k ÷ 100, so the same share missing costs the same; those saved before k became 10 (v9),
   // without k.
   // v12: the birth chance became 0.003; v13: elder at 3,240 days. Saved settings keep everything else.
-  const STORE_KEY = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
+  // v14: 6 men and 6 women to start
+  const STORE_KEY = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
   try {
     if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
@@ -34,7 +35,9 @@
     const v11 = JSON.parse(localStorage.getItem(V11) || "null");
     if (!localStorage.getItem(V12) && v11 && typeof v11 === "object") { delete v11.p; localStorage.setItem(V12, JSON.stringify(v11)); }
     const v12 = JSON.parse(localStorage.getItem(V12) || "null");
-    if (!localStorage.getItem(STORE_KEY) && v12 && typeof v12 === "object") { delete v12.E; localStorage.setItem(STORE_KEY, JSON.stringify(v12)); }
+    if (!localStorage.getItem(V13) && v12 && typeof v12 === "object") { delete v12.E; localStorage.setItem(V13, JSON.stringify(v12)); }
+    const v13 = JSON.parse(localStorage.getItem(V13) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v13 && typeof v13 === "object") { delete v13.men; delete v13.women; localStorage.setItem(STORE_KEY, JSON.stringify(v13)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
@@ -166,7 +169,7 @@
   }
 
   // Starting population, set on the Humans page and also used by the Food Model and every page after it
-  const START = { men: 5, women: 5 };
+  const START = { men: 6, women: 6 };
 
   // The starting men and women the Humans page last saved, or null
   function savedStart() {

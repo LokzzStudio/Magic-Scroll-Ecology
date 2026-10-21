@@ -5,7 +5,7 @@
   // Model parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
     r: 0.02,  // intrinsic growth rate, per day
-    K: 10,    // carrying capacity, animals
+    K: 11,    // carrying capacity, animals
     A: 2,     // Allee threshold, animals
     L: 360,   // average lifespan, days
     S: 15,    // lifespan spread, ± percent of L
@@ -13,8 +13,12 @@
               // Only a label: young animals still count toward births and crowding.
   };
 
-  // Where the cow page saves its sliders
-  const STORE_KEY = "cow-herd-params-v8";
+  // Where the cow page saves its sliders. v9 (carrying capacity 11) keeps the rest of v8.
+  const STORE_KEY = "cow-herd-params-v9";
+  try {
+    const v8 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem("cow-herd-params-v8") || "null");
+    if (v8 && typeof v8 === "object") { delete v8.K; localStorage.setItem(STORE_KEY, JSON.stringify(v8)); }
+  } catch (e) {}
 
   function rng(seed) {
     let a = seed >>> 0;

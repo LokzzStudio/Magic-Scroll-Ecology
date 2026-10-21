@@ -24,8 +24,8 @@
 
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    ricePerEnergy: 1,  // rice effectiveness: rice 1 energy of tending grows (72,000 a year)
-    foodStart: 200000, // food in store on day 0; it never spoils
+    ricePerEnergy: 1.2, // rice effectiveness: rice 1 energy of tending grows
+    foodStart: 500000, // food in store on day 0; it never spoils
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
     milkPerEnergy: 1, // milk effectiveness: milk 1 energy collects
@@ -35,7 +35,7 @@
   DEFAULTS.riceYear = riceYearOf(DEFAULTS);   // follows from ricePerEnergy; not a setting of its own
 
   // Slider ranges, [min, max]
-  const LIMITS = { ricePerEnergy: [0.1, 10], foodStart: [0, 500000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10], fieldCap: [5000, 200000] };
+  const LIMITS = { ricePerEnergy: [0.1, 10], foodStart: [0, 1000000], milkKeep: [0, 30], riceKeep: [0, 1080], milkPerEnergy: [0.1, 10], fieldCap: [5000, 200000] };
 
   // Milk one standard working day collects (a cow has no limit); where nobody
   // works, what each adult cow gives (on average: each day's milk is whole, fractions carried over)
@@ -47,7 +47,12 @@
 
   // Where the Food Model page saves its sliders; before rice became 1 per energy (v5, kept but for
   // that); at 10 energy a day (v4), and before that at an older scale (v2)
-  const STORE_KEY = "food-params-v6", V5_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
+  // v7: starting food 500,000 and rice effectiveness 1.2; saved settings keep everything else
+  const STORE_KEY = "food-params-v7", V6_KEY = "food-params-v6", V5_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
+  try {
+    const v6 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem(V6_KEY) || "null");
+    if (v6 && typeof v6 === "object") { delete v6.foodStart; delete v6.ricePerEnergy; localStorage.setItem(STORE_KEY, JSON.stringify(v6)); }
+  } catch (e) {}
   const TEN_FIELDS = ["foodStart", "fieldCap"];   // ×10 at 100 energy a day
 
   // Food in store: stores.milk[a] / stores.rice[a] = food made a days ago that is still good, and
