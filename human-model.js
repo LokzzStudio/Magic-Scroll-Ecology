@@ -3,7 +3,8 @@
 (function () {
   // Human parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    p: 0.003,  // chance a fertile couple has a child each day
+    p: 0.005,  // chance a fertile couple conceives each day
+    G: 300,    // pregnancy, days: the child is born this long after it's conceived
     M: 360,    // adult at age, days. Younger people are children.
     E: 3240,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
     L: 3600,   // average lifespan, days
@@ -18,8 +19,8 @@
   // ×10 and k ÷ 100, so the same share missing costs the same; those saved before k became 10 (v9),
   // without k.
   // v12: the birth chance became 0.003; v13: elder at 3,240 days. Saved settings keep everything else.
-  // v14: 6 men and 6 women to start
-  const STORE_KEY = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
+  // v14: 6 men and 6 women to start; v15: births through pregnancy, the chance 0.005
+  const STORE_KEY = "human-params-v15", V14 = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
   try {
     if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
@@ -37,7 +38,9 @@
     const v12 = JSON.parse(localStorage.getItem(V12) || "null");
     if (!localStorage.getItem(V13) && v12 && typeof v12 === "object") { delete v12.E; localStorage.setItem(V13, JSON.stringify(v12)); }
     const v13 = JSON.parse(localStorage.getItem(V13) || "null");
-    if (!localStorage.getItem(STORE_KEY) && v13 && typeof v13 === "object") { delete v13.men; delete v13.women; localStorage.setItem(STORE_KEY, JSON.stringify(v13)); }
+    if (!localStorage.getItem(V14) && v13 && typeof v13 === "object") { delete v13.men; delete v13.women; localStorage.setItem(V14, JSON.stringify(v13)); }
+    const v14 = JSON.parse(localStorage.getItem(V14) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v14 && typeof v14 === "object") { delete v14.p; localStorage.setItem(STORE_KEY, JSON.stringify(v14)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
@@ -127,24 +130,34 @@
       }
     }
 
-    const chances = chancesOf ? chancesOf(people) : null, couples = chances ? chances.length : census(people, p).couples;
+    // Tonight's chances of conceiving: [chance, the woman], one a couple (chancesOf: the Happiness page's
+    // couples; without it, the first adult women in village order, as many as there are couples, at p),
+    // only for a woman who can conceive (canConceive)
+    const chances = chancesOf ? chancesOf(people) : (() => { const n = census(people, p).couples; return people.filter((h) => h.sex === FEMALE && stage(h, p) === "adult").slice(0, n).filter((f) => canConceive(f, p)).map((f) => [p.p, f]); })();
     let born = 0, males = 0, females = 0;   // the living boys + men and girls + women, tonight's newborns too
     const x = p.X ?? 1;
     for (const h of people) if (h.age < p.E) h.sex === MALE ? males++ : females++;
-    for (let i = 0; i < couples; i++) {
-      if (rand() < (chances ? chances[i] : p.p)) {
-        const all = males + females + 2 * x, life = lifespan(p, rand), sex = rand() < (all > 0 ? (females + x) / all : 0.5) ? MALE : FEMALE;
-        sex === MALE ? males++ : females++;
-        people.push({ id: state.nextId++, sex, age: 0, life, life0: life });
-        born++;
-      }
-    }
+    const birth = () => {
+      const all = males + females + 2 * x, life = lifespan(p, rand), sex = rand() < (all > 0 ? (females + x) / all : 0.5) ? MALE : FEMALE;
+      sex === MALE ? males++ : females++;
+      people.push({ id: state.nextId++, sex, age: 0, life, life0: life });
+      born++;
+    };
+    // Mothers whose time has come give birth, in village order; then the couples conceive (with no
+    // pregnancy, G = 0, the child is born at once)
+    const n0 = people.length;
+    for (let i = 0; i < n0; i++) { const f = people[i]; if (f.carry > 0 && --f.carry === 0) birth(); }
+    for (const [chance, f] of chances) if (rand() < chance) { if ((p.G || 0) > 0) f.carry = p.G; else birth(); }
     state.people = people;
-    return { born, died, hungry, couples, need, ration, lost, lostAll };
+    return { born, died, hungry, couples: chances.length, need, ration, lost, lostAll };
   }
 
-  // Children a couple can expect if both live out their adult years well fed
-  const childrenPerCouple = (p) => p.p * Math.max(0, Math.min(p.L, p.E) - p.M);
+  // A woman can conceive while she's an adult, not already expecting, and young enough to give birth
+  // before she's an elder (her age + G under E)
+  const canConceive = (f, p) => !(f.carry > 0) && f.age >= p.M && f.age + (p.G || 0) < p.E;
+  // Children a couple can expect if both live out their adult years well fed: each takes 1 ÷ p days to
+  // conceive on average, then G days to be born, over the years she can conceive
+  const childrenPerCouple = (p) => (p.p > 0 ? Math.max(0, Math.min(p.L, p.E) - (p.G || 0) - p.M) / (1 / p.p + (p.G || 0)) : 0);
 
   // How many adults the daily food fully feeds (or 1 ÷ CHILD_FOOD times as many children)
   const fedCapacity = (p) => (p.c > 0 ? p.F / p.c : Infinity);
@@ -184,5 +197,5 @@
     }
   }
 
-  window.HumanModel = { DEFAULTS, STORE_KEY, MALE, FEMALE, lifespan, startPeople, stage, census, CHILD_FOOD, ELDER_FOOD, needOf, foodNeed, rationFor, hungerLoss, stepPeople, childrenPerCouple, fedCapacity, savedParams, START, savedStart };
+  window.HumanModel = { DEFAULTS, STORE_KEY, MALE, FEMALE, lifespan, startPeople, stage, census, CHILD_FOOD, ELDER_FOOD, needOf, foodNeed, rationFor, hungerLoss, stepPeople, canConceive, childrenPerCouple, fedCapacity, savedParams, START, savedStart };
 })();

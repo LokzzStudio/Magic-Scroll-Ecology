@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="ecology.css">
+<link rel="stylesheet" href="village.css">
+<style>
+  /* The water chart: each month's land and field water levels, and the well */
+  .chart .land-line { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 3; }
+  .chart .field-line { fill: none; stroke: var(--cows); stroke-width: 1.8; }
+  .chart .well-bar { fill: var(--allee); opacity: 0.35; }
+  .chart .best-band { fill: var(--cows); opacity: 0.08; }
+  .key-land { width: 16px; border-top: 2px dashed var(--muted); display: inline-block; vertical-align: middle; }
+  .key-field { width: 16px; border-top: 2px solid var(--cows); display: inline-block; vertical-align: middle; }
+  .key-well { width: 10px; height: 10px; display: inline-block; background: var(--allee); opacity: 0.6; border-radius: 2px; }
+  .key-best { width: 14px; height: 10px; display: inline-block; background: var(--cows); opacity: 0.2; border-radius: 2px; }
+  .growth-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 2px; }
+  .growth-table th, .growth-table td { padding: 2px 3px; text-align: center; border-bottom: 1px solid var(--line); }
+  .growth-table th:first-child, .growth-table td:first-child { text-align: left; white-space: nowrap; }
+  .growth-table input { width: 100%; min-width: 0; box-sizing: border-box; font-family: var(--mono); font-size: 12px; text-align: center; padding: 3px 1px; }
+  .growth-scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<nav class="sidenav" aria-label="Pages" data-page="watering.html"></nav>
+<script src="roles-model.js"></script>
+<script src="site.js"></script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="top-actions">
+      <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
+      <button type="button" class="btn reset" id="reset" title="Put this page, the pages it follows, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>Watering</h1>
+    <p class="lede">The Clothing page, with <b>water</b> in the fields. Each of the 4 fields has its own water level, from <b>0</b> (dry) to <b>10</b> (flooded). Once a field has been tended this year it grows rice <b>by itself</b>, by its water: best at levels <b>3–4</b>, nothing at 1 or 6–7, and rice is lost when it's far too dry or too wet. Tending uses water up, so when a farmer finds their field at level <b>3</b> or lower they fetch water: from the <b>well (井)</b> if it has some and is nearer, otherwise from the <b>river (川)</b>, which never runs dry. The well refills from the ground, by the land's water level (the Weather page's), and from the rain. A field nobody tends goes back to the land's level within the day.</p>
+    <aside class="head-card" aria-label="Where this page's settings come from">
+      <dl>
+        <dt>Set here</dt><dd>The well's size and how full the ground fills it; the water tending uses, and the level farmers fetch water at; the rice a field grows each day at each water level</dd>
+        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> (the well 井 and the river 川) · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="happiness.html">Happiness</a> · <a href="resources.html">Resources</a> · <a href="craft.html">Craft</a> · <a href="weather.html">Weather</a> (the land's water level and the rain) · <a href="clothing.html">Clothing</a>, and the Jobs table</dd>
+        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+      </dl>
+    </aside>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Settings">
+      <section class="panel-section" id="well">
+        <div class="section-head">
+          <h2>The well</h2>
+          <p class="scope">Its water, from the ground and the rain; this page only</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wc-num">Holds</label>
+            <span class="num-wrap"><input id="wc-num" type="number"><span class="unit">water</span></span>
+          </div>
+          <input id="wc-range" type="range" aria-label="The most water the well holds">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wg-num">The ground fills it to</label>
+            <span class="num-wrap"><input id="wg-num" type="number"><span class="unit">water</span></span>
+          </div>
+          <input id="wg-range" type="range" aria-label="How full the ground's water fills the well">
+          <p class="hint" id="well-hint"></p>
+        </div>
+      </section>
+      <section class="panel-section" id="fields">
+        <div class="section-head">
+          <h2>The fields</h2>
+          <p class="scope">Their water and what it grows; this page only</p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wu-num">Tending uses</label>
+            <span class="num-wrap"><input id="wu-num" type="number"><span class="unit">levels an energy</span></span>
+          </div>
+          <input id="wu-range" type="range" aria-label="Water levels each energy of tending uses">
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="wa-num">Fetch water at</label>
+            <span class="num-wrap"><input id="wa-num" type="number"><span class="unit">level or lower</span></span>
+          </div>
+          <input id="wa-range" type="range" aria-label="The field water level at which a farmer fetches water from the well">
+          <p class="hint" id="use-hint"></p>
+        </div>
+        <h3 class="sub-h">Rice a seeded field grows a day</h3>
+        <div class="growth-scroll"><table class="growth-table" aria-label="Rice a seeded field grows each day at each water level">
+          <thead><tr><th>Level</th></tr></thead>
+          <tbody><tr><td>Rice</td></tr></tbody>
+        </table></div>
+        <p class="hint" id="growth-hint"></p>
+        <dl class="foods" id="water-compare"></dl>
+      </section>
+    </aside>
+    <main></main>
+  </div>
+</div>
+
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script src="food-model.js"></script>
+<script src="ration-model.js"></script>
+<script src="map-model.js"></script>
+<script src="weather-model.js"></script>
+<script src="day-model.js"></script>
+<script src="village-model.js"></script>
+<script src="micro-model.js"></script>
+<script src="micro-view.js"></script>
+<script src="village-page.js"></script>
+<script>
+// Watering: the Clothing page with the fields' water, the well, and rice that grows by itself
+// The growth table's inputs, one a level (built before the page wires its inputs)
+{
+  const head = document.querySelector(".growth-table thead tr"), row = document.querySelector(".growth-table tbody tr");
+  for (let k = 0; k <= 10; k++) {
+    head.insertAdjacentHTML("beforeend", `<th>${k}</th>`);
+    row.insertAdjacentHTML("beforeend", `<td><input id="g${k}-num" type="number" aria-label="Rice a seeded field grows a day at water level ${k}"></td>`);
+  }
+}
+VillagePage.start({
+  key: "watering", work: "energy", inherit: true, school: true, happiness: true, resources: true, skills: true, craft: true,
+  inputs: [
+    { id: "wc", key: "wellCap" }, { id: "wg", key: "wellGround" }, { id: "wu", key: "waterUse" }, { id: "wa", key: "waterAt" },
+    ...Array.from({ length: 11 }, (_, k) => ({ id: "g" + k, key: "g" + k })),
+  ],
+  // The same villages without the fields' water (as on the Clothing page)
+  compare: (c) => { c.result.waterCompare = { now: c.result.people.alive, dry: c.aliveWith({ water: null }) }; },
+  // The Water card, after Numbers over time
+  setup(c) {
+    document.querySelector('section[aria-label="Numbers over time"]').insertAdjacentHTML("afterend", `<section class="card" aria-label="Water">
+      <div class="card-head"><h2>Water</h2><p>Run 1 month by month: the land's water level, the fields' (their average), and the well.</p></div>
+      <svg class="chart" id="water-chart" height="220" role="img" aria-label="Each month's land and field water levels, and the water in the well, over the run"></svg>
+      <div class="legend"><span><i class="key-land"></i>The land's level</span><span><i class="key-field"></i>The fields' level</span><span><i class="key-best"></i>Best for rice</span><span><i class="key-well"></i>The well (right axis)</span></div>
+      <div class="food-rows"><dl class="rows" id="water-run"></dl><dl class="rows" id="water-all"></dl></div>
+      <p class="hint" id="water-hint"></p>
+    </section>`);
+  },
+  drawPanel(c) {
+    const { S, $, fmt } = c, pm = c.result.people.main, runs = c.result.people.runs;
+    const lived = (r) => (r.extinctDay !== null ? r.extinctDay : r.last);   // days the village had people
+    const G = Array.from({ length: 11 }, (_, k) => S["g" + k]), best = Math.max(...G), bestAt = G.map((g, k) => (g === best ? k : -1)).filter((k) => k >= 0);
+    $("well-hint").innerHTML = `The ground fills the well at half the land's water level an hour (at the land's level 5, 2.5 an hour), but only until it holds ${fmt(S.wellGround)}; rain fills it at its rainfall an hour (snow too), up to ${fmt(S.wellCap)}. It refills over each day's 24 hours, after the day's work, and starts full.`;
+    $("use-hint").innerHTML = `Each energy of tending uses ${fmt(S.waterUse, 2)} of its field's level: a standard day (100 energy) uses ${fmt(100 * S.waterUse, 1)}. A farmer who finds their field at level ${fmt(S.waterAt, 1)} or lower (when they get there, and after each unit) walks for 1 water and back with it, +1 level: to the well if it has water and is no further than the river, otherwise to the river, which never runs dry. A field nobody tends today goes back to the land's level by the end of the day.`;
+    $("growth-hint").innerHTML = `A field is seeded once it's been tended this year; until the harvest (day 181) it grows this much rice each day by itself, at its water level rounded down (best at ${bestAt.join(" and ")}: +${fmt(best)}), on top of what tending grows. On day 181 the year's water growth joins the standing rice, which never goes below 0. Fields are numbered in the order farmers take them each day.`;
+    const k = c.result.waterCompare;
+    $("water-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With the fields' water", k.now, k.now >= k.dry], ["Without it (as on Clothing)", k.dry, k.dry >= k.now]]);
+    // Run 1, month by month
+    const svg = $("water-chart"), H0 = 220, w = Math.max(280, svg.clientWidth || 640), m = { l: 34, r: 44, t: 10, b: 26 }, last = lived(pm), M = 30, bins = Math.max(1, Math.ceil(last / M));
+    svg.setAttribute("viewBox", `0 0 ${w} ${H0}`);
+    const land = [], fld = [], well = [];
+    for (let b = 0; b < bins; b++) {
+      let a = 0, f = 0, wl = 0, n = 0;
+      for (let d = b * M + 1; d <= Math.min(last, (b + 1) * M); d++) if (isFinite(pm.land[d])) { a += pm.land[d]; f += pm.fieldWater[d]; wl += pm.well[d]; n++; }
+      land.push(n ? a / n : NaN); fld.push(n ? f / n : NaN); well.push(n ? wl / n : NaN);
+    }
+    const x = (b) => m.l + (b / bins) * (w - m.l - m.r), y = (v) => m.t + (1 - v / 10) * (H0 - m.t - m.b), yw = (v) => m.t + (1 - v / Math.max(1, S.wellCap)) * (H0 - m.t - m.b);
+    let s = "";
+    if (bestAt.length) s += `<rect class="best-band" x="${m.l}" width="${w - m.l - m.r}" y="${y(Math.max(...bestAt) + 1)}" height="${y(Math.min(...bestAt)) - y(Math.max(...bestAt) + 1)}"/>`;
+    for (let v = 0; v <= 10; v += 2) s += `<line class="gridline" x1="${m.l}" x2="${w - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    s += `<text class="wind-axis" x="${w - m.r + 6}" y="${yw(S.wellCap) + 4}">${fmt(S.wellCap)}</text><text class="wind-axis" x="${w - m.r + 6}" y="${yw(0) + 4}">0</text>`;
+    const years = last / c.YEAR, every = [1, 2, 5, 10, 20, 50].find((e) => ((w - m.l - m.r) * e) / Math.max(1, years) >= 48) || 50;
+    for (let yr = 0; yr <= years + 1e-9; yr += every) s += `<text x="${x((yr * c.YEAR) / M)}" y="${H0 - m.b + 15}" text-anchor="middle">${yr ? `y${fmt(yr)}` : "0"}</text>`;
+    const bw = Math.max(0.6, (w - m.l - m.r) / bins - 0.4);
+    well.forEach((v, b) => { if (isFinite(v) && v > 0) s += `<rect class="well-bar" x="${x(b).toFixed(1)}" y="${yw(v).toFixed(1)}" width="${bw.toFixed(2)}" height="${(yw(0) - yw(v)).toFixed(1)}"/>`; });
+    const path = (arr, cls) => { const p = arr.map((v, b) => (isFinite(v) ? `${x(b + 0.5).toFixed(1)} ${y(v).toFixed(1)}` : null)).filter(Boolean); return p.length ? `<path class="${cls}" d="M${p.join(" L")}"/>` : ""; };
+    s += path(land, "land-line") + path(fld, "field-line");
+    svg.innerHTML = s;
+    // Run 1 and all 20 villages
+    let wr = 0, tr = 0, rv = 0, pd = 0, dry = 0, days = 0;
+    for (let d = 1; d <= last; d++) { wr += pm.waterRice[d]; tr += pm.trips[d]; rv += pm.riverTrips[d]; pd += pm.counts[d - 1]; if (isFinite(pm.fieldWater[d])) { days++; if (pm.fieldWater[d] <= S.waterAt) dry++; } }
+    const perYear = (v, n) => fmt((v / Math.max(1, n)) * c.YEAR, 1);
+    $("water-run").innerHTML = `<dt class="sub">Run 1</dt>
+      <dt>Rice the water grew a year</dt><dd>${perYear(wr, last)}</dd>
+      <dt>Water fetched a year</dt><dd>${perYear(tr, last)}</dd>
+      <dt>Of it, from the river</dt><dd>${tr > 0 ? `${fmt((100 * rv) / tr, 0)}%` : "—"}</dd>
+      <dt>Days the fields were dry (level ${fmt(S.waterAt, 1)} or lower, on average)</dt><dd>${days ? `${fmt((100 * dry) / days, 1)}%` : "—"}</dd>`;
+    let aW = 0, aT = 0, aD = 0, aP = 0;
+    for (const r of runs) { aW += r.tally.waterRice; aT += r.tally.trips; aD += lived(r); aP += r.tally.peopleDays; }
+    $("water-all").innerHTML = `<dt class="sub">All ${fmt(runs.length)} villages</dt>
+      <dt>Rice the water grew a village a year</dt><dd>${perYear(aW, aD)}</dd>
+      <dt>Water fetched a person a year</dt><dd>${perYear(aT, aP)}</dd>`;
+    $("water-hint").innerHTML = `Tending lowers a field's water and the well tops it up, so tended fields sit low, often in the best band; a field left alone follows the land, which in a drought (0) or a flood (10) costs rice. When the well runs dry, farmers walk the longer way to the river instead.`;
+  },
+});
+</script>
+<script src="rules.js"></script>
+</body>
+</html>

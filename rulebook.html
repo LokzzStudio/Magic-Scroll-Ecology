@@ -67,7 +67,8 @@
           <ul>
             <li>People live about 3,600 days (±10%). Children until day 360, adults until 3,240, then elders.</li>
             <li>An adult man and woman pair for life; only couples of two adults have children.</li>
-            <li>Each person's chance of a child is 0.003 a day × happiness ÷ 50; a couple's is the average of the two.</li>
+            <li>A child is born 300 days after it's conceived, if the mother lives (the father doesn't matter by then). A woman expecting doesn't conceive again, and conceives only while she could give birth before she's an elder. So a new couple has no child in their first 300 days. <span class="who you">you: Humans page</span></li>
+            <li>Each person's chance of conceiving is 0.005 a day × happiness ÷ 50; a couple's is the average of the two.</li>
             <li>Births lean toward the scarcer sex: a boy with chance (females + X) ÷ (males + females + 2X), birth balance X = 1.</li>
             <li>A day's food need: 100 for an adult, 70 for a child, 80 for an elder.</li>
             <li>Hunger shortens life: the longer someone is out with an empty stomach in a day, the more days it costs, growing with the square of the hungry time.</li>
@@ -102,7 +103,7 @@
           <h3>Food <a href="farm.html">Food</a></h3>
           <ul>
             <li>1 energy milking an adult cow gives 1 milk. One milker to a cow a day, but no limit on what one cow gives. Calves (under 60 days) give none.</li>
-            <li>4 fields, one person to each a day. Tending (days 1–180): 1 energy grows 1.2 rice, at most 50,000 a field a year. Harvest (days 181–270): 1 energy brings in 25 rice; whatever's left after day 270 is lost.</li>
+            <li>4 fields, one person to each a day. Tending (days 1–180): 1 energy grows 1 rice, at most 50,000 a field a year. Harvest (days 181–270): 1 energy brings in 25 rice; whatever's left after day 270 is lost.</li>
             <li>Milk keeps 1 day, rice 360. The village starts with 500,000 food that never spoils.</li>
           </ul>
         </div>
@@ -134,8 +135,8 @@
           <ul>
             <li>Women weave 衣 clothes (200 wool + 100 timber) and 笠 hats (100 wool + 200 timber); men forge 刀 blades (200 stone + 100 timber) and 叉 hayforks (100 stone + 200 timber). Each takes 300 energy.</li>
             <li>One loom and one forge, one crafter at each a day.</li>
-            <li>A hayfork adds to farming effectiveness and a blade to collecting: +20% to +100%, by tier. Clothes and hats are worn by everyone (on the Clothing page, only against the cold and the rain).</li>
-            <li>Tools wear out with use: each after 3,000 energy (clothes and hats: all their wearer spends; blades: collecting; hayforks: farming).</li>
+            <li>A hayfork adds to tending effectiveness, and a blade to the harvest (收割) and to collecting: +20% to +100%, by tier. Clothes and hats are worn by everyone (on the Clothing page, only against the cold and the rain).</li>
+            <li>Tools wear out with use: each after 3,000 energy (clothes and hats: all their wearer spends; blades: the harvest and collecting; hayforks: tending).</li>
             <li>The village starts with 200 R blades, hayforks, clothes and hats in store. <span class="who you">you: Craft page</span></li>
           </ul>
         </div>
@@ -158,6 +159,14 @@
           </ul>
         </div>
         <div class="topic">
+          <h3>Watering <a href="watering.html">Watering</a></h3>
+          <ul>
+            <li>The river (川) never runs dry. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
+            <li>Each field has its own water level, 0–10. Tending uses 0.1 level per energy; a field nobody tends goes back to the land's level within the day.</li>
+            <li>A field tended this year grows rice by itself, by its water level: +20 a day at levels 3–4, +10 at 2 and 5, nothing at 1, 6 and 7, and it loses rice when too dry or too wet (−100 at 0 or 10).</li>
+          </ul>
+        </div>
+        <div class="topic">
           <h3>The rain <a href="clothing.html">Clothing</a></h3>
           <ul>
             <li>Rain comes in levels from 0 to 10. Out of the house it slows the work: at level R, by <b>(R ÷ 10)²</b> (level 3: 9%, level 4: 16%).</li>
@@ -169,7 +178,8 @@
         <div class="topic">
           <h3>The cold <a href="clothing.html">Clothing</a></h3>
           <ul>
-            <li>The house is warm. Out of it, below 0 °C (as it feels), people fall into <b>hypothermia</b>: each spell takes days off their life, more the longer it lasts, like hunger, but starting again from nothing each time they warm up.</li>
+            <li>The house is warm. Out of it, below 0 °C (as it feels), people fall into <b>hypothermia</b>: each spell takes days off their life, more the colder it feels (× (felt ÷ 10)²) and the longer it lasts, like hunger, but starting again from nothing each time they warm up.</li>
+            <li>Below 0 °C their work out of the house slows by (felt ÷ 10)², as in the rain. At −5 °C or colder they go home.</li>
             <li>A 衣 feels warmer by 5 °C a tier (N +5 to UR +25).</li>
             <li>A fire, lit with 1 timber and 1 energy, burns 2 hours and warms everyone within 4 tiles by 5 °C a tier of its timber (N +5 to SSR +20), on top of any 衣.</li>
           </ul>
@@ -251,12 +261,20 @@
           </ul>
         </div>
         <div class="topic">
+          <h3>Fetching water <a href="watering.html">Watering</a></h3>
+          <ul>
+            <li>A farmer who finds their field at level 3 or lower fetches 1 water (+1 level): from the well if it has water and is nearer, otherwise from the river. <span class="who">fixed</span></li>
+            <li>They look when they get to the field and after each bit of work. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
           <h3>Facing the rain <a href="clothing.html">Clothing</a></h3>
           <ul>
             <li>Light rain is put up with: they work on, slower. <span class="who">fixed</span></li>
             <li>In heavy rain at work, they finish what's in hand and go home. <span class="who">fixed</span></li>
             <li>Leaving the house in heavy rain, they put on the 笠 of the lowest tier that brings it under 5, saving the better ones. <span class="who">fixed</span></li>
             <li>With no 笠 good enough, they stay in and look again on the hour. <span class="who">fixed</span></li>
+            <li>Indoors from the weather they still eat breakfast and lunch, and hunger still counts, at half the toll. <span class="who">fixed</span></li>
             <li>The work's cut goes by the rain as each bit of work starts. <span class="who">fixed</span></li>
           </ul>
         </div>
@@ -265,8 +283,8 @@
           <ul>
             <li>Leaving the house on a freezing day, they put on the 衣 of the lowest tier that's warm enough, saving the warmer ones. <span class="who">fixed</span></li>
             <li>If no 衣 is enough, they wear the warmest there is and take a timber of the lowest tier that makes up the rest, to light where they work. <span class="who">fixed</span></li>
-            <li>With neither, they stay in and look again on the hour. <span class="who">fixed</span></li>
-            <li>Freezing at work, they finish what's in hand and walk home to warm up. <span class="who">fixed</span></li>
+            <li>If it would still feel −5 °C or colder, they stay in and look again on the hour; warmer than that, they go and put up with it. <span class="who">fixed</span></li>
+            <li>At −5 °C or colder at work, they finish what's in hand and walk home to warm up. <span class="who">fixed</span></li>
           </ul>
         </div>
         <div class="topic">

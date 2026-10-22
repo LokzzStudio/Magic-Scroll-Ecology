@@ -9,7 +9,7 @@
     { id: "H", name: "House" }, { id: "F", name: "Farm" }, { id: "P", name: "Pasture" },
     { id: "T", name: "Forest" }, { id: "M", name: "Mine" }, { id: "W", name: "Well" }, { id: "R", name: "River" },
   ];
-  const PLACES = ["F", "P", "T", "M"];
+  const PLACES = ["F", "P", "T", "M", "W", "R"];   // places people walk to (the well and the river: for water, the Watering page)
 
   // The starting map: two houses, farm 2 steps away, pasture 4, forest 7, mine 18 (at 1 minute a tile), a
   // well and a river

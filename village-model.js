@@ -31,6 +31,8 @@
 //             each season's temperature figures) gives each hour's temperature; out of the house below 0 °C
 //             (felt: 衣 and fires add warmth) people suffer hypothermia, at a toll like hunger's (Clothing)
 //   kit       null, or { blade, fork, clothes, hat, tier }: that many 刀, 叉 (Craft), 衣 and 笠 (Clothing) of that tier in store on day 1
+//   water     null, or { cap, ground, at, use, growth }: the well (cap) and the 4 fields' water (Watering),
+//             with the Clothing page's weather: see the Watering section of run
 //   rain      null, or { sets, stats, hatStep, limit }: in Micro mode, the same weather's rainfall hour by
 //             hour (0–10, snow too) cuts work out of the house by (felt ÷ 10)², felt = the rainfall less
 //             hatStep × their 笠's tier; from limit on they go home and stay in, unless a 笠 brings it
@@ -150,20 +152,24 @@
     // energy does effectiveness × its work. ops: what someone could still do at a place, and doing
     // `amount` of it (collect: carried home, 搬運), both in energy at a yield job (mult: what each brings
     // in) and in work elsewhere.
-    const effOf = (w, skill) => { const t = toolFor(w, skill); return (eff ? eff(w.h, skill) : 1) + (t ? t.bonus : 0); };
+    const effOf = (w, skill) => { const t = skill === "farm" && !tending ? w.b : toolFor(w, skill); return (eff ? eff(w.h, skill) : 1) + (t ? t.bonus : 0); };   // the harvest (收割) uses a 刀
     const isYield = (skill) => skill === "milk" || skill === "wool" || skill === "wood" || skill === "stone" || (skill === "farm" && tending);
     const ops = {
       can: (w, place, collect, skill) => canAt(w.c, place, w.e, w.r, S, collect) * (isYield(skill) ? 1 : effOf(w, skill)),
       work: (w, place, amount, collect, skill) => {
         const c = w.c, yieldJob = isYield(skill), m = yieldJob ? 1 : effOf(w, skill);
-        if (c.wx) { c.wetE = 0; c.fireE = 0; }
+        if (c.wx) { c.wetE = 0; c.rainE = 0; c.fireE = 0; }
         const done = amount > 1e-9 ? workAt(c, place, amount / m, w.r, S, collect) : 0;
         w.e -= done;
         w.wf = 1;
         if (c.wx) {   // the weather: the rain's cut, and fires lit
           w.e -= c.fireE;
           if (done > 0) w.wf = c.wetE / done;
-          if (weather.wet && place !== "H" && done > 0) { const full = done * effOf(w, skill); weather.wet.outWork += full * w.wf; weather.wet.lost += full * (1 - w.wf); }
+          if (place !== "H" && done > 0) {   // what the rain and the cold took
+            const full = done * effOf(w, skill), rain = c.rainE / done;
+            if (weather.wet) { weather.wet.outWork += full * w.wf; weather.wet.lost += full * (1 - rain); }
+            if (weather.chill) weather.chill.coldCut += full * (rain - w.wf);
+          }
         }
         if (w.e < 1e-9) w.e = 0;   // a crumb left over from dividing by effectiveness is nothing
         if (w.x && done > 0) w.x[SKILL_IX[skill]] += done;
@@ -198,11 +204,13 @@
     // tending, a field's daily limit; the day's hayfork is taken before they see what they can do, and put
     // back if they do nothing
     const farmOne = (w) => {
-      const fresh = tools && w.fork === undefined;
-      if (fresh) w.fork = extra.takeTool("fork");
+      const key = tending ? "fork" : "b", fresh = tools && w[key] === undefined;   // tending takes a 叉, the harvest a 刀
+      if (fresh) w[key] = extra.takeTool(tending ? "fork" : KNIFE);
+      w.c.fieldIx = tending ? fields : -1;   // the field they're on (the Watering page's water)
       const e0 = w.e, done = work(w, "F", Math.min(can(w, "F", !tending, "farm"), fieldLeft(), tending ? fieldE : Infinity), !tending, "farm");
-      if (done <= 0) { if (fresh) { extra.untake(w.fork); w.fork = undefined; } return 0; }
-      if (tools) extra.farmed(w, e0 - w.e);
+      w.c.fieldIx = -1;
+      if (done <= 0) { if (fresh) { extra.untake(w[key]); w[key] = undefined; } return 0; }
+      if (tools) extra.farmed(w[key], e0 - w.e);
       if (tending) { tendBase += done; tendEnergy += done * ops.mult(w, "farm") * w.wf; }
       farmWork += done / DAY_ENERGY; farmEnergy += done; fields++;
       return done;
@@ -222,7 +230,7 @@
     for (const w of pool) if (w.f > 0) { if (w.f >= w.m) farm++; else milkers++; } else if (w.m > 0) milkers++;
     let kidsWorked = 0;
     const kidsField = may(null, fieldJob, "child"), kidsMilk = may(null, "milk", "child");
-    const kidPool = kids.map((h) => ({ h, e: en.get(h), r: rate.get(h), c: newClock(S), x: eff && clocks ? h.xp.fill(0) : null, fork: undefined }));
+    const kidPool = kids.map((h) => ({ h, e: en.get(h), r: rate.get(h), c: newClock(S), x: eff && clocks ? h.xp.fill(0) : null, b: undefined, fork: undefined }));
     if (weather) kidPool.forEach((w, k) => { w.c.wx = weather.person(w.h, wakeAt(grownUps.length + k)); });
     for (const w of kidPool) {
       let farmed = 0, milked = 0;
@@ -243,29 +251,32 @@
   // The Clothing page's cold and rain in Macro mode: Micro's rules (micro-model.js), worked along each
   // person's clock (DayModel's workWx asks their hooks, person(h, wake)), clock hour = wake + hours since
   // waking. Fires are the day's, lit by anyone worked out so far. C, Rn: the day's cold and rain, as Micro
-  // gets them; E: the economy's state (衣, 笠, timber); p: the human parameters (need). Returns the hooks
+  // gets them; E: the economy's state (衣, 笠, timber); p: the human parameters (need); water: the day's
+  // watering (DayModel.wateringOf), for fields tended (c.fieldIx) or null. Returns the hooks
   // and the day's totals: chill { cold: Map(h → days of life lost), coldHours, fires } and wet { inH,
   // lost, outWork, hats }, as Micro's.
-  function macroWeather(C, Rn, E, S, p) {
+  function macroWeather(C, Rn, E, S, p, water = null) {
     const EPS = 1e-9;
-    const chill = C ? { cold: new Map(), coldHours: 0, fires: 0 } : null, wet = Rn ? { inH: 0, lost: 0, outWork: 0, hats: 0 } : null;
+    const chill = C ? { cold: new Map(), coldHours: 0, fires: 0, coldCut: 0 } : null, wet = Rn ? { inH: 0, lost: 0, outWork: 0, hats: 0 } : null;
     const Wx = DayModel.weatherOf(C, Rn, E, S, wet);
-    function warmUp(x, T) { const s = Math.max(0, T - x.coldSince); x.coldLost += C.k * (s / x.u) ** 2; chill.coldHours += s; x.coldSince = null; }
+    function warmUp(x, T) { chill.coldHours += Math.max(0, T - x.coldSince); x.coldSince = null; }
     // Out of the house from t0 to t1 (hours since waking) at place (null: walking): into hypothermia, or out
-    // of it, where the felt temperature crosses 0 (straight between the two)
+    // of it, where the felt temperature crosses 0 (straight between the two), and its toll so far
     function look(x, t0, t1, place) {
       if (!C || !x.away) return;
-      const T0 = x.w0 + t0, T1 = x.w0 + t1, f0 = Wx.felt(x, place, T0), f1 = Wx.felt(x, place, T1), cross = () => (f0 === f1 ? T0 : T0 + ((T1 - T0) * f0) / (f0 - f1));
-      if (x.coldSince === null) { if (f1 < 0) x.coldSince = f0 < 0 ? T0 : cross(); }
-      else if (f1 >= 0) warmUp(x, f0 >= 0 ? T0 : cross());
+      const f = (T) => Wx.felt(x, place, T), T0 = x.w0 + t0, T1 = x.w0 + t1, f0 = f(T0), f1 = f(T1), cross = () => (f0 === f1 ? T0 : T0 + ((T1 - T0) * f0) / (f0 - f1));
+      if (x.coldSince === null) { if (f1 < 0) { x.coldSince = f0 < 0 ? T0 : cross(); x.coldLost += Wx.toll(f, x.coldSince, x.coldSince, T1, x.u); } }
+      else if (f1 >= 0) { const Tw = f0 >= 0 ? T0 : cross(); x.coldLost += Wx.toll(f, x.coldSince, T0, Tw, x.u); warmUp(x, Tw); }
+      else x.coldLost += Wx.toll(f, x.coldSince, T0, T1, x.u);
     }
+    const tooCold = (x, place, T) => !!C && Wx.tooCold(x, place, T);
     // Indoors from the weather, for hunger (and the rain's hours in)
     const goIn = (x, t, why) => { if (x.inSince === null) { x.inSince = t; x.inWhy = why; } };
     const comeOut = (x, t) => { if (x.inSince !== null) { x.inside.push([x.inSince, t]); if (wet && x.inWhy === "rain") wet.inH += t - x.inSince; x.inSince = null; } };
     function person(h, w0) {
       const x = { h, w0, u: S.active / HumanModel.needOf(h, p), cloth: null, hat: null, timber: 0, away: false, coldSince: null, coldLost: 0, inSince: null, inWhy: null, inside: [] };
       return {
-        x,
+        x, water,
         leave(c, place, e) {
           const T = w0 + c.t;
           if ((Rn && !Wx.hatFor(x, T)) || (C && !Wx.dressFor(x, place, T, e))) {   // too wet or cold: in, and look again on the hour
@@ -280,11 +291,13 @@
           const T = w0 + c.t;
           if (Wx.tooWet(x, T)) return "rain";
           if (C && x.timber && !Wx.noFire(T)) { Wx.light(x, place, T); chill.fires++; c.fireE += C.fireEnergy; look(x, c.t, c.t, place); }
-          return C && x.coldSince !== null ? "cold" : null;
+          return tooCold(x, place, T) ? "cold" : null;
         },
-        mult: (c) => (Rn ? 1 - (Wx.wetAt(x, w0 + c.t) / 10) ** 2 : 1),
+        // The cuts to a unit starting now at place: the rain's, and the cold's
+        rainMult: (c) => (Rn ? 1 - (Wx.wetAt(x, w0 + c.t) / 10) ** 2 : 1),
+        coldMult: (c, place) => (C ? 1 - Wx.coldCut(Wx.felt(x, place, w0 + c.t)) : 1),
         worked(c, t0, place) { look(x, t0, c.t, place); },
-        after: (c) => (C && x.coldSince !== null ? "cold" : Wx.tooWet(x, w0 + c.t) ? "rain" : null),
+        after: (c, place) => (tooCold(x, place, w0 + c.t) ? "cold" : Wx.tooWet(x, w0 + c.t) ? "rain" : null),
         home(c, why) {
           if (C && x.coldSince !== null) warmUp(x, w0 + c.t);
           x.away = false;
@@ -315,7 +328,7 @@
   const adjSkill = (h, skill) => Math.max(1, h.level ? h.level[skill] : 0);
   const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor((rate * 10 - 1) / 10 - 8 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
-  // Tools: a 叉 hayfork for farming, a 刀 blade for collecting, each adding its bonus (cr.bonus, by tier) to
+  // Tools: a 叉 hayfork for tending, a 刀 blade for the harvest and collecting, each adding its bonus (cr.bonus, by tier) to
   // the holder's effectiveness there (a yield, as skill's); by default +20%, +40%, +60%, +80%, +100% (toolFor:
   // the one w has for a skill, or none)
   const toolBonus = (tier) => 0.2 * tier;
@@ -437,7 +450,7 @@
     if (cr) for (const it of cr.items) { crafted[it.id] = new Int32Array(CRAFT_MAX_TIER + 1); started[it.id] = 0; }
     const stations = cr ? { weave: { job: null }, forge: { job: null } } : null;
     // Each craft in store: { tier, used (energy spent using it), day (last taken) }, by tier (tools[id][t]),
-    // oldest first. 刀 blades go out with collectors, 叉 hayforks with farmers, 衣 and 笠 with everyone (dress)
+    // oldest first. 刀 blades go out with collectors and harvesters, 叉 hayforks with those tending, 衣 and 笠 with everyone (dress)
     const tools = {}, wearOf = {};
     if (cr) for (const it of cr.items) { tools[it.id] = Array.from({ length: CRAFT_MAX_TIER + 1 }, () => []); wearOf[it.id] = it.wear; }
     // The starting kit: crafts in store from day 1, as if just made
@@ -486,8 +499,8 @@
       timberFor(minTier) { if (store.wood < 1) return 0; for (let t = Math.max(1, minTier); t <= 4; t++) if (lots.wood[t] >= 1 - 1e-9) return t; return 0; },
       takeTimber(t) { lots.wood[t] -= 1; store.wood -= 1; today.burned++; },
       untakeTimber(t) { lots.wood[t] += 1; store.wood += 1; today.burned--; },   // brought back unlit
-      // Farming energy by w (a person's pool entry or agent) wears their hayfork
-      farmed(w, energy) { if (w.fork) w.fork.used += energy; },
+      // Farming energy wears the tool used: a 叉 tending, a 刀 at the harvest
+      farmed(tool, energy) { if (tool) tool.used += energy; },
       // work (energy spent) collected of r by h with blade b: their skill tier, and (crafts) their 刀's (none:
       // N), count by the work; the energy wears the blade
       collected(r, h, b, work, energy) {
@@ -804,6 +817,34 @@
     const sched = !!S && !none;
     const cold = sched && cfg.cold && window.WeatherModel ? cfg.cold : null;
     const rain = sched && cfg.rain && window.WeatherModel ? cfg.rain : null, wx = cold || rain;
+    // The Watering page: the well and each field's water (0–10), the fields tended this year, and the rice
+    // the water grew this year. Each day the well refills (worked out after the day): from the ground at
+    // the land's water level ÷ 2 an hour while it holds under water.ground, and from the rain at its
+    // rainfall an hour up to water.cap. A field nobody tended today takes the land's level; each seeded
+    // field (tended this year, before the harvest) grows water.growth[its level, rounded down] rice.
+    const waterCfg = sched && cfg.water && wx ? cfg.water : null;
+    const waterSt = waterCfg ? { well: waterCfg.cap, level: [5, 5, 5, 5], farmed: [false, false, false, false], seeded: [false, false, false, false], started: false } : null;
+    let waterRice = 0;
+    // The day's end for the water: untended fields take the land's level, seeded ones grow, and the well
+    // refills over the day (the ground's share while under water.ground, worked out between the rain's changes)
+    function endWaterDay(dw, wd, tending) {
+      const st = waterSt, land = Math.max(0, Math.min(10, wd.water ?? 5)), g = land / 2, cap = waterCfg.cap, ground = Math.min(cap, waterCfg.ground), ra = wd.rainAt || [0, 0];
+      let grew = 0;
+      for (let k = 0; k < st.level.length; k++) {
+        if (!st.farmed[k]) st.level[k] = land;
+        if (tending && st.seeded[k]) grew += waterCfg.growth[Math.min(10, Math.floor(st.level[k] + 1e-9))];
+      }
+      waterRice += grew;
+      let well = st.well;
+      for (let i = 0; i < ra.length; i += 2) {
+        let dt = (i + 2 < ra.length ? ra[i + 2] : 24) - ra[i];
+        const r = ra[i + 1];
+        if (well < ground && g + r > 0) { const t = Math.min(dt, (ground - well) / (g + r)); well += (g + r) * t; dt -= t; }
+        if (dt > 0 && r > 0 && well < cap) well = Math.min(cap, well + r * dt);
+      }
+      st.well = Math.min(cap, well);
+      return { grew, trips: dw.day.trips, river: dw.day.river, well: st.well, level: st.level.reduce((a, b) => a + b, 0) / st.level.length, land };
+    }
     const wdays = wx ? WeatherModel.simulateYear(wx.sets, (cfg.seed ^ 0x2c1b3c6d) >>> 0, wx.stats, Math.ceil(Math.min(T, cfg.stopAfter || T) / YEAR), undefined, !!rain) : null;
     const roles = cfg.roles || RolesModel.DEFAULTS;
     const roleOf = (h) => { const st = HumanModel.stage(h, p); return st === "child" ? "child" : st === "elder" ? (h.sex === MALE ? "oldMan" : "oldWoman") : h.sex === MALE ? "man" : "woman"; };
@@ -845,7 +886,8 @@
     // Skills (the Resources page on): everyone gets more out of the work they've done most
     const skills = energy ? cfg.skills || null : null;
     const eff = skills ? (h, id) => h.eff[id] : null;
-    // The night's fertile couples (after the deaths), as each one's chance of a child. Couples last for
+    // The night's fertile couples (after the deaths), as each one's chance of conceiving and the woman (only
+    // those whose woman can conceive: HumanModel.canConceive). Couples last for
     // life: one ends only when a partner dies, and the other is single again. Then the adult men and
     // women without a partner pair up at random, as many as the smaller group. A couple stays together
     // when a partner becomes an elder, but only couples of two adults can have a child.
@@ -857,8 +899,8 @@
       for (const g of [men, women]) for (let i = g.length - 1; i > 0; i--) { const j = Math.floor(hrand() * (i + 1)); [g[i], g[j]] = [g[j], g[i]]; }
       for (let i = 0; i < Math.min(men.length, women.length); i++) { men[i].partner = women[i]; women[i].partner = men[i]; couples.push([men[i], women[i]]); }
       const out = [];
-      for (const [m, f] of couples) if (adult(m) && adult(f)) out.push((birthChance(happinessOf(m, joy), p) + birthChance(happinessOf(f, joy), p)) / 2);
-      chanceToday = out.reduce((a, b) => a + b, 0);
+      for (const [m, f] of couples) if (adult(m) && adult(f) && HumanModel.canConceive(f, p)) out.push([(birthChance(happinessOf(m, joy), p) + birthChance(happinessOf(f, joy), p)) / 2, f]);
+      chanceToday = out.reduce((a, [c]) => a + c, 0);
       return out;
     }
 
@@ -874,8 +916,9 @@
       adults: i32(), farm: i32(), milkers: i32(), kidsWork: i32(), cows: i32(), walk: f32(),   // work
       crop: f32(), field: f32(), riceLost: f32(), milkWork: f32(), farmWork: f32(),
       hunger: f32(),                                                                 // days of life lost to hunger, everyone together
-      cold: f32(), coldHours: f32(), fires: i32(), burned: i32(), tempLo: nan(), tempHi: nan(),   // the cold: days of life lost to it, hours in hypothermia, fires lit, timber burned, the day's low and high
-      heavy: f32(), rainIn: f32(), rainLost: f32(), outWork: f32(), hats: i32(),   // the rain: its hours at the limit or more, everyone's hours in from it, the work out of the house it took and what was done, 笠 put on
+      cold: f32(), coldHours: f32(), coldCut: f32(), fires: i32(), burned: i32(), tempLo: nan(), tempHi: nan(),   // the cold: days of life lost to it, hours in hypothermia, fires lit, timber burned, the day's low and high
+      heavy: f32(), rainIn: f32(), rainLost: f32(), outWork: f32(), hats: i32(),
+      well: nan(), fieldWater: nan(), land: nan(), waterRice: f32(), trips: i32(), riverTrips: i32(),   // the water: the well's at day's end, the fields' average, the land's, rice the water grew, water carried   // the rain: its hours at the limit or more, everyone's hours in from it, the work out of the house it took and what was done, 笠 put on
       pow: f32(), int: f32(), extra: f32(),                                          // adults' attributes, children's extra food
       taught: f32(), gained: i32(), kids: i32(), picked: i32(), lesson: f32(), schPow: nan(), schInt: nan(), scholars: i32(),   // school
       read: f32(),                                                // the scholar's reading
@@ -918,8 +961,9 @@
         d.pow[day] = n ? pw / n : NaN; d.int[day] = n ? it / n : NaN;
       }
       if (food.wd) {
-        d.cold[day] = food.coldLost || 0; d.coldHours[day] = food.coldHours || 0; d.fires[day] = food.fires || 0; d.burned[day] = food.burned || 0;
+        d.cold[day] = food.coldLost || 0; d.coldHours[day] = food.coldHours || 0; d.coldCut[day] = food.coldCut || 0; d.fires[day] = food.fires || 0; d.burned[day] = food.burned || 0;
         d.tempLo[day] = food.wd.temp - food.wd.swing / 2; d.tempHi[day] = food.wd.temp + food.wd.swing / 2;
+        if (food.waterDay) { const w = food.waterDay; d.well[day] = w.well; d.fieldWater[day] = w.level; d.land[day] = w.land; d.waterRice[day] = w.grew; d.trips[day] = w.trips; d.riverTrips[day] = w.river; }
         if (food.wet) {
           const a = food.wd.rainAt;
           let hv = 0;
@@ -966,7 +1010,7 @@
     // The whole run's totals, kept even without the day-by-day records (Micro mode's comparison).
     // pow, int: the adults' average, summed over the last year's days with adults (attrDays)
     // level: the grown-ups' average level over every skill, summed over the last year's days with grown-ups (levelDays)
-    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
+    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, coldCut: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, waterRice: 0, trips: 0, riverTrips: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
 
     for (let day = 1; day <= stopAt; day++) {
       if (extinctDay !== null) {   // nobody left: the cows go unmilked and the rice untended
@@ -984,7 +1028,7 @@
       let milkSpent, riceMade = 0, riceLost = 0, crop = 0, grownUps = 0, farmers = false;
       let w = { farm: 0, milkers: 0, farmWork: 0 }, lesson = { knowledge: 0, gained: 0, hours: 0 }, reading = { read: 0 }, kidCount = 0, picked = 0, made = {};
       // Each person's timeline for hunger ({ Lh, E }); the day's exp, everyone together, by skill
-      let timelines = null, walk = 0, trace = null, chill = null, wet = null;   // chill: the day's cold (Micro, Clothing); wet: its rain
+      let timelines = null, walk = 0, trace = null, chill = null, wet = null, waterDay = null;   // chill: the day's cold (Micro, Clothing); wet: its rain
       const expToday = new Float64Array(SKILLS.length);
       const gain = (h, spent) => { earn(h, spent, skills); for (let k = 0; k < SKILLS.length; k++) if (spent[k] > 0) expToday[k] += spent[k]; };
 
@@ -1017,8 +1061,8 @@
           for (const s of scholars) if (!scholar || s.intel > scholar.intel) scholar = s;
         }
         const isScholar = new Set(scholars);
-        if (doy === 1) { tended = 0; tendEnergy = 0; }
-        if (doy === HARVEST_FIRST) field = FoodModel.wholeFood(tendEnergy, F.ricePerEnergy);
+        if (doy === 1) { tended = 0; tendEnergy = 0; waterRice = 0; if (waterSt) waterSt.seeded.fill(false); }
+        if (doy === HARVEST_FIRST) field = Math.max(0, FoodModel.wholeFood(tendEnergy, F.ricePerEnergy) + Math.round(waterRice));
         const tending = doy < HARVEST_FIRST;
         const riceWanted = tending ? FULL_CREW : doy > HARVEST_LAST ? 0 : Math.min(FULL_CREW, field / HARVEST_PER_HAND);
         if (cfg.traceDay === day) trace = cfg.trace = {};
@@ -1053,14 +1097,17 @@
         // isn't below 0 has no cold to feel, so none is worked out (but for a day being watched)
         const wd = wdays ? wdays[day - 1] : null;
         const dayCold = cold && (wd.temp - wd.swing / 2 < 0 || trace) ? { ...cold, tempAt: (h) => WeatherModel.hourTemp(wd.temp, wd.swing, h) } : null;
+        const dayWater = waterSt ? DayModel.wateringOf(waterCfg, waterSt, S) : null;
+        if (waterSt && !waterSt.started) { waterSt.level.fill(Math.max(0, Math.min(10, wd.water ?? 5))); waterSt.started = true; }   // day 1: the land's
+        if (waterSt) waterSt.farmed.fill(false);
         const dayRain = rain ? { hatStep: rain.hatStep, limit: rain.limit, at: (h) => WeatherModel.rainAtHour(wd.rainAt, h), fireOut: (t0, hours) => WeatherModel.fireOut(wd.rainAt, t0, hours) } : null;
         if (micro) {
           const m = MicroModel.day({ S, rand: mrand, people: st.people, p, may, cows, fieldE, riceWanted, tending, order, trace,
             happyOf: joy ? (h) => happinessOf(h, joy) : null, eff, levelsOf: skills ? (h) => h.level : null,
             energyOf: (h) => (en.has(h) ? { e: en.get(h), r: rt.get(h) } : null),
-            econ: econ ? econ.state() : null, cold: dayCold, rain: dayRain,
+            econ: econ ? econ.state() : null, cold: dayCold, rain: dayRain, water: dayWater,
             school: scholars.length ? { scholars: scholars.map((s) => ({ h: s, day: scholarDay(s, p, elderAttr, school), reads: may(null, "read", rowOf(s)) })), classOf, params: school, learn, read } : null });
-          w = m.work; timelines = m.timelines; walk = m.walk; if (m.cold) chill = m; if (m.wet) wet = { ...m.wet, limit: rain.limit };
+          w = m.work; timelines = m.timelines; walk = m.walk; if (m.cold) chill = m; if (m.wet) wet = { ...m.wet, limit: rain.limit };   // chill: m.cold, coldHours, coldCut, fires
           if (scholars.length) { lesson = m.lesson; reading = m.reading; kidCount = m.pupils; }
           if (joy) for (const h of st.people) h.joyNext = joyOf(m.left.get(h) || 0, joy);
           if (skills) for (const [h, sp] of m.spent) gain(h, bySkill(sp));
@@ -1072,7 +1119,7 @@
           // With a schedule, grown-ups come to the day's jobs in the order they wake: a new order each day
           const grown = [...elders, ...adults];
           if (S) shuffle(grown, mrand);
-          const weather = dayCold || dayRain ? macroWeather(dayCold, dayRain, econ ? econ.state() : null, S, p) : null;
+          const weather = dayCold || dayRain || dayWater ? macroWeather(dayCold, dayRain, econ ? econ.state() : null, S, p, dayWater) : null;
           w = assignEnergy(grown, cows, riceWanted, tending, helpers, en, fieldE, Sd, rt, may, order, extra, clocks, classToday, eff, weather);
           timelines = new Map();
           for (const [h, c] of clocks) {
@@ -1110,6 +1157,7 @@
           }
         }
         if (econ) made = econ.endDay();
+        if (waterSt) waterDay = endWaterDay(dayWater, wd, tending);
         if (tending) { tended += w.tendBase / (FULL_CREW * fieldE); tendEnergy += w.tendEnergy; }
         milkSpent = w.milkEnergy;
         crop = tended / Math.min(doy, TEND_DAYS);
@@ -1229,12 +1277,13 @@
         milkWork: w.milkWork, farmWork: w.farmWork, walk, ...made, exp: expToday,
         taught: lesson.knowledge, gained: lesson.gained, kids: kidCount, picked, lesson: lesson.hours, scholar, scholars: scholars.length, ...reading,
         happy, happyKids, chance: chanceToday, joyAdults, happyNight, pairs: couples.length,
-        coldLost, coldHours: chill ? chill.coldHours : 0, fires: chill ? chill.fires : 0, wd: wdays ? wdays[day - 1] : null, wet,
+        coldLost, coldHours: chill ? chill.coldHours : 0, coldCut: chill ? chill.coldCut : 0, fires: chill ? chill.fires : 0, wd: wdays ? wdays[day - 1] : null, wet, waterDay,
       });
       tally.born += ev.born;
       if (joy && isFinite(happy)) { tally.happy += happy; tally.happyDays++; }
       tally.peopleDays += counts[day - 1]; tally.milk += milkMade; tally.rice += riceMade; tally.hunger += (ev.lostAll || 0) - coldLost; tally.walk += walk;
-      tally.cold += coldLost; tally.coldHours += chill ? chill.coldHours : 0; tally.fires += chill ? chill.fires : 0;
+      tally.cold += coldLost; tally.coldHours += chill ? chill.coldHours : 0; tally.coldCut += chill ? chill.coldCut : 0; tally.fires += chill ? chill.fires : 0;
+      if (waterDay) { tally.waterRice += waterDay.grew; tally.trips += waterDay.trips; tally.riverTrips += waterDay.river; }
       if (wet) { tally.rainIn += wet.inH; tally.rainLost += wet.lost; tally.outWork += wet.outWork; tally.hats += wet.hats; }
       if (made.resMade) { tally.wool += made.resMade.wool; tally.stone += made.resMade.stone; }
       tally.crafts += made.craftDone || 0; tally.taught += lesson.knowledge || 0; tally.gained += lesson.gained || 0;

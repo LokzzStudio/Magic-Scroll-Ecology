@@ -3,7 +3,7 @@
 //   const view = MicroView.mount(element); view.show(trace, { day, k }); view.stop()
 (function () {
   const GLYPH = { milk: "奶", field: "田", wood: "木", wool: "毛", stone: "石", weave: "織", forge: "鍛", class: "學", teach: "教", poetry: "詩" };
-  const PLACE = { H: "the house", F: "the farm", P: "the pasture", T: "the forest", M: "the mine" };
+  const PLACE = { H: "the house", F: "the farm", P: "the pasture", T: "the forest", M: "the mine", W: "the well", R: "the river" };
   const CARRY = { milk: "milk", field: "rice", wood: "timber", wool: "wool", stone: "stone" };
   const JOB = { milk: "Milking", field: "Working the fields", wood: "Cutting wood", wool: "Shearing", stone: "Quarrying", weave: "Weaving", forge: "Forging", class: "In class", teach: "Teaching", poetry: "Writing poetry" };
   // Tile colours and how strongly they show: [colour, fill opacity]
@@ -83,7 +83,7 @@
       // The day's hungry hours so far (they add up over the day), and what they've cost
       const hours = (from, to) => Math.max(0, Math.min(time, to) - from);
       const h = lunch < Infinity ? hours(end1, lunch) + (time > lunch ? hours(end2, night) : 0) : hours(end1, night);
-      const lost = (info.k * h * h) / (u * u);
+      const lost = a.tl && a.tl.inside ? (info.k * DayModel.emptyWeight(a.plan, a.tl, time - a.w)) / (u * u) : (info.k * h * h) / (u * u);
       return { full: Math.max(0, until - time) / S.active, lost };
     }
     // Hunger status: at HUNGRY_AT or less, out of the house; empty: losing life
@@ -103,7 +103,7 @@
         case "early": return "Gone in early: hungry, no energy left";
         case "eat": return st.meal === "breakfast" ? "Breakfast by the house" : "Lunch by the house";
         case "idle": return a.e0 > 0 && st.e > 0.01 ? "Waiting by the house" : "Done for the day, by the house";
-        case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : st.why === "warm" ? "Walking home to warm up" : st.why === "rain" ? "Walking home out of the rain" : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
+        case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : st.why === "warm" ? "Walking home to warm up" : st.why === "rain" ? "Walking home out of the rain" : st.why === "water" ? `Fetching water from ${PLACE[st.to]}` : st.why === "pour" ? "Carrying water to the field" : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
         case "class": return "In class";
         case "cold-in": return "Staying in from the cold";
         case "rain-in": return "Staying in from the rain";

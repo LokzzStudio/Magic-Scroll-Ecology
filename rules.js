@@ -6,13 +6,13 @@
 // examples belong in page hints. The Rulebook page (rulebook.html) says the same in plain words, sorted
 // into the game's rules and the simulation's; a change here may need it there too.
 (function () {
-  const ORDER = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing"];
+  const ORDER = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering"];
 
   function groups(page) {
     const at = (name) => ORDER.indexOf(page) >= ORDER.indexOf(name);   // this page or a later one
     const is = (...names) => names.includes(page);
     const working = at("attribute");   // people work for their food, on the Map page's map and day
-    const school = at("education"), happiness = at("happiness"), resources = at("resources"), skills = resources, crafts = at("craft"), cold = at("clothing"), wet = cold;
+    const school = at("education"), happiness = at("happiness"), resources = at("resources"), skills = resources, crafts = at("craft"), cold = at("clothing"), wet = cold, watering = at("watering");
     const out = [];
     const add = (title, where, items, opts = {}) => out.push({ title, where, items, ...opts });
     const walking = () => {
@@ -24,7 +24,7 @@
       ]);
       add("Meals and hunger", "Map", [
         "Share g = the food eaten ÷ need, at most 1" + (working ? " (each person's group's, see Food advisor)" : "") + ". Breakfast and lunch are each half of it and each keeps them full for <b>f = 6g</b> hours: breakfast until f; lunch, from Lh (when they got home for it), until max(f, Lh) + f.",
-        "Out and empty, they lose 2k × t ÷ u² days of life an hour, t = hours hungry so far today (eating or going in pauses it; it restarts at 0 each day), k = 0.1, u = 12 ÷ their need. With s₁ = max(0, Lh − f) and s₂ = max(0, E − max(f, Lh) − f) (E: when they went in), the day costs <b>k × ((s₁ + s₂) ÷ u)²</b>.",
+        "Out and empty, they lose 2k × t ÷ u² days of life an hour, t = hours hungry so far today (eating or going in pauses it; it restarts at 0 each day), k = 0.1, u = 12 ÷ their need; indoors from the weather (Clothing page) the hours count on, at k ÷ 2. With s₁ = max(0, Lh − f) and s₂ = max(0, E − max(f, Lh) − f) (E: when they went in), the day costs <b>k × ((s₁ + s₂) ÷ u)²</b>.",
         "Going in early (it changes nobody's work): let o be when they were first back at the house with no energy left. If o < Lh and max(o, f − 2.4) < Lh, they go in then and skip lunch (s₂ = 0, s₁ to then). Otherwise, if max(o, Lh + 24 min, max(f, Lh) + f − 2.4) is before E, that's their E. Never home for lunch: Lh = 5½; never went in: E = 12. Shown as hungry at 2.4 h of food left or less.",
       ]);
     };
@@ -70,16 +70,16 @@
     if (at("humans")) add("People", "Humans", [
       "Lifespan 3,600 × (1 ± up to 10%) days, drawn evenly. Child under 360 days, adult to 3,240, then elder; adults and elders are grown-ups. Start: 6 men, 6 women, each aged min(lifespan − 1, 360 + ⌊an even draw below (lifespan − 360)⌋).",
       happiness
-        ? "Couples last for life. Each night after the deaths, a couple with a dead partner ends; then single adult men and women, each shuffled, pair up in order (the shorter list's length). Only couples of two adults can have a child, each at its own chance (see Happiness), taken in the order they paired. A newborn is a boy with chance (W + X) ÷ (M + W + 2X), M and W the living males and females under elder age (newborns of the same night included), X the birth balance (1, 0–1; nobody to count: even)."
-        : "Couples = min(adult men, adult women). Each has a child at 0.003 a day, a boy with chance (W + X) ÷ (M + W + 2X) (M, W: living males and females under elder age, the night's newborns included; X the birth balance, 1).",
+        ? "Couples last for life. Each night after the deaths, a couple with a dead partner ends; then single adult men and women, each shuffled, pair up in order (the shorter list's length). First, mothers who conceived G = 300 days ago give birth (in village order); a mother who died first loses the child, but the father doesn't matter. Then only couples of two adults whose woman can conceive (not expecting, and her age + G under elder age) may conceive, each at its own chance (see Happiness), taken in the order they paired. A newborn is a boy with chance (W + X) ÷ (M + W + 2X), M and W the living males and females under elder age (newborns of the same night included), X the birth balance (1, 0–1; nobody to count: even)."
+        : "Couples = min(adult men, adult women). First, mothers who conceived G = 300 days ago give birth (in village order); a mother who died first loses the child. Then the first adult women in village order, as many as there are couples, each conceives at 0.005 a day if she can (not expecting, and her age + G under elder age). A child is born a boy with chance (W + X) ÷ (M + W + 2X) (M, W: living males and females under elder age, the night's newborns included; X the birth balance, 1).",
       "Need: 100 food a day per adult, 70 per child, " + (working ? "100 × (1 − elder penalty) = 80" : "80") + " per elder." + (working ? " Hunger (see Meals and hunger) takes days off the lifespan; they die when their age reaches it." : " Each loses <b>0.1 × (their missing food)²</b> days of life a day (missing = (1 − share) × their need; share = food ÷ total need), off their lifespan; they die when their age reaches it."),
       is("humans") && "Each day: hunger, ageing and deaths, births. Food: a fixed 2,000 a day, never stored.",
     ]);
 
     if (at("food")) add("Food", "Food", [
       "Milk and rice meet need one for one. Made on day d, they keep until day d + keep (milk 1, rice 360). Start: 500,000 food in store that never spoils. Eat whatever spoils soonest first (milk on a tie), the starting food last.",
-      "A standard day is 100 energy. 1 energy collects 1 milk (one milker to an adult cow a day, with no limit on a cow, whatever its tier) or grows 1.2 rice tending (at most 50,000 per field a year, 4 fields).",
-      !working && "Nobody works: each adult cow gives a standard day's milk (100); while any adult lives, the year's 86,400 rice comes in evenly over days 181–210.",
+      "A standard day is 100 energy. 1 energy collects 1 milk (one milker to an adult cow a day, with no limit on a cow, whatever its tier) or grows 1 rice tending (at most 50,000 per field a year, 4 fields).",
+      !working && "Nobody works: each adult cow gives a standard day's milk (100); while any adult lives, the year's 72,000 rice comes in evenly over days 181–210.",
     ]);
 
     if (at("food")) add("Food advisor", "Food", [
@@ -126,7 +126,7 @@
 
     if (happiness) add("Happiness", "Happiness", [
       "Happiness = min(100, <b>max(0, 100 − ⌊Intelligence ÷ 2⌋) + ⌊√(energy left at the end of their last day)⌋</b>), set each night (in time for that night's births) and kept through the next day. Energy left: after all jobs" + (school ? " and a child's class; a scholar who writes poetry has none" : "") + ". Day 1 and the born: none yet.",
-      "Each person's chance of a child: <b>0.003 × happiness ÷ 50</b>; a couple's is the average of the two.",
+      "Each person's chance of conceiving: <b>0.005 × happiness ÷ 50</b>; a couple's is the average of the two (the child is born G days later; see Humans).",
     ]);
 
     if (resources) add("Sheep and resources", "Resources", [
@@ -138,9 +138,9 @@
     if (cold) add("The cold", "Clothing", [
       "The temperature: each village has its own weather (the Weather page's settings, on its own dice), and each hour its temperature (the Weather page's Through the day): the day's T + (D ÷ 2) × f(the hour).",
       "The house is warm (meals, the loom and forge, class, poetry, waiting, the night). Out of it (walking, or at the farm, pasture, forest or mine), each person's <b>felt temperature</b> = the hour's + 5 × their 衣's tier + 5 × the tier of the warmest fire burning within 4 tiles (straight-line distance between tiles); below 0 °C they're in <b>hypothermia</b>.",
-      "Each spell of hypothermia, from when they go below 0 °C to when they warm up (a fire lit, or home), costs <b>k × (its hours ÷ u)²</b> days of life, k = 1, u = 12 ÷ their need: hunger's toll, but starting again from 0 each spell. It comes off the lifespan with hunger's, that night. Time indoors from the cold (staying in, or home to warm up) pauses hunger, as going in does.",
-      "In hypothermia out at work, they finish the unit in hand, then walk home to warm up, keeping their job. Arriving at the work site already freezing (no fire there), they turn back.",
-      "Leaving the house for a job out of it: if the hour's temperature, with their 衣 and any fire burning at the place when they'd arrive, is 0 °C or more, they go. Otherwise they put on the 衣 of the lowest tier that is warm enough (the oldest of that tier, taken for the day); with none, the warmest 衣 there is, and, with more than 1 energy and the rain under 10, a timber of the lowest tier that makes up the rest (from the closed lots in store); with neither, they let go of the job and choose again on the hour (or at lunch, or for the night).",
+      "Each spell of hypothermia, from when they go below 0 °C (felt) to when they warm up (to 0 °C or warmer, or home), costs <b>2K × t ÷ u²</b> days of life an hour, t = hours into the spell, u = 12 ÷ their need, <b>K = 1 × (felt ÷ 10)²</b> at that moment (worked out by Simpson's rule between the times they look): so s hours at one felt temperature cost K × (s ÷ u)², hunger's toll, starting again from 0 each spell. Each unit of work out of the house below 0 °C is cut by (felt ÷ 10)² as it starts, on top of the rain's cut (the two multiply). It comes off the lifespan with hunger's, that night. Time indoors from the cold (staying in, or home to warm up) doesn't stop hunger: they eat breakfast and lunch as ever, and the hours empty indoors count, at half the toll (k × ½ for those hours).",
+      "Out at work feeling −5 °C or colder, they finish the unit in hand, then walk home to warm up, keeping their job. Arriving at the work site to find it so (after lighting any timber they bring), they turn back. Between 0 and −5 °C they work on, slower.",
+      "Leaving the house for a job out of it: if the hour's temperature, with their 衣 and any fire burning at the place when they'd arrive, is 0 °C or more, they go. Otherwise they put on the 衣 of the lowest tier that is warm enough (the oldest of that tier, taken for the day); with none, the warmest 衣 there is, and, with more than 1 energy and the rain under 10, a timber of the lowest tier that makes up the rest (from the closed lots in store); short of that, if it would still feel −5 °C or colder they let go of the job and choose again on the hour (or at lunch, or for the night), and otherwise they go.",
       "At the work site with a timber, they light it, unless the rain is at 10 (then it stays unlit, and goes back to the store when they're home): 1 energy, and it warms everyone within 4 tiles for 2 h, less in the rain: at rain level R it burns × 1 ÷ (1 − (R ÷ 10)²) as fast (2 × (1 − (R ÷ 10)²) h in a steady rain, the work's cut), the rain changing as it burns. 衣 is worn only for warmth; a 衣 put on is kept for the day and worn by all its wearer's energy, and one swapped for a warmer goes back unworn.",
     ]);
     if (wet) add("The rain", "Clothing", [
@@ -148,21 +148,27 @@
       "Each unit of work out of the house (milking, the fields, shearing, quarrying, woodcutting) does × <b>1 − (felt ÷ 10)²</b>, at the rain as the unit starts: of a yield job's limit (a field's, a sheep's wool) it still takes energy for energy, bringing in less; at the harvest it does less of the work the rice wants. The loom, the forge, class and poetry are in the house.",
       "Felt at 5 or more out at work, they finish the unit in hand, then walk home, keeping their job; arriving at the work site to find it so, they turn back (an unlit timber goes back to the store).",
       "Leaving the house for a job out of it with R felt at 5 or more: they put on the 笠 of the lowest tier that brings it under 5 (the oldest of that tier, taken for the day); with none, they let go of the job and choose again on the hour (or at lunch, or for the night). The rain goes before the cold: only then do they dress for the cold.",
-      "With the rain, 笠 is worn only against it (no longer taken every day); a 笠 put on is kept for the day and worn by all its wearer's energy. Time in from the rain (staying in, or home out of it) pauses hunger, as going in does.",
+      "With the rain, 笠 is worn only against it (no longer taken every day); a 笠 put on is kept for the day and worn by all its wearer's energy. Time in from the rain (staying in, or home out of it) counts for hunger at half the toll, as from the cold.",
       "In Macro mode the same rules run along each person's clock, a unit at a time (as their work does): everyone wakes at an even spread over the wake-up window, in the order they come to work, and sees the fires lit by those worked out before them; the felt temperature is taken as a straight line between the times they look, to find when it crosses 0. Planning what someone could do (the 12 h rule) leaves the weather out.",
+    ]);
+
+    if (watering) add("Watering", "Watering", [
+      "The well (井, a place on the Map) holds at most 100 water and starts full. Each day, once the day's work is done, it refills over the day's 24 hours: from the ground at W ÷ 2 an hour (W: the land's water level, the Weather page's, at the day's end) while it holds under 50, and from the rain at its rainfall an hour (snow too) up to 100, worked out between the rain's changes.",
+      "Each of the 4 fields has a water level, 0–10; the fields are numbered in the order they're taken each day (the first farmer's is field 1), and start at the land's level. Tending uses 0.1 level per energy. A farmer who finds their field at level 3 or lower, on arriving or after each unit, walks for 1 water and back with it: +1 level (at most 10). They go to the well (井) if it has water and is no further from the field than the river (川), otherwise to the river, which never runs dry (no river on the map and the well empty: no water). In Macro this happens along their clock, as carrying home does.",
+      "At the day's end, a field nobody tended today takes the land's level. A field tended at least once this year is seeded: until the harvest (days 1–180) it grows rice by itself each day by its level, rounded down: level 0: −100, 1: 0, 2: +10, 3: +20, 4: +20, 5: +10, 6: 0, 7: 0, 8: −10, 9: −50, 10: −100. On day 181 the rice standing is the tending's (as before) plus all the water's growth this year, never below 0.",
     ]);
 
     if (crafts) add("Crafts", "Craft", [
       "Women weave (紡織) 衣 clothes (200 wool + 100 timber) or 笠 hats (100 wool + 200 timber); men forge (鍛造) 刀 blades (200 stone + 100 timber) or 叉 hayforks (100 stone + 200 timber); each takes 300 energy of work at the house. One loom and one forge, one crafter each a day; a craft takes its materials up front and is worked until done, across days, by whoever holds the station.",
       "To start with, the store holds 200 R 刀, 200 R 叉, 200 R 衣 and 200 R 笠 (Craft page), each worn out like a made one.",
       "Next item: the station's item started fewest times (衣 before 笠, 刀 before 叉); the station waits until all its materials are in store.",
-      "In use: each day everyone with energy (and the scholars), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best 叉 or 刀 left, putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 3,000), 叉 farming and 刀 collecting with it (3,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
+      "In use: each day everyone with energy (and the scholars), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best left of its tool (tending: a 叉; the harvest and collecting: a 刀, the same 刀 all day), putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 3,000), 叉 tending and 刀 at the harvest and collecting with it (3,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
       "It takes each material lowest tier first (closing the filling lot early if the full ones fall short). Done: its score = the average of three, to the nearest 0.01: its materials' average tier, and its crafters' skill tier and human tier (⌊(Intelligence − 1) ÷ 10 − 8⌋ held to 1–4), these two averaged by work on it. Tier = <b>round((score + roll) ÷ 2)</b>, half up, held to 1–5; roll: an even draw of 1.01, 1.02, …, score + 1 (worked in hundredths). All three SSR (4.00): SSR 50%, SR 49.75%, UR 1 in 400; below 4.00, never UR.",
     ]);
 
     if (skills) add("Skills", "Resources", [
       "Nine skills, each with exp and a level (0–4), from 0 exp and level 0 (the born too): milking, farming (tending and harvest), woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Each energy spent on the job is 1 exp; a child's class earns none. Levels 1 / 2 / 3 / 4 take <b>100 / 1,000 / 10,000 / 100,000</b> more exp each (level 4 at 111,100), counted at the end of the day for the next.",
-      "<b>Effectiveness m = 1 + 0 / 5% / 10% / 20% / 40% at skill level 0 / 1 / 2 / 3 / 4" + (crafts ? " + their tool's bonus: 叉 farming, 刀 collecting, 20% / 40% / 60% / 80% / 100% for N / R / SR / SSR / UR (as made)" : "") + "</b>, a yield. Milking, tending and shearing: their need, done, reserved and open are energy (milking: no end, one to a cow; the fields' daily limit, the wool on the sheep ÷ wool per energy), each energy using up 1 of it and bringing in m: milk, the field's rice, wool. Timber, stone, knowledge from teaching and poetry: energy × m. Harvest: speed, as the standing rice is all there is: its need, done, reserved and open are work, energy × m (could still do: the energy × m; a unit, min(10, e, reservation left ÷ m) energy, credited × m)." + (crafts ? " Crafts: speed too, a craft's energy being work (a unit: min(10, e, craft left ÷ m) energy, credited × m)." : "") + " Hours go by energy.",
+      "<b>Effectiveness m = 1 + 0 / 5% / 10% / 20% / 40% at skill level 0 / 1 / 2 / 3 / 4" + (crafts ? " + their tool's bonus: 叉 tending, 刀 at the harvest and collecting, 20% / 40% / 60% / 80% / 100% for N / R / SR / SSR / UR (as made)" : "") + "</b>, a yield. Milking, tending and shearing: their need, done, reserved and open are energy (milking: no end, one to a cow; the fields' daily limit, the wool on the sheep ÷ wool per energy), each energy using up 1 of it and bringing in m: milk, the field's rice, wool. Timber, stone, knowledge from teaching and poetry: energy × m. Harvest: speed, as the standing rice is all there is: its need, done, reserved and open are work, energy × m (could still do: the energy × m; a unit, min(10, e, reservation left ÷ m) energy, credited × m)." + (crafts ? " Crafts: speed too, a craft's energy being work (a unit: min(10, e, craft left ÷ m) energy, credited × m)." : "") + " Hours go by energy.",
     ]);
 
     if (school) add("Scholar and school", "Education", [

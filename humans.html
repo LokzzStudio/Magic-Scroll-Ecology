@@ -134,7 +134,7 @@
       <li><span class="step">1 · Food</span><span><b>F</b> is shared by need: <b>c</b> for an adult, 70% of it for a child, 80% for an elder. Anyone short loses <span class="f">k × (missing food)²</span> days of life.</span></li>
       <li><span class="step">2 · Ageing</span><span>Anyone who reaches their lifespan dies.</span></li>
       <li><span class="step">3 · Couples</span><span><span class="f">min(adult men,</span> <span class="f">adult women)</span>; elders don't have children</span></li>
-      <li><span class="step">4 · Births</span><span>Each couple: chance <b>p</b> of a child. A boy with chance <span class="f">(♀ + X) ÷ (♂ + ♀ + 2X)</span>, so births lean to the scarcer sex.</span></li>
+      <li><span class="step">4 · Births</span><span>Mothers who conceived <b>G</b> days ago give birth. Then each couple whose woman isn't expecting, and is young enough to give birth before she's an elder, conceives with chance <b>p</b>. A boy with chance <span class="f">(♀ + X) ÷ (♂ + ♀ + 2X)</span>, so births lean to the scarcer sex.</span></li>
       <li><span class="step">5 · Life stages</span><span>Children grow up at <b id="rule-adult">360</b> days and become elders at <b id="rule-elder">3,240</b>.</span></li>
     </ol>
   </header>
@@ -152,8 +152,17 @@
             <label for="p-num"><span class="sym r">p</span>Birth chance</label>
             <span class="num-wrap"><input id="p-num" type="number" step="0.0001"><span class="unit">/day</span></span>
           </div>
-          <input id="p-range" type="range" aria-label="Birth chance per couple per day">
-          <p class="hint" id="p-hint">Chance a couple has a child each day.</p>
+          <input id="p-range" type="range" aria-label="Chance a couple conceives a child each day">
+          <p class="hint" id="p-hint">Chance a couple conceives a child each day.</p>
+        </div>
+
+        <div class="param">
+          <div class="param-head">
+            <label for="G-num"><span class="sym r">G</span>Pregnancy</label>
+            <span class="num-wrap"><input id="G-num" type="number" step="10"><span class="unit">days</span></span>
+          </div>
+          <input id="G-range" type="range" aria-label="Days from conceiving a child to its birth">
+          <p class="hint" id="G-hint">Days from conceiving a child to its birth.</p>
         </div>
 
         <div class="param">
@@ -381,6 +390,7 @@
   // L comes before M so M's limit uses the current lifespan
   const SPECS = {
     p:     { min: () => 0, max: () => 0.01, step: 0.0001 },
+    G:     { min: () => 0, max: () => 360, step: 10 },
     X:     { min: () => 0, max: () => 1, step: 0.05 },
     L:     { min: () => 360, max: () => 10800, step: 30 },
     M:     { min: () => 1, max: () => P.L, step: 1 },
@@ -494,8 +504,11 @@
   function drawTexts() {
     const perCouple = HumanModel.childrenPerCouple(P);
     $("p-hint").innerHTML = P.p > 0
-      ? `About one child every <b>${fmt(1 / P.p)}</b> days per couple, so <b>${fmt(perCouple, 1)}</b> children over a couple's adult years. About 2 replace the parents.`
+      ? `A couple conceives after about <b>${fmt(1 / P.p)}</b> days on average, and the child comes ${fmt(P.G)} days later: about one every <b>${fmt(1 / P.p + P.G)}</b> days, so <b>${fmt(perCouple, 1)}</b> children over a couple's adult years. About 2 replace the parents.`
       : "No children are born.";
+    $("G-hint").innerHTML = P.G > 0
+      ? `A couple has no child in their first ${fmt(P.G)} days together, and a woman expecting doesn't conceive again until the child is born. Once she's conceived, only she matters: the child is born if she lives, whatever happens to the father. She conceives only while she could give birth before she's an elder (by day ${fmt(Math.max(P.M, P.E - P.G))} of her life).`
+      : "0: a couple's child is born the night it's conceived.";
     const dieLo = Math.round(P.L * (1 - P.S / 100)), dieHi = Math.round(P.L * (1 + P.S / 100));
     const deathText = dieLo === dieHi ? fmt(dieLo) : `${fmt(dieLo)}–${fmt(dieHi)}`;
     const boy = (m, f) => fmt((100 * (f + P.X)) / (m + f + 2 * P.X || 1));
@@ -543,7 +556,8 @@
     $("snippet").textContent =
 `// Humans: men and women, adult couples have children,
 // food is shared equally and hunger shortens lives
-const HUMAN_BIRTH_CHANCE = ${P.p};  // p, per couple per day
+const HUMAN_BIRTH_CHANCE = ${P.p};  // p, chance a couple conceives, per day
+const PREGNANCY = ${P.G};           // G, days from conceiving to the birth
 const HUMAN_LIFESPAN = ${P.L};       // L, days on average
 const HUMAN_LIFESPAN_SPREAD = ${P.S / 100}; // ± share of L
 const HUMAN_ADULT_AGE = ${P.M};      // M, days
@@ -555,7 +569,7 @@ const BIRTH_BALANCE = ${P.X};        // X, 0–1: smaller leans births harder to
 
 function newPerson(sex) {
   const spread = HUMAN_LIFESPAN_SPREAD * (2 * Math.random() - 1);
-  return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread) };
+  return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread), carry: 0 };
 }
 
 // Grown-ups are adults and elders. Elders don't have children,
@@ -577,17 +591,21 @@ function stepHumans(people) {
   for (const h of people) h.age += 1;
   people = people.filter((h) => h.age < h.lifespan);
 
-  // 3. Each adult man-woman couple may have a child; elders don't
+  // 3. Mothers who conceived PREGNANCY days ago give birth; a boy with chance
+  //    (females + X) ÷ (males + females + 2X), counting children and adults
+  const birth = () => {
+    const young = people.filter((h) => !isElder(h)), m = young.filter((h) => h.sex === "male").length;
+    const all = young.length + 2 * BIRTH_BALANCE, boy = all > 0 ? (young.length - m + BIRTH_BALANCE) / all : 0.5;
+    people.push(newPerson(Math.random() < boy ? "male" : "female"));
+  };
+  for (const f of people.slice()) if (f.carry > 0 && --f.carry === 0) birth();
+  // 4. Each adult man-woman couple may conceive (elders don't): the first adult women, as many as
+  //    there are couples, each if she isn't expecting and could give birth before she's an elder
   const men = people.filter((h) => isAdult(h) && h.sex === "male").length;
-  const women = people.filter((h) => isAdult(h) && h.sex === "female").length;
-  const couples = Math.min(men, women);
-  // A boy with chance (females + X) ÷ (males + females + 2X), counting children and adults
-  for (let i = 0; i < couples; i++) {
-    if (Math.random() < HUMAN_BIRTH_CHANCE) {
-      const young = people.filter((h) => !isElder(h)), m = young.filter((h) => h.sex === "male").length;
-      const all = young.length + 2 * BIRTH_BALANCE, boy = all > 0 ? (young.length - m + BIRTH_BALANCE) / all : 0.5;
-      people.push(newPerson(Math.random() < boy ? "male" : "female"));
-    }
+  const women = people.filter((h) => isAdult(h) && h.sex === "female");
+  for (const f of women.slice(0, Math.min(men, women.length))) {
+    if (f.carry > 0 || f.age + PREGNANCY >= HUMAN_ELDER_AGE) continue;
+    if (Math.random() < HUMAN_BIRTH_CHANCE) { if (PREGNANCY > 0) f.carry = PREGNANCY; else birth(); }
   }
   return people;
 }`;

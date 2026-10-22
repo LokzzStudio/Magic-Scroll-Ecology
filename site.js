@@ -14,6 +14,7 @@
     ["craft.html", "Craft", "Weaving &amp; forging"],
     ["weather.html", "Weather", "Clouds &amp; wind"],
     ["clothing.html", "Clothing", "Cold, rain, 衣 &amp; 笠"],
+    ["watering.html", "Watering", "The well &amp; the fields' water"],
     ["rulebook.html", "Rulebook", "Game rules vs simulation"],
   ];
   const nav = document.querySelector("nav.sidenav");

@@ -36,7 +36,7 @@
   const NOTE = "Showing defaults. If you changed that page and it doesn't show here, your browser keeps each local file's settings separate.";
 
   // The crafts, for the Craft page's settings and card: what each takes by default, and the energy of its
-  // use it lasts (wear: 衣 and 笠 anything, 刀 collecting, 叉 farming). needKey: the setting for one of its
+  // use it lasts (wear: 衣 and 笠 anything, 刀 the harvest and collecting, 叉 tending). needKey: the setting for one of its
   // materials ("hatWood")
   const CRAFTS = [
     { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 3000 },
@@ -55,8 +55,10 @@
     resources: { key: "resources-v8", fields: { fleece: [300, 10, 500, 10], regrow: [30, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1], forestCrew: [3, 0, 20, 1], mineCrew: [2, 0, 20, 1],
       exp1: [100, 10, 1000000, 10], exp2: [1000, 10, 1000000, 10], exp3: [10000, 10, 1000000, 10], exp4: [100000, 10, 1000000, 10],
       bonus1: [5, 0, 500, 5], bonus2: [10, 0, 500, 5], bonus3: [20, 0, 500, 5], bonus4: [40, 0, 500, 5] } },
-    clothing: { key: "clothing-v3", fields: { coldK: [1, 0, 5, 0.05], clothStep: [5, 0, 20, 1], fireStep: [5, 0, 20, 1], fireHours: [2, 0.25, 4, 0.25], fireReach: [4, 0, 16, 1], fireEnergy: [1, 0, 20, 1],
+    clothing: { key: "clothing-v4", fields: { coldK: [1, 0, 5, 0.05], coldLimit: [-5, -30, 0, 1], clothStep: [5, 0, 20, 1], fireStep: [5, 0, 20, 1], fireHours: [2, 0.25, 4, 0.25], fireReach: [4, 0, 16, 1], fireEnergy: [1, 0, 20, 1],
       hatStep: [2, 0, 10, 1], rainLimit: [5, 1, 11, 1] } },
+    watering: { key: "watering-v1", fields: { wellCap: [100, 10, 1000, 10], wellGround: [50, 0, 1000, 10], waterUse: [0.1, 0, 1, 0.01], waterAt: [3, 0, 10, 0.5],
+      g0: [-100, -500, 500, 5], g1: [0, -500, 500, 5], g2: [10, -500, 500, 5], g3: [20, -500, 500, 5], g4: [20, -500, 500, 5], g5: [10, -500, 500, 5], g6: [0, -500, 500, 5], g7: [0, -500, 500, 5], g8: [-10, -500, 500, 5], g9: [-50, -500, 500, 5], g10: [-100, -500, 500, 5] } },
     craft: { key: "craft-v11", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [300, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, 300000, 1000]]])),       startBlades: [200, 0, 1000, 10], startForks: [200, 0, 1000, 10], startClothes: [200, 0, 1000, 10], startHats: [200, 0, 1000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
@@ -98,6 +100,7 @@
       ["resources-v8", [() => scaled(keyed("resources-v7") || {}, { fleece: 0, regrow: 0 })]],
       ["clothing-v2", [() => scaled(keyed("clothing-v1") || {}, { fireHours: 0 })]],
       ["clothing-v3", [() => scaled(keyed("clothing-v2") || {}, { coldK: 0 })]],
+      ["clothing-v4", [() => scaled(keyed("clothing-v3") || {}, { coldK: 0 })]],   // the toll became k × (felt ÷ 10)²
       ["craft-v2", [() => scaled(pick(resV2(), crafts), ten(...crafts))]],
       ["craft-v5", [() => pick(keyed("craft-v4") || keyed("craft-v3") || keyed("craft-v2") || {}, energies)]],
       ["craft-v6", [() => { const v5 = keyed("craft-v5") || {}; return pick(v5, Object.keys(v5).filter((k) => !k.endsWith("Wear"))); }]],
@@ -144,14 +147,14 @@
   function coldOf(K) {
     const sets = WeatherModel.savedParams(), key = JSON.stringify(sets);
     if (!coldStats.has(key)) coldStats.set(key, Object.fromEntries(WeatherModel.SEASONS.map((s) => [s.id, WeatherModel.simulate({ ...sets[s.id] }, 360 * 24 * 10, 1, 0).temp.stats])));
-    return { sets, stats: coldStats.get(key), k: K.coldK, clothStep: K.clothStep, fireStep: K.fireStep, fireHours: K.fireHours, fireReach: K.fireReach, fireEnergy: K.fireEnergy };
+    return { sets, stats: coldStats.get(key), k: K.coldK, limit: K.coldLimit, clothStep: K.clothStep, fireStep: K.fireStep, fireHours: K.fireHours, fireReach: K.fireReach, fireEnergy: K.fireEnergy };
   }
   // The rain (the Clothing page too): the same weather, with its 笠 and limit
   const rainOf = (K) => { const { sets, stats } = coldOf(K); return { sets, stats, hatStep: K.hatStep, limit: K.rainLimit }; };
 
   // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
   // (the Food page keeps the food and the rationing settings)
-  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing"];
+  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering"];
   const KEYS = { herd: [HerdModel.STORE_KEY], humans: [HumanModel.STORE_KEY], food: [FoodModel.STORE_KEY, RationModel.STORE_KEY], map: [MapModel.STORE_KEY], weather: window.WeatherModel ? [WeatherModel.STORE_KEY] : [],
     ...Object.fromEntries(Object.entries(SPECS).map(([name, spec]) => [name, [spec.key]])) };
   const SHEEP_SALT = 500000;   // keeps the sheep's dice apart from the cows'
@@ -215,6 +218,7 @@
       if (at("resources")) { o.resources = resourcesOf(c.RS); o.skills = skillsOf(c.RS); }
       if (at("craft")) { o.craft = craftOf(c.CR); o.kit = { tier: 2, blade: c.CR.startBlades, fork: c.CR.startForks, clothes: c.CR.startClothes, hat: c.CR.startHats }; }
       if (at("clothing")) { const K = c.set.clothing; o.cold = coldOf(K); o.rain = rainOf(K); }
+      if (at("watering")) { const V = c.set.watering; o.water = { cap: V.wellCap, ground: V.wellGround, use: V.waterUse, at: V.waterAt, growth: Array.from({ length: 11 }, (_, k) => V["g" + k]) }; }
       return o;
     }
 
@@ -285,7 +289,7 @@
     }
     const sheepOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].adults : null), sheepTiersOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].tiers : null);
 
-    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills, cfg.cold ? { ...cfg.cold, stats: null } : null, cfg.rain ? { ...cfg.rain, sets: null, stats: null } : null, cfg.kit || null]);
+    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills, cfg.cold ? { ...cfg.cold, stats: null } : null, cfg.rain ? { ...cfg.rain, sets: null, stats: null } : null, cfg.kit || null, cfg.water || null]);
     let job = 0;   // each recompute's number, so a computation still under way stops once it's stale
     const SLICE_MS = 50;   // how long the villages run before the page gets a turn
     function recompute() {
@@ -594,7 +598,7 @@
         legend([["res-wool", "Wool"], ["res-wood", "Timber"], ["res-stone", "Stone"]]) +
         `<div class="food-rows"><dl class="rows" id="res-day"></dl><dl class="rows" id="res-run"></dl></div>` +
         `<div class="table-scroll"><table class="mm-table tier-table" id="res-tiers"></table></div>`);
-      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, collectors carry 刀, farmers 叉 (+20% to +100% effectiveness by tier, N to UR). Each wears out with use.",
+      if (def.craft) s += card("Crafts", "Crafts in store", "What the idle grown-ups make at the house, and what's in use: everyone wears 衣 and 笠, harvesters and collectors carry 刀, those tending 叉 (+20% to +100% effectiveness by tier, N to UR). Each wears out with use.",
         `<svg class="chart" id="craft-chart" height="190" role="img" aria-label="Crafted items in store over ${fmt(VM.T)} days"></svg>` +
         legend(CRAFTS.map((it) => [`craft-${it.id}`, `${it.zh} ${it.en}`])) +
         `<div class="food-rows"><dl class="rows" id="craft-day"></dl><dl class="rows" id="craft-run"></dl></div>` +

@@ -49,12 +49,12 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Clothing</h1>
-    <p class="lede">The Craft page, out in the <b>weather</b>. Each village has its own weather, set on the Weather page: its temperature changes through the day, and its rain from hour to hour. The house is warm and dry. Out of it, below <b>0 °C</b>, people fall into <b>hypothermia</b>, which takes days off their lives the longer it lasts; they finish the work in hand and go home to warm up. To go out on a freezing day they put on a <b>衣</b> just warm enough; if no 衣 will do, they take a <b>timber</b> and light a <b>fire</b> where they work, which warms everyone nearby for two hours, less in the rain. Rain, from level <b>0</b> to <b>10</b>, slows the work out of the house by <b>(level ÷ 10)²</b>; from level <b>5</b> on, people go home, unless a <b>笠</b> keeps enough of it off. With neither warmth nor cover, they stay in, and the work waits.</p>
+    <p class="lede">The Craft page, out in the <b>weather</b>. Each village has its own weather, set on the Weather page: its temperature changes through the day, and its rain from hour to hour. The house is warm and dry. Out of it, below <b>0 °C</b>, people fall into <b>hypothermia</b>, which takes days off their lives, more the colder it feels and the longer it lasts, and slows their work by <b>(felt ÷ 10)²</b>, as rain does; at <b>−5 °C</b> or colder they finish the work in hand and go home to warm up. To go out on a freezing day they put on a <b>衣</b> just warm enough; if no 衣 will do, they take a <b>timber</b> and light a <b>fire</b> where they work, which warms everyone nearby for two hours, less in the rain. Rain, from level <b>0</b> to <b>10</b>, slows the work out of the house by <b>(level ÷ 10)²</b>; from level <b>5</b> on, people go home, unless a <b>笠</b> keeps enough of it off. If it would still feel −5 °C or colder, or the rain is still too heavy, they stay in, and the work waits.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The hypothermia toll; how much warmth a 衣 and a fire give; how long a fire burns, how far it reaches and what it costs to light; how much rain a 笠 keeps off, and the rain level people go home at</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> · <a href="map.html">Map</a> · <a href="attribute.html">Attribute</a> · <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a> · <a href="happiness.html">Happiness</a> · <a href="resources.html">Resources</a> · <a href="craft.html">Craft</a> (the crafts, and the 刀, 叉, 衣 and 笠 to start with) · <a href="weather.html">Weather</a> (the temperatures and the rain), and the Jobs table</dd>
-        <dt>Used by</dt><dd><span class="none">Nothing yet; this is the last page</span></dd>
+        <dt>Used by</dt><dd><a href="watering.html">Watering</a></dd>
       </dl>
     </aside>
   </header>
@@ -69,10 +69,18 @@
         <div class="param">
           <div class="param-head">
             <label for="ck-num">Hypothermia toll</label>
-            <span class="num-wrap"><input id="ck-num" type="number"><span class="unit">× hours²</span></span>
+            <span class="num-wrap"><input id="ck-num" type="number"><span class="unit">× (felt ÷ 10)²</span></span>
           </div>
-          <input id="ck-range" type="range" aria-label="Hypothermia toll: days of life lost per spell, by its hours squared">
+          <input id="ck-range" type="range" aria-label="Hypothermia toll: k is this × (the felt temperature ÷ 10) squared">
           <p class="hint" id="ck-hint"></p>
+        </div>
+        <div class="param">
+          <div class="param-head">
+            <label for="cw-num">Too cold to stay out</label>
+            <span class="num-wrap"><input id="cw-num" type="number"><span class="unit">°C felt</span></span>
+          </div>
+          <input id="cw-range" type="range" aria-label="The felt temperature at which people go home, or stay in">
+          <p class="hint" id="cw-hint"></p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -162,7 +170,7 @@ const TIER = ["", "N", "R", "SR", "SSR", "UR"];
 VillagePage.start({
   key: "clothing", work: "energy", inherit: true, school: true, happiness: true, resources: true, skills: true, craft: true,
   inputs: [
-    { id: "ck", key: "coldK" }, { id: "cs", key: "clothStep" }, { id: "fs", key: "fireStep" },
+    { id: "ck", key: "coldK" }, { id: "cw", key: "coldLimit" }, { id: "cs", key: "clothStep" }, { id: "fs", key: "fireStep" },
     { id: "fh", key: "fireHours" }, { id: "fr", key: "fireReach" }, { id: "fe", key: "fireEnergy" },
     { id: "hs", key: "hatStep" }, { id: "rl", key: "rainLimit" },
   ],
@@ -187,11 +195,14 @@ VillagePage.start({
   drawPanel(c) {
     const { S, $, fmt, VM } = c, pm = c.result.people.main, runs = c.result.people.runs;
     const lived = (r) => (r.extinctDay !== null ? r.extinctDay : r.last);   // days the village had people
-    $("ck-hint").innerHTML = `Out of the house below 0 °C (felt), each spell of hypothermia costs <b>k × (hours × need ÷ 12)²</b> days of life, like hunger's toll, but it starts again from 0 every time they warm up: for a grown-up, half an hour costs ${fmt(S.coldK * (0.5 * 100 / 12) ** 2, 1)} days, an hour ${fmt(S.coldK * (100 / 12) ** 2, 1)}, two hours ${fmt(S.coldK * (2 * 100 / 12) ** 2, 0)}. The house is warm.`;
+    const deg = (v) => (v < 0 ? `−${fmt(-v)}` : fmt(v));   // °C with a true minus
+    const spell = (deg, h) => fmt(S.coldK * (deg / 10) ** 2 * (h * 100 / 12) ** 2, 1);
+    $("ck-hint").innerHTML = `Out of the house below 0 °C (felt), a spell of hypothermia costs <b>K × (hours × need ÷ 12)²</b> days of life, like hunger's toll, with <b>K = this × (felt ÷ 10)²</b>, following the felt temperature as it changes; it starts again from 0 every time they warm up. For a grown-up an hour at −2 °C costs ${spell(2, 1)} days, at −4 °C ${spell(4, 1)}, at −8 °C ${spell(8, 1)}. The house is warm.`;
+    $("cw-hint").innerHTML = `Below 0 °C they put up with the cold, working slower by (felt ÷ 10)²: −2 °C by 4%, −4 °C by 16%. At ${deg(S.coldLimit)} °C or colder they go home, and they don't go out unless their 衣 and a fire would bring it above.`;
     $("cs-hint").innerHTML = `A 衣 makes it feel warmer by this for each of its tiers: ${[1, 2, 3, 4, 5].map((t) => `${TIER[t]} +${fmt(S.clothStep * t)}`).join(", ")} °C. 衣 is worn only for warmth (and 笠 only against the rain), and wears out with its wearer's energy.`;
     $("fs-hint").innerHTML = `A fire warms by this for each tier of its timber: ${[1, 2, 3, 4].map((t) => `${TIER[t]} +${fmt(S.fireStep * t)}`).join(", ")} °C, on top of any 衣.`;
     $("fire-hint").innerHTML = `Lit at the work site, a fire burns ${fmt(S.fireHours, 2)} h and warms everyone within ${fmt(S.fireReach)} tiles of it (in a circle); lighting it takes 1 timber from the house's store and ${fmt(S.fireEnergy)} energy. Rain burns it down faster, by the same cut as the work's: in a steady rain at level R it lasts × (1 − (R ÷ 10)²), ${[2, 4, 6, 8].map((r) => `${r}: ${fmt(S.fireHours * (1 - (r / 10) ** 2), 2)} h`).join(", ")}; at 10 it can't be lit.`;
-    $("go-hint").innerHTML = `<b>Going out on a freezing day.</b> Before they leave the house for work: if it's warm enough as they are (counting a fire already burning where they're going), they go. Otherwise they put on the 衣 of the lowest tier that's warm enough. If none is, they put on the warmest 衣 there is and, unless the rain is at 10, take a timber of the lowest tier that makes up the rest, and light it when they get there. With neither, they stay in and look again on the hour. Out at work, once they feel below 0 °C (it cools after 15:00, and fires burn out), they finish the unit in hand and walk home to warm up.`;
+    $("go-hint").innerHTML = `<b>Going out on a freezing day.</b> Before they leave the house for work: if it's warm enough as they are (counting a fire already burning where they're going), they go. Otherwise they put on the 衣 of the lowest tier that's warm enough. If none is, they put on the warmest 衣 there is and, unless the rain is at 10, take a timber of the lowest tier that makes up the rest, and light it when they get there. Short of that, they go anyway if it feels warmer than ${deg(S.coldLimit)} °C, putting up with the cold, and otherwise stay in and look again on the hour. Out at work, below 0 °C each unit is slowed by the cold as it starts; once it feels ${deg(S.coldLimit)} °C or colder (it cools after 15:00, and fires burn out), they finish the unit in hand and walk home to warm up.`;
     const k = c.result.wxCompare, best = Math.max(k.now, k.dry, k.none);
     $("weather-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With the cold and the rain", k.now, k.now >= best], ["Without the rain", k.dry, k.dry >= best], ["Without either (as on Craft)", k.none, k.none >= best]]);
     // Run 1, month by month
@@ -226,14 +237,17 @@ VillagePage.start({
       <dt>Days of life lost a person a year: cold / hunger</dt><dd>${py(cl)} / ${py(hl)}</dd>
       <dt>Fires lit a year</dt><dd>${fmt((fires / Math.max(1, lived(pm))) * c.YEAR, 1)}</dd>
       <dt>Timber burned in all</dt><dd>${fmt(burned)}</dd>`;
+    const cutShare = (t) => { const all = t.outWork + t.rainLost + t.coldCut; return all > 0 ? `${fmt((100 * t.coldCut) / all, 1)}%` : "—"; };
+    const sum = (k) => runs.reduce((s, r) => s + r.tally[k], 0);
     let aH = 0, aC = 0, aHu = 0, aP = 0, aF = 0, aD = 0;
     for (const r of runs) { aH += r.tally.coldHours; aC += r.tally.cold; aHu += r.tally.hunger; aP += r.tally.peopleDays; aF += r.tally.fires; aD += lived(r); }
     const pa = (v) => fmt((v / Math.max(1, aP)) * c.YEAR, 1);
     $("cold-all").innerHTML = `<dt class="sub">All ${fmt(runs.length)} villages</dt>
       <dt>Hypothermia a person a year</dt><dd>${pa(aH)} h</dd>
       <dt>Days of life lost a person a year: cold / hunger</dt><dd>${pa(aC)} / ${pa(aHu)}</dd>
-      <dt>Fires lit a village a year</dt><dd>${fmt((aF / Math.max(1, aD)) * c.YEAR, 1)}</dd>`;
-    $("cold-hint").innerHTML = `On days that stay below 0 °C, anyone without a warm enough 衣 or a timber stays in, and the cows go unmilked: the cold costs food as well as hypothermia. Pick a winter day in <b>A day, person by person</b> to watch who stays in, who lights a fire, and who comes home to warm up.`;
+      <dt>Fires lit a village a year</dt><dd>${fmt((aF / Math.max(1, aD)) * c.YEAR, 1)}</dd>
+      <dt>Work out of the house lost to the cold</dt><dd>${cutShare({ outWork: sum("outWork"), rainLost: sum("rainLost"), coldCut: sum("coldCut") })}</dd>`;
+    $("cold-hint").innerHTML = `On days that stay at −5 °C or colder, anyone without a warm enough 衣 or a timber stays in, and the cows go unmilked; above that the work goes on, slower: the cold costs food as well as hypothermia. Pick a winter day in <b>A day, person by person</b> to watch who stays in, who lights a fire, and who comes home to warm up.`;
     // ---------- The rain ----------
     {
       const lim = S.rainLimit;
@@ -243,7 +257,7 @@ VillagePage.start({
       const cell = (r, t) => { const f = Math.max(0, r - S.hatStep * t); return f >= lim ? `<td class="home">home</td>` : `<td>${f > 0 ? `−${fmt(f * f, 0)}%` : "0"}</td>`; };
       $("hat-table-wrap").innerHTML = `<table class="hat-table" aria-label="The cut to the work at each rain level, bare and with each 笠"><thead><tr><th>Rain</th><th>Bare</th>${[1, 2, 3, 4, 5].map((t) => `<th>${TIER[t]}</th>`).join("")}</tr></thead><tbody>${
         [2, 4, 5, 6, 8, 10].map((r) => `<tr><td>${r}</td>${[0, 1, 2, 3, 4, 5].map((t) => cell(r, t)).join("")}</tr>`).join("")}</tbody></table>`;
-      $("rain-go-hint").innerHTML = `<b>Going out in the rain.</b> Before they leave the house for work: if the rain is under ${fmt(lim)} as they are, they go. Otherwise they put on the 笠 of the lowest tier that brings it under ${fmt(lim)}; with none, they stay in and look again on the hour. Out at work, each unit is slowed by the rain when it starts; once it's ${fmt(lim)} or more, they finish the unit and walk home (arriving to find it so, they turn back). Time in from the rain pauses hunger, as going in does. The loom and the forge are in the house, out of the rain.`;
+      $("rain-go-hint").innerHTML = `<b>Going out in the rain.</b> Before they leave the house for work: if the rain is under ${fmt(lim)} as they are, they go. Otherwise they put on the 笠 of the lowest tier that brings it under ${fmt(lim)}; with none, they stay in and look again on the hour. Out at work, each unit is slowed by the rain when it starts; once it's ${fmt(lim)} or more, they finish the unit and walk home (arriving to find it so, they turn back). Time in from the rain, as from the cold, still counts for hunger, at half the toll; they eat breakfast and lunch as ever. The loom and the forge are in the house, out of the rain.`;
       // Run 1, month by month
       const svg = $("rain-chart"), H0 = 220, w = Math.max(280, svg.clientWidth || 640), m = { l: 40, r: 44, t: 10, b: 26 }, last = pm.last, M = 30, bins = Math.ceil(last / M);
       svg.setAttribute("viewBox", `0 0 ${w} ${H0}`);

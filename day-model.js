@@ -70,8 +70,8 @@
   // workAt in the weather (the Clothing page in Macro mode): the same day, with the person's weather hooks
   // (c.wx, village-model.js's macroWeather) asked as they leave the house for work out of it (null: they go;
   // else the clock hour to look again, staying in), arrive there, finish each unit (why they'd go home:
-  // "rain", "cold" or null) and come home; each unit there brings in × c.wx.mult (the rain's cut), summed
-  // in c.wetE (energy × cut), and lighting a fire adds its energy to c.fireE
+  // "rain", "cold" or null) and come home; each unit there brings in × the rain's and the cold's cuts as it
+  // starts (c.wetE: energy × both; c.rainE: energy × the rain's), and lighting a fire adds its energy to c.fireE
   function workWx(c, place, want, rate, S, collect) {
     const back = S.between(place, "H"), wx = c.wx, out = place !== "H";
     if (!(rate > 0) || !isFinite(S.between(c.at, place)) || !isFinite(back)) return 0;
@@ -83,6 +83,8 @@
       wx.walked(c, t0);
       if (to === "H") { c.load = 0; wx.home(c, why); }
     };
+    // Tending a dry field (c.fieldIx: theirs; wx.water: the day's watering): to the well or the river and back with 1 water
+    const water = () => { if (c.fieldIx >= 0 && wx.water) while (c.at === "F" && wx.water.dry(c.fieldIx)) { const src = wx.water.source(); walkTo(src, "water"); wx.water.fetch(src); walkTo("F", "work"); wx.water.pour(c.fieldIx); } };
     while (want - done > 1e-9) {
       if (c.t >= S.active - 1e-9) break;
       if (!c.lunched && c.t >= S.lunch - 1e-9) {   // home for lunch, eaten by the house
@@ -95,15 +97,18 @@
       if (c.at !== place) {
         if (c.at === "H" && out) { const until = wx.leave(c, place, want - done); if (until !== null) { c.t = until; continue; } }
         walkTo(place, "work");
-        if (out) { const why = wx.arrive(c, place); if (why) walkTo("H", why); }   // too wet or cold there: back home
+        if (out) { const why = wx.arrive(c, place); if (why) { walkTo("H", why); continue; } }   // too wet or cold there: back home
+        water();
         continue;
       }
-      const t0 = c.t, m = out ? wx.mult(c) : 1;
-      c.t += a / rate; done += a; c.wetE += a * m;
+      const t0 = c.t, mr = out ? wx.rainMult(c) : 1, m = out ? mr * wx.coldMult(c, place) : 1;
+      c.t += a / rate; done += a; c.wetE += a * m; c.rainE += a * mr;
       if (out) {
         wx.worked(c, t0, place);
-        const why = wx.after(c);
+        if (c.fieldIx >= 0 && wx.water) wx.water.used(c.fieldIx, a);
+        const why = wx.after(c, place);
         if (why) { walkTo("H", why); continue; }
+        water();
       }
       if (carry) { c.load += a; if (c.load >= S.load - 1e-9 || want - done <= 1e-9) walkTo("H", "carry"); }
     }
@@ -152,8 +157,10 @@
   // need, and a meal keeps them full for g × S.active ÷ 2 hours (what's left of breakfast carries over to
   // lunch). From their timeline (dayEnd): s1, s2, the hours they spent out and empty before lunch and
   // after it; Lh, E, when they went in for lunch (null if they'd gone in for the day) and for the day;
-  // early, when they went in early, hungry with no energy left (or null). tl.inside, if given: the hours
-  // they spent indoors from the cold ([[from, to]], the Clothing page), which pause hunger as going in does.
+  // early, when they went in early, hungry with no energy left (or null); empty: the hours they were empty,
+  // [[from, to]], until they ate or went in. tl.inside, if given: the hours they spent indoors from the
+  // weather ([[from, to]], the Clothing page): they still eat their meals, and the hours count as empty
+  // (s1 and s2 then count the hours empty out of the house only), at HOME_K of the toll (hungerOf).
   function dayOut(g, tl, S) {
     const full = (g * S.active) / 2, low = HUNGRY_AT * S.active;   // hours of food that keep them above hungry
     const indoors = (a, b) => (tl.inside ? tl.inside.reduce((t, [p, q]) => t + Math.max(0, Math.min(b, q) - Math.max(a, p)), 0) : 0);
@@ -161,20 +168,44 @@
     const spent = tl.out !== undefined && tl.out !== null;
     if (spent && tl.out < tl.Lh - 1e-9) {   // nothing left to do before lunch: in once they're hungry
       const goIn = Math.max(tl.out, full - low);
-      if (goIn < tl.Lh - 1e-9) return { s1: out(full, goIn), s2: 0, Lh: null, E: goIn, early: goIn };
+      if (goIn < tl.Lh - 1e-9) return { s1: out(full, goIn), s2: 0, Lh: null, E: goIn, early: goIn, empty: [[full, goIn]] };
     }
     const after = Math.max(full, tl.Lh) + full;   // when lunch runs out
     let E = tl.E, early = null;
     if (spent) { const goIn = Math.max(tl.out, tl.Lh + S.meal, after - low); if (goIn < E - 1e-9) { E = goIn; early = goIn; } }
-    return { s1: out(full, tl.Lh), s2: out(after, E), Lh: tl.Lh, E, early };
+    return { s1: out(full, tl.Lh), s2: out(after, E), Lh: tl.Lh, E, early, empty: [[full, tl.Lh], [after, E]] };
+  }
+  // Indoors from the weather, hunger's toll is HOME_K of out of the house
+  const HOME_K = 0.5;
+  // The toll's weight of the empty hours (dayOut's d.empty) up to `upTo` hours since waking: the sum over
+  // them of w × (t₁² − t₀²), t the hours empty so far that day, w = 1 out of the house and HOME_K indoors
+  // (tl.inside), so that the day costs k × that ÷ u² (all out: k × (hours ÷ u)²)
+  function emptyWeight(d, tl, upTo = Infinity) {
+    let t = 0, acc = 0;
+    const add = (a, b, w) => { const s = b - a; if (s > 0) { acc += w * ((t + s) * (t + s) - t * t); t += s; } };
+    for (const [a, b0] of d.empty) {
+      const b = Math.min(b0, upTo);
+      if (!(b > a)) continue;
+      let x = a;
+      for (const [p, q] of (tl.inside || []).filter(([p, q]) => q > a && p < b).sort((m, n) => m[0] - n[0])) {
+        const p1 = Math.max(p, x), q1 = Math.min(q, b);
+        if (q1 <= p1) continue;
+        add(x, p1, 1); add(p1, q1, HOME_K); x = q1;
+      }
+      add(x, b, 1);
+    }
+    return acc;
   }
   // Days of life a person loses to hunger in a day: while out and empty they lose 2k × t ÷ u² days an
   // hour, t being the hours they've been hungry so far that day (one food lasts u = S.active ÷ need
   // hours). Eating or going in stops the clock but doesn't reset it; it starts again from 0 the next day.
-  // So the day costs k × ((s1 + s2) ÷ u)².
+  // So the day costs k × ((s1 + s2) ÷ u)². Indoors from the weather (tl.inside) the clock runs on, at
+  // HOME_K × k (emptyWeight).
   function hungerOf(g, tl, S, k, need) {
     if (!(need > 0)) return 0;
-    const d = dayOut(g, tl, S), u = S.active / need, s = d.s1 + d.s2;
+    const d = dayOut(g, tl, S), u = S.active / need;
+    if (tl.inside) return (k * emptyWeight(d, tl)) / (u * u);
+    const s = d.s1 + d.s2;
     return (k * s * s) / (u * u);
   }
   // Someone who spends the whole day by the house (or no schedule); with nothing to do (idle), they may
@@ -219,13 +250,18 @@
 
   // ---------- The weather (the Clothing page) ----------
   // What Micro (micro-model.js) and Macro (village-model.js's macroWeather) share: the temperature and rain
-  // a person feels, and dressing to go out. C, Rn: the day's cold and rain, either null ({ tempAt(clock
-  // hour), k, clothStep, fireStep, fireHours, fireReach, fireEnergy } and { at(clock hour), fireOut(lit at,
-  // hours), hatStep, limit }); E: the economy's state (衣, 笠, timber); S: the day (S.spots: the work
-  // sites' tiles); wet: the day's rain totals (wet.hats counts the 笠 put on). A person x: { h, cloth, hat,
-  // timber }. Times are clock hours.
+  // a person feels, the cuts they make to work, the cold's toll, and dressing to go out. C, Rn: the day's
+  // cold and rain, either null ({ tempAt(clock hour), k, limit, clothStep, fireStep, fireHours, fireReach,
+  // fireEnergy } and { at(clock hour), fireOut(lit at, hours), hatStep, limit }); E: the economy's state (衣,
+  // 笠, timber); S: the day (S.spots: the work sites' tiles); wet: the day's rain totals (wet.hats counts
+  // the 笠 put on). A person x: { h, cloth, hat, timber }. Times are clock hours.
+  // The cold: below 0 °C felt, out of the house, they're in hypothermia. Its toll weighs K = k × (felt ÷
+  // 10)²: over a spell begun at ts, 2K(τ) × (τ − ts) ÷ u² days of life an hour (u = S.active ÷ their need),
+  // so a spell of s hours at one temperature costs K × (s ÷ u)², hunger's toll with K for k. The work out
+  // there is cut by (felt ÷ 10)² too, as the rain's; at C.limit (−5 °C) or colder they go home.
   function weatherOf(C, Rn, E, S, wet) {
     const EPS = 1e-9, fires = [];   // { x, y, t0, t1, warm } at the tiles worked
+    const limit = C && C.limit != null ? C.limit : -5;   // too cold to stay out, °C felt
     const spot = (place) => (S.spots ? S.spots[place] : null);
     const clothWarm = (x) => (x.cloth ? C.clothStep * x.cloth.tier : 0);
     // The warmest fire burning within reach of place at T (0: none, or place null: walking)
@@ -237,6 +273,15 @@
       return w;
     };
     const felt = (x, place, T) => C.tempAt(T) + clothWarm(x) + fireWarm(place, T);
+    // The cut a felt temperature makes to work (0 at 0 °C or warmer), and whether it's too cold to stay out
+    const coldCut = (f) => (f < 0 ? (f / 10) ** 2 : 0);
+    const tooCold = (x, place, T) => !!C && felt(x, place, T) <= limit;
+    // The toll from lo to hi of a spell begun at ts, felt(T) the felt temperature, by Simpson's rule
+    function toll(feltAt, ts, lo, hi, u) {
+      if (!(hi > lo)) return 0;
+      const g = (T) => coldCut(feltAt(T)) * (T - ts), mid = (lo + hi) / 2;
+      return ((2 * C.k) / (u * u)) * ((hi - lo) * (g(lo) + 4 * g(mid) + g(hi))) / 6;
+    }
     // The rain x feels at T (under their 笠); whether it's at the limit or more; whether no fire can be lit (10)
     const wetAt = (x, T) => Math.max(0, Rn.at(T) - (x.hat ? Rn.hatStep * x.hat.tier : 0));
     const tooWet = (x, T) => !!Rn && wetAt(x, T) >= Rn.limit - EPS;
@@ -253,21 +298,21 @@
       return true;
     }
     function putOn(x, c) { if (x.cloth) E.untake(x.cloth); x.cloth = c; E.wear(x.h, c); }
-    // Ready to go out to place at T with e energy: warm enough as they are (counting a fire burning there
+    // Ready to go out to place at T with e energy: 0 °C or warmer as they are (counting a fire burning there
     // when they'd arrive), or in the 衣 of the lowest tier that does it, or in the warmest 衣 there is with a
-    // timber of the lowest tier that makes up the rest (none in a rain at 10); false: none of these, so they
-    // stay in
+    // timber of the lowest tier that makes up the rest (none in a rain at 10); short of that, they go if it
+    // feels warmer than C.limit, and stay in (false) if not
     function dressFor(x, place, T, e) {
       const air = C.tempAt(T) + fireWarm(place, T + S.between("H", place));
       if (air + clothWarm(x) >= 0) return true;
-      if (!E || !E.clothFor) return false;
+      if (!E || !E.clothFor) return air + clothWarm(x) > limit;
       const c = E.clothFor(Math.max(x.cloth ? x.cloth.tier + 1 : 1, Math.ceil(-air / C.clothStep - EPS)));
       if (c) { putOn(x, c); return true; }
       const best = E.takeTool("clothes");
       if (best && (!x.cloth || best.tier > x.cloth.tier)) putOn(x, best); else if (best) E.untake(best);
       const need = Math.ceil(-(air + clothWarm(x)) / C.fireStep - EPS);
       const t = need <= 4 && e > C.fireEnergy + EPS && !noFire(T) ? E.timberFor(need) : 0;
-      if (!t) return false;
+      if (!t) return air + clothWarm(x) > limit;
       E.takeTimber(t); x.timber = t;
       return true;
     }
@@ -277,13 +322,35 @@
       if (s) fires.push({ x: s.x, y: s.y, t0: T, t1: Rn ? Rn.fireOut(T, C.fireHours) : T + C.fireHours, warm: C.fireStep * x.timber });
       x.timber = 0;
     }
-    return { fires, felt, wetAt, tooWet, noFire, hatFor, dressFor, light };
+    return { fires, felt, coldCut, tooCold, toll, wetAt, tooWet, noFire, hatFor, dressFor, light };
+  }
+
+  // ---------- Watering (the Watering page) ----------
+  // What both modes share: the well, the river and the fields' water through the day. W: { at (fetch water
+  // at this field level or lower), use (levels 1 energy of tending uses) }; st: the village's water { well,
+  // level (each field's, 0–10, fields numbered in the order they're taken each day), farmed (tended today),
+  // seeded (tended this year) }; S: the day (the walks). The river (川) never runs dry; a farmer fetches from
+  // the nearer of it and the well, the well only while it has water. day: trips (water carried), river (of them).
+  function wateringOf(W, st, S) {
+    const day = { trips: 0, river: 0 };
+    const toWell = S.between("F", "W"), toRiver = S.between("F", "R");
+    return {
+      day,
+      // ix tended with `energy`: it uses water, and it's seeded
+      used(ix, energy) { if (energy > 0) { st.level[ix] = Math.max(0, st.level[ix] - W.use * energy); st.farmed[ix] = true; st.seeded[ix] = true; } },
+      // Whether the farmer of ix goes for water: the field is at W.at or lower, and there's somewhere to get it
+      dry: (ix) => st.level[ix] <= W.at + 1e-9 && (isFinite(toRiver) || (st.well >= 1 && isFinite(toWell))),
+      // Where to get it: the well ("W") if it has water and is no further than the river, else the river ("R")
+      source: () => (st.well >= 1 && isFinite(toWell) && (!isFinite(toRiver) || toWell <= toRiver) ? "W" : isFinite(toRiver) ? "R" : null),
+      fetch(src) { if (src === "W") st.well -= 1; else day.river++; },
+      pour(ix) { st.level[ix] = Math.min(10, st.level[ix] + 1); day.trips++; },
+    };
   }
 
   // A day with no walking, for a working page without a map
   const NO_MAP = { active: 12, lunch: 5, meal: 0.4, wake0: 4, wake1: 8, between: () => 0 };
 
   window.DayModel = {
-    NO_MAP, HUNGRY_AT, UNIT, newClock, workAt, canAt, dayEnd, dayOut, hungerOf, atHome, workSpans, classSpans, sharedHours, weatherOf,
+    NO_MAP, HUNGRY_AT, UNIT, HOME_K, newClock, workAt, canAt, dayEnd, dayOut, emptyWeight, hungerOf, atHome, workSpans, classSpans, sharedHours, weatherOf, wateringOf,
   };
 })();
