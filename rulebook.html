@@ -85,8 +85,8 @@
         <div class="topic">
           <h3>Growing up <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a></h3>
           <ul>
-            <li>Every newborn starts with Power 70, whoever their parents are. Their Intelligence is 0.7 × the average of a random adult man's and woman's, give or take 15%.</li>
-            <li>Children turn extra milk into Power and lessons into Intelligence, one point at a time. The next point costs <b>(max(100, A) − 100)² + 100</b>: cheap below 100, then dearer and dearer.</li>
+            <li>A newborn's Power and Intelligence are each 0.7 × the average of a random adult man's and woman's, give or take 15%.</li>
+            <li>Children turn extra milk into Power and lessons into Intelligence, one point at a time. The next point costs <b>(max(70, A) − 70)² + 100</b>: cheap up to 70, then dearer and dearer.</li>
             <li>A child going hungry loses 1 Power for every 100 food missed.</li>
             <li>At 360 days they come of age: +30 to both. After that, attributes don't change.</li>
             <li>Scholars teach at the house: a child learns the scholar's speed × the time in class × teaching skill, shared among the class. Scholars do no other work.</li>
@@ -155,13 +155,14 @@
             <li>Clouds blow across the map; the more clouds, the likelier rain, and it snows below 0 °C.</li>
             <li>Each season has its own clouds, wind, rain and temperature. Cloudy and rainy days are cooler, and the temperature swings through the day, coldest at 06:00 and warmest at 15:00.</li>
             <li>Rain raises the water level and dry hours drain it: at 0 a drought, at 10 a flood.</li>
+            <li>The mountain above the river holds water the same way, but doesn't drain below −5 °C, when the river is frozen. The river runs as long as the mountain has water.</li>
             <li>On the Clothing page the village feels the weather's temperature, and its rain too; nowhere else yet.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Watering <a href="watering.html">Watering</a></h3>
           <ul>
-            <li>The river (川) never runs dry. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
+            <li>The river (川) runs while the mountain has water: it's dry only in the deepest droughts. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
             <li>Each field has its own water level, 0–10. Tending uses 0.1 level per energy; a field nobody tends goes back to the land's level within the day.</li>
             <li>A field tended this year grows rice by itself, by its water level: +20 a day at levels 3–4, +10 at 2 and 5, nothing at 1, 6 and 7, and it loses rice when too dry or too wet (−100 at 0 or 10).</li>
           </ul>
@@ -263,7 +264,7 @@
         <div class="topic">
           <h3>Fetching water <a href="watering.html">Watering</a></h3>
           <ul>
-            <li>A farmer who finds their field at level 3 or lower fetches 1 water (+1 level): from the well if it has water and is nearer, otherwise from the river. <span class="who">fixed</span></li>
+            <li>A farmer who finds their field at level 3 or lower fetches 1 water (+1 level): from the well if it has water and is nearer, otherwise from the river if it's running. <span class="who">fixed</span></li>
             <li>They look when they get to the field and after each bit of work. <span class="who">fixed</span></li>
           </ul>
         </div>

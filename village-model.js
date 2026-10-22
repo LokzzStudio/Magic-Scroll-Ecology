@@ -11,9 +11,9 @@
 //   shares    null, or { grown, kids }: the player rations instead, each a fraction of need (children's
 //             above 1 is extra food, from the Inheritance page on)
 //   attrs     starting grown-ups' { power, intel }; elderAttr: the share of both elders work with
-//   inherit   null, or { share, variation, grow, powerBase, bornPower }: children are born with
-//             bornPower and take their Intelligence after their parents
-//   school    null, or { knowPerEnergy, knowBase, shift, most }: up to `most` scholars teach the
+//   inherit   null, or { share, variation, grow, powerBase, dearerPast }: children take their Power and
+//             Intelligence after their parents
+//   school    null, or { knowPerEnergy, knowBase, shift, most, dearerPast }: up to `most` scholars teach the
 //             children and write poetry (吟詩) with the energy left over
 //   travel    null, or the map and the day (MapModel.travelOf): when people wake, how long they're out,
 //             lunch and meals, and the walking between places (Attribute on). With it, hunger is felt
@@ -629,11 +629,13 @@
   const scholarIQ = (h, p, elderAttr, school) =>
     Math.floor(h.intel * (HumanModel.stage(h, p) === "elder" ? elderAttr : 1) * (1 + school.shift / 100) + 1e-9);
 
-  // The next point of Power or Intelligence at `at`: (max(100, at) − 100)² + the base cost
-  const dearer = (at, base) => { const d = Math.max(100, at) - 100; return d * d + base; };
+  // The next point of Power or Intelligence at `at`: (max(x, at) − x)² + the base cost, x the Inheritance
+  // page's "dearer past" (DEARER_PAST without)
+  const DEARER_PAST = 70;
+  const dearer = (at, base, x = DEARER_PAST) => { const d = Math.max(x, at) - x; return d * d + base; };
   // A child takes home `got` knowledge (h.knowBank: what's put by toward the next point); it buys
   // Intelligence one point at a time, for life (nextIntelCost: the next point's knowledge). Returns the gain.
-  const nextIntelCost = (intel, school) => dearer(intel, school.knowBase);
+  const nextIntelCost = (intel, school) => dearer(intel, school.knowBase, school.dearerPast);
   function learn(h, got, school) {
     h.knowledge = (h.knowledge || 0) + got; h.knowBank = (h.knowBank || 0) + got;
     let gain = 0;
@@ -679,9 +681,9 @@
   }
 
   // ---------- Inheritance ----------
-  // Newborns are born with Power ih.bornPower (BORN_POWER without; h.basePower: the Power they were
-  // born with), and Intelligence share × the average of a random adult man and woman's, give or take the
-  // variation, rounded down. Milk goes to the
+  // Newborns are born with Power and Intelligence each share × the average of a random adult man and
+  // woman's, give or take the variation (drawn for each), rounded down (h.basePower: the Power they were
+  // born with). Milk goes to the
   // children first: whatever milk a child drinks above their need is extra milk, and it buys Power as it
   // comes (h.milkBank: what's put by toward the next point), one point at a time, for good. The food a
   // child goes without takes Power away, 1 point for every HUNGER_FOOD of it (h.hungerBank: toward the
@@ -689,8 +691,8 @@
   // what's left in their banks is lost.
   // Extra milk buys Power one point at a time (nextPointCost: the next point's milk); powerFromFood: the
   // Power a lump of it buys, for the pages' hints.
-  const HUNGER_FOOD = 100, BORN_POWER = 70;
-  const nextPointCost = (power, ih) => dearer(power, ih.powerBase);
+  const HUNGER_FOOD = 100;
+  const nextPointCost = (power, ih) => dearer(power, ih.powerBase, ih.dearerPast);
   function powerFromFood(power, food, ih) {
     let gained = 0;
     for (;;) {
@@ -712,7 +714,7 @@
           const vary = ih.variation > 0 ? (ih.variation / 100) * (2 * irand() - 1) : 0;
           return Math.max(0, Math.floor(ih.share * ((a + b) / 2) * (1 + vary) + 1e-9));
         };
-        h.power = h.basePower = ih.bornPower ?? BORN_POWER;
+        h.power = h.basePower = dad && mum ? born(dad.power, mum.power) : attrs.power;
         h.intel = dad && mum ? born(dad.intel, mum.intel) : attrs.intel;
         h.grown = false; h.milkBank = 0; h.hungerBank = 0; h.knowledge = 0; h.knowBank = 0; h.learned = 0;
       } else if (!h.grown && h.age >= p.M) {
@@ -843,7 +845,7 @@
         if (dt > 0 && r > 0 && well < cap) well = Math.min(cap, well + r * dt);
       }
       st.well = Math.min(cap, well);
-      return { grew, trips: dw.day.trips, river: dw.day.river, well: st.well, level: st.level.reduce((a, b) => a + b, 0) / st.level.length, land };
+      return { grew, trips: dw.day.trips, river: dw.day.river, riverDry: wd.river === false ? 1 : 0, well: st.well, level: st.level.reduce((a, b) => a + b, 0) / st.level.length, land };
     }
     const wdays = wx ? WeatherModel.simulateYear(wx.sets, (cfg.seed ^ 0x2c1b3c6d) >>> 0, wx.stats, Math.ceil(Math.min(T, cfg.stopAfter || T) / YEAR), undefined, !!rain) : null;
     const roles = cfg.roles || RolesModel.DEFAULTS;
@@ -918,7 +920,7 @@
       hunger: f32(),                                                                 // days of life lost to hunger, everyone together
       cold: f32(), coldHours: f32(), coldCut: f32(), fires: i32(), burned: i32(), tempLo: nan(), tempHi: nan(),   // the cold: days of life lost to it, hours in hypothermia, fires lit, timber burned, the day's low and high
       heavy: f32(), rainIn: f32(), rainLost: f32(), outWork: f32(), hats: i32(),
-      well: nan(), fieldWater: nan(), land: nan(), waterRice: f32(), trips: i32(), riverTrips: i32(),   // the water: the well's at day's end, the fields' average, the land's, rice the water grew, water carried   // the rain: its hours at the limit or more, everyone's hours in from it, the work out of the house it took and what was done, 笠 put on
+      well: nan(), fieldWater: nan(), land: nan(), waterRice: f32(), trips: i32(), riverTrips: i32(), riverDry: i32(),   // the water: the well's at day's end, the fields' average, the land's, rice the water grew, water carried   // the rain: its hours at the limit or more, everyone's hours in from it, the work out of the house it took and what was done, 笠 put on
       pow: f32(), int: f32(), extra: f32(),                                          // adults' attributes, children's extra food
       taught: f32(), gained: i32(), kids: i32(), picked: i32(), lesson: f32(), schPow: nan(), schInt: nan(), scholars: i32(),   // school
       read: f32(),                                                // the scholar's reading
@@ -963,7 +965,7 @@
       if (food.wd) {
         d.cold[day] = food.coldLost || 0; d.coldHours[day] = food.coldHours || 0; d.coldCut[day] = food.coldCut || 0; d.fires[day] = food.fires || 0; d.burned[day] = food.burned || 0;
         d.tempLo[day] = food.wd.temp - food.wd.swing / 2; d.tempHi[day] = food.wd.temp + food.wd.swing / 2;
-        if (food.waterDay) { const w = food.waterDay; d.well[day] = w.well; d.fieldWater[day] = w.level; d.land[day] = w.land; d.waterRice[day] = w.grew; d.trips[day] = w.trips; d.riverTrips[day] = w.river; }
+        if (food.waterDay) { const w = food.waterDay; d.well[day] = w.well; d.fieldWater[day] = w.level; d.land[day] = w.land; d.waterRice[day] = w.grew; d.trips[day] = w.trips; d.riverTrips[day] = w.river; d.riverDry[day] = w.riverDry; }
         if (food.wet) {
           const a = food.wd.rainAt;
           let hv = 0;
@@ -1010,7 +1012,7 @@
     // The whole run's totals, kept even without the day-by-day records (Micro mode's comparison).
     // pow, int: the adults' average, summed over the last year's days with adults (attrDays)
     // level: the grown-ups' average level over every skill, summed over the last year's days with grown-ups (levelDays)
-    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, coldCut: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, waterRice: 0, trips: 0, riverTrips: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
+    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, coldCut: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, waterRice: 0, trips: 0, riverTrips: 0, riverDry: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
 
     for (let day = 1; day <= stopAt; day++) {
       if (extinctDay !== null) {   // nobody left: the cows go unmilked and the rice untended
@@ -1097,7 +1099,7 @@
         // isn't below 0 has no cold to feel, so none is worked out (but for a day being watched)
         const wd = wdays ? wdays[day - 1] : null;
         const dayCold = cold && (wd.temp - wd.swing / 2 < 0 || trace) ? { ...cold, tempAt: (h) => WeatherModel.hourTemp(wd.temp, wd.swing, h) } : null;
-        const dayWater = waterSt ? DayModel.wateringOf(waterCfg, waterSt, S) : null;
+        const dayWater = waterSt ? DayModel.wateringOf(waterCfg, waterSt, S, wd.river !== false) : null;
         if (waterSt && !waterSt.started) { waterSt.level.fill(Math.max(0, Math.min(10, wd.water ?? 5))); waterSt.started = true; }   // day 1: the land's
         if (waterSt) waterSt.farmed.fill(false);
         const dayRain = rain ? { hatStep: rain.hatStep, limit: rain.limit, at: (h) => WeatherModel.rainAtHour(wd.rainAt, h), fireOut: (t0, hours) => WeatherModel.fireOut(wd.rainAt, t0, hours) } : null;
@@ -1283,7 +1285,7 @@
       if (joy && isFinite(happy)) { tally.happy += happy; tally.happyDays++; }
       tally.peopleDays += counts[day - 1]; tally.milk += milkMade; tally.rice += riceMade; tally.hunger += (ev.lostAll || 0) - coldLost; tally.walk += walk;
       tally.cold += coldLost; tally.coldHours += chill ? chill.coldHours : 0; tally.coldCut += chill ? chill.coldCut : 0; tally.fires += chill ? chill.fires : 0;
-      if (waterDay) { tally.waterRice += waterDay.grew; tally.trips += waterDay.trips; tally.riverTrips += waterDay.river; }
+      if (waterDay) { tally.waterRice += waterDay.grew; tally.trips += waterDay.trips; tally.riverTrips += waterDay.river; tally.riverDry += waterDay.riverDry; }
       if (wet) { tally.rainIn += wet.inH; tally.rainLost += wet.lost; tally.outWork += wet.outWork; tally.hats += wet.hats; }
       if (made.resMade) { tally.wool += made.resMade.wool; tally.stone += made.resMade.stone; }
       tally.crafts += made.craftDone || 0; tally.taught += lesson.knowledge || 0; tally.gained += lesson.gained || 0;
@@ -1334,7 +1336,7 @@
   }
 
   window.VillageModel = {
-    T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, TEND_DAYS, HARVEST_PER_HAND, DAY_ENERGY, HUNGER_FOOD, nextPointCost, nextIntelCost,
+    T, YEAR, RUNS, MAX_ICONS, MAX_PEOPLE, HUMAN_SALT, FULL_CREW, HARVEST_FIRST, TEND_DAYS, HARVEST_PER_HAND, DAY_ENERGY, HUNGER_FOOD, DEARER_PAST, nextPointCost, nextIntelCost,
     milkGiven, DEFAULT_ORDER, fullOrder, teachesFirst, SKILLS, MAX_LEVEL, effAt, MAX_HAPPY, MID_HAPPY, baseHappiness, happinessOf, birthChance, powerFromFood, dayOfYear, harvestLastOf, workDay, runHerd, run, scholarDay, scholarIQ, teach, learn, read,
     collectOrder, assignEnergy, CRAFT_MAX_TIER, craftTier, craftTierOdds,
   };

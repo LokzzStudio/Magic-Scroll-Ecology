@@ -54,7 +54,7 @@
   <div class="topbar-inner">
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
-      <button type="button" class="btn reset" id="reset" title="Put every setting on this page back to its default">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put every page's settings, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -687,7 +687,6 @@ function stepCows(herd) {
     if (b) { P[k] = Number(b.dataset.t); recompute(); }
   });
   $("reroll").addEventListener("click", () => { P.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
-  $("reset").addEventListener("click", () => { stop(); P = { ...DEFAULTS }; cursor = null; recompute(); });
 
   $("day").addEventListener("input", (e) => { stop(); const v = Number(e.target.value); cursor = v >= P.T ? null : v; drawFrame(); });
 

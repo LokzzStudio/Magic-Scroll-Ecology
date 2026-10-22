@@ -51,7 +51,7 @@
 //     a fire down faster (x.rain.fireOut), and at 10 none can be lit (nobody takes a timber out then).
 //   Watering (with x.water): each field (numbered in the order taken) has a water level; while tending,
 //     each energy uses some of it, and a farmer who finds it at the fetching level or lower (arriving, or
-//     after a unit) walks to the nearer of the well (W, while it has water) and the river (R, never dry), takes
+//     after a unit) walks to the nearer of the well (W, while it has water) and the river (R, while it runs), takes
 //     1 water and walks back with it (+1 level).
 // Returns { work (as assignEnergy's), timelines: Map(h → { Lh, E, out }), left: Map(h → energy left
 // unspent), spent: Map(h → energy spent on each job), walk, lesson, reading, pupils }, and with the cold

@@ -18,7 +18,7 @@
   <div class="topbar-inner">
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
-      <button type="button" class="btn reset" id="reset" title="Put this page, the pages it follows, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put every page's settings, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -110,16 +110,16 @@ VillagePage.start({
   // The same villages without a school, so without a scholar to advise on food
   compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: null }) }; },
   drawPanel(c) {
-    const { S, A, IH, UP, $, fmt, VM } = c, school = VillagePage.schoolOf(S), p = { M: UP.M, E: UP.E };
+    const { S, A, IH, UP, $, fmt, VM } = c, school = VillagePage.schoolOf(S, IH), p = { M: UP.M, E: UP.E };
     const cost = (v) => VM.nextIntelCost(v, school);
     $("ms-hint").innerHTML = S.maxScholars > 1
       ? `Up to <b>${fmt(S.maxScholars)}</b> scholars, one for each child, while the village can spare them. Each one is a worker taken off the food work for good, so a small village can't afford many; in the game, appointing more is the player's call.`
       : `One scholar teaches every child, and advises on food. In the game, appointing more is the player's call; here, raise this to see what more would do.`;
     $("sch-hint").innerHTML = `In the job, a scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>, and advises on food with that Intelligence. It isn't passed on to their children.`;
-    $("kc-hint").innerHTML = `Knowledge buys Intelligence one point at a time as it comes, for life. The next point costs <b>(max(100, Intelligence) − 100)² + ${fmt(S.knowBase)}</b> knowledge (the base cost, plus the square of how far Intelligence is past 100): ${fmt(cost(100))} up to Intelligence 100, ${fmt(cost(110))} at 110, ${fmt(cost(130))} at 130, ${fmt(cost(150))} at 150, ${fmt(cost(200))} at 200.`;
+    $("kc-hint").innerHTML = `Knowledge buys Intelligence one point at a time as it comes, for life. The next point costs <b>(max(${fmt(IH.dearerPast)}, Intelligence) − ${fmt(IH.dearerPast)})² + ${fmt(S.knowBase)}</b> knowledge (the base cost, plus the square of how far Intelligence is past ${fmt(IH.dearerPast)}, the Inheritance page's "points dearer past"): ${fmt(cost(IH.dearerPast))} up to Intelligence ${fmt(IH.dearerPast)}, ${fmt(cost(IH.dearerPast + 10))} at ${fmt(IH.dearerPast + 10)}, ${fmt(cost(IH.dearerPast + 30))} at ${fmt(IH.dearerPast + 30)}, ${fmt(cost(IH.dearerPast + 50))} at ${fmt(IH.dearerPast + 50)}, ${fmt(cost(IH.dearerPast + 100))} at ${fmt(IH.dearerPast + 100)}.`;
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const scholar = { power: A.power, intel: A.intel, age: UP.M };
-    const child = { power: IH.bornPower, intel: Math.floor(IH.share * A.intel + 1e-9), age: 0, knowledge: 0, learned: 0 };
+    const child = { power: Math.floor(IH.share * A.power + 1e-9), intel: Math.floor(IH.share * A.intel + 1e-9), age: 0, knowledge: 0, learned: 0 };
     const sc = VM.scholarDay(scholar, p, 1, school), w = VM.workDay(child.power, child.intel);
     // On average over wake-up times (the Map page's day), and if the two woke together
     const t = VM.teach({ ...scholar }, [{ ...child }], p, 1, school, c.travel), together = VM.teach({ ...scholar }, [{ ...child }], p, 1, school);

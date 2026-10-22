@@ -1,4 +1,4 @@
-// The sidebar on every page, from one list, and the Jobs button next to Reset. Load roles-model.js,
+// The sidebar on every page, from one list, the Jobs button next to Reset, and Reset itself (every page's settings). Load roles-model.js,
 // then this, right after <nav class="sidenav" data-page="...">, where data-page is the page's file name.
 (function () {
   const PAGES = [
@@ -90,8 +90,18 @@
     return { open: () => { draw(); dlg.showModal(); } };
   }
 
+  // Reset to defaults, the same on every page: clears every setting the site keeps, on every page and in
+  // every saved version (an old version left behind would come back through its page's migration), with
+  // the Jobs table and the Priority, then reloads the page on its defaults
+  const SAVED = /^(attribute|clothing|cow-herd-params|craft|education|farm|food-params|happiness|human-params|inheritance|map|priority|ration-params|resources|roles|skill|watering|weather)-v\d+$/;
+  function resetAll() {
+    try { for (const k of Object.keys(localStorage)) if (SAVED.test(k)) localStorage.removeItem(k); } catch (e) {}
+    location.reload();
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const actions = document.querySelector(".top-actions"), reset = document.getElementById("reset");
+    if (reset) { reset.title = "Put every page's settings, the Jobs table and the Priority back to their defaults"; reset.addEventListener("click", resetAll); }
     if (!actions || !window.RolesModel) return;
     const add = (label, title, make) => {
       const btn = document.createElement("button");

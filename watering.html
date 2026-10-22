@@ -34,7 +34,7 @@
   <div class="topbar-inner">
     <div class="top-actions">
       <button type="button" class="btn primary roll" id="reroll" title="Run everything again with different luck"><span aria-hidden="true">↻</span> Roll new runs</button>
-      <button type="button" class="btn reset" id="reset" title="Put this page, the pages it follows, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put every page's settings, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -42,7 +42,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Watering</h1>
-    <p class="lede">The Clothing page, with <b>water</b> in the fields. Each of the 4 fields has its own water level, from <b>0</b> (dry) to <b>10</b> (flooded). Once a field has been tended this year it grows rice <b>by itself</b>, by its water: best at levels <b>3–4</b>, nothing at 1 or 6–7, and rice is lost when it's far too dry or too wet. Tending uses water up, so when a farmer finds their field at level <b>3</b> or lower they fetch water: from the <b>well (井)</b> if it has some and is nearer, otherwise from the <b>river (川)</b>, which never runs dry. The well refills from the ground, by the land's water level (the Weather page's), and from the rain. A field nobody tends goes back to the land's level within the day.</p>
+    <p class="lede">The Clothing page, with <b>water</b> in the fields. Each of the 4 fields has its own water level, from <b>0</b> (dry) to <b>10</b> (flooded). Once a field has been tended this year it grows rice <b>by itself</b>, by its water: best at levels <b>3–4</b>, nothing at 1 or 6–7, and rice is lost when it's far too dry or too wet. Tending uses water up, so when a farmer finds their field at level <b>3</b> or lower they fetch water: from the <b>well (井)</b> if it has some and is nearer, otherwise from the <b>river (川)</b>, which runs as long as the mountain above it holds water (the Weather page's). The well refills from the ground, by the land's water level (the Weather page's), and from the rain. A field nobody tends goes back to the land's level within the day.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The well's size and how full the ground fills it; the water tending uses, and the level farmers fetch water at; the rice a field grows each day at each water level</dd>
@@ -152,7 +152,7 @@ VillagePage.start({
     const lived = (r) => (r.extinctDay !== null ? r.extinctDay : r.last);   // days the village had people
     const G = Array.from({ length: 11 }, (_, k) => S["g" + k]), best = Math.max(...G), bestAt = G.map((g, k) => (g === best ? k : -1)).filter((k) => k >= 0);
     $("well-hint").innerHTML = `The ground fills the well at half the land's water level an hour (at the land's level 5, 2.5 an hour), but only until it holds ${fmt(S.wellGround)}; rain fills it at its rainfall an hour (snow too), up to ${fmt(S.wellCap)}. It refills over each day's 24 hours, after the day's work, and starts full.`;
-    $("use-hint").innerHTML = `Each energy of tending uses ${fmt(S.waterUse, 2)} of its field's level: a standard day (100 energy) uses ${fmt(100 * S.waterUse, 1)}. A farmer who finds their field at level ${fmt(S.waterAt, 1)} or lower (when they get there, and after each unit) walks for 1 water and back with it, +1 level: to the well if it has water and is no further than the river, otherwise to the river, which never runs dry. A field nobody tends today goes back to the land's level by the end of the day.`;
+    $("use-hint").innerHTML = `Each energy of tending uses ${fmt(S.waterUse, 2)} of its field's level: a standard day (100 energy) uses ${fmt(100 * S.waterUse, 1)}. A farmer who finds their field at level ${fmt(S.waterAt, 1)} or lower (when they get there, and after each unit) walks for 1 water and back with it, +1 level: to the well if it has water and is no further than the river, otherwise to the river, while it runs (it's dry only on days that start with the mountain empty; then the well is the only water). A field nobody tends today goes back to the land's level by the end of the day.`;
     $("growth-hint").innerHTML = `A field is seeded once it's been tended this year; until the harvest (day 181) it grows this much rice each day by itself, at its water level rounded down (best at ${bestAt.join(" and ")}: +${fmt(best)}), on top of what tending grows. On day 181 the year's water growth joins the standing rice, which never goes below 0. Fields are numbered in the order farmers take them each day.`;
     const k = c.result.waterCompare;
     $("water-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With the fields' water", k.now, k.now >= k.dry], ["Without it (as on Clothing)", k.dry, k.dry >= k.now]]);
@@ -178,20 +178,22 @@ VillagePage.start({
     s += path(land, "land-line") + path(fld, "field-line");
     svg.innerHTML = s;
     // Run 1 and all 20 villages
-    let wr = 0, tr = 0, rv = 0, pd = 0, dry = 0, days = 0;
-    for (let d = 1; d <= last; d++) { wr += pm.waterRice[d]; tr += pm.trips[d]; rv += pm.riverTrips[d]; pd += pm.counts[d - 1]; if (isFinite(pm.fieldWater[d])) { days++; if (pm.fieldWater[d] <= S.waterAt) dry++; } }
+    let wr = 0, tr = 0, rv = 0, pd = 0, dry = 0, days = 0, rd = 0;
+    for (let d = 1; d <= last; d++) { wr += pm.waterRice[d]; tr += pm.trips[d]; rv += pm.riverTrips[d]; rd += pm.riverDry[d]; pd += pm.counts[d - 1]; if (isFinite(pm.fieldWater[d])) { days++; if (pm.fieldWater[d] <= S.waterAt) dry++; } }
     const perYear = (v, n) => fmt((v / Math.max(1, n)) * c.YEAR, 1);
     $("water-run").innerHTML = `<dt class="sub">Run 1</dt>
       <dt>Rice the water grew a year</dt><dd>${perYear(wr, last)}</dd>
       <dt>Water fetched a year</dt><dd>${perYear(tr, last)}</dd>
       <dt>Of it, from the river</dt><dd>${tr > 0 ? `${fmt((100 * rv) / tr, 0)}%` : "—"}</dd>
+      <dt>Days the river was dry</dt><dd>${fmt(rd)}</dd>
       <dt>Days the fields were dry (level ${fmt(S.waterAt, 1)} or lower, on average)</dt><dd>${days ? `${fmt((100 * dry) / days, 1)}%` : "—"}</dd>`;
-    let aW = 0, aT = 0, aD = 0, aP = 0;
-    for (const r of runs) { aW += r.tally.waterRice; aT += r.tally.trips; aD += lived(r); aP += r.tally.peopleDays; }
+    let aW = 0, aT = 0, aD = 0, aP = 0, aR = 0;
+    for (const r of runs) { aW += r.tally.waterRice; aT += r.tally.trips; aD += lived(r); aP += r.tally.peopleDays; aR += r.tally.riverDry; }
     $("water-all").innerHTML = `<dt class="sub">All ${fmt(runs.length)} villages</dt>
       <dt>Rice the water grew a village a year</dt><dd>${perYear(aW, aD)}</dd>
-      <dt>Water fetched a person a year</dt><dd>${perYear(aT, aP)}</dd>`;
-    $("water-hint").innerHTML = `Tending lowers a field's water and the well tops it up, so tended fields sit low, often in the best band; a field left alone follows the land, which in a drought (0) or a flood (10) costs rice. When the well runs dry, farmers walk the longer way to the river instead.`;
+      <dt>Water fetched a person a year</dt><dd>${perYear(aT, aP)}</dd>
+      <dt>Days the river was dry, in all</dt><dd>${fmt(aR)}</dd>`;
+    $("water-hint").innerHTML = `Tending lowers a field's water and the well tops it up, so tended fields sit low, often in the best band; a field left alone follows the land, which in a drought (0) or a flood (10) costs rice. When the well runs dry, farmers walk the longer way to the river instead; only in a drought deep enough to empty the mountain too (about one year in 35 by default) is there nowhere left to go once the well is dry.`;
   },
 });
 </script>

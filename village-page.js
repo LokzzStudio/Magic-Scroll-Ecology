@@ -49,7 +49,7 @@
   // its defaults and slider ranges from here; the pages after it read what it saved.
   const SPECS = {
     attribute: { key: "attribute-v4", fields: { power: [100, 0, 300, 5], intel: [100, 0, 300, 5], elderPenalty: [20, 0, 50, 5] } },
-    inheritance: { key: "inheritance-v9", fields: { bornPower: [70, 0, 300, 5], share: [0.7, 0, 1, 0.05], variation: [15, 0, 50, 1], grow: [30, 0, 100, 5], powerBase: [100, 10, 1000, 10] } },
+    inheritance: { key: "inheritance-v10", fields: { dearerPast: [70, 0, 300, 5], share: [0.7, 0, 1, 0.05], variation: [15, 0, 50, 1], grow: [30, 0, 100, 5], powerBase: [100, 10, 1000, 10] } },
     education: { key: "education-v4", fields: { maxScholars: [1, 1, 10, 1], knowPerEnergy: [1, 0.1, 5, 0.1], knowBase: [100, 10, 1000, 10], scholarShift: [10, 0, 50, 5] } },
     happiness: { key: "happiness-v4", fields: { iqStep: [2, 0.5, 10, 0.5] } },
     resources: { key: "resources-v8", fields: { fleece: [300, 10, 500, 10], regrow: [30, 1, 100, 1], woolPerEnergy: [1, 0.1, 5, 0.1], woodPerEnergy: [1, 0.1, 5, 0.1], stonePerEnergy: [1, 0.1, 5, 0.1], forestTier: [3, 1, 3, 1], mineTier: [3, 1, 3, 1], forestCrew: [3, 0, 20, 1], mineCrew: [2, 0, 20, 1],
@@ -87,6 +87,7 @@
       ["inheritance-v8", [() => scaled(keyed("inheritance-v7") || {}, ten("extraCap", "powerFoodBase")),
         () => scaled(keyed("inheritance-v6") || {}, { extraCap: 0, powerFoodBase: 10 }), () => scaled(keyed("inheritance-v5") || {}, { extraCap: 0, powerFoodBase: 0 })]],
       ["inheritance-v9", [() => scaled(keyed("inheritance-v8") || {}, { variation: 0, powerBase: 0 })]],
+      ["inheritance-v10", [() => scaled(keyed("inheritance-v9") || {}, { bornPower: 0 })]],   // Power inherited again; points dearer past 70
       ["education-v2", [() => scaled(keyed("education-v1") || {}, ten("knowPerIntel", "readPerIntel"))]],
       ["education-v3", [() => scaled(keyed("education-v2") || {}, { readPerIntel: 0 })]],
       ["education-v4", [() => scaled(keyed("education-v3") || {}, { knowBase: 0 })]],
@@ -135,7 +136,8 @@
     }
   }
   // Simulation options from the Education, Happiness, Resources and Craft pages' settings
-  const schoolOf = (E) => ({ knowPerEnergy: E.knowPerEnergy, knowBase: E.knowBase, shift: E.scholarShift, most: E.maxScholars });
+  // (IH: the Inheritance page's settings, whose "dearer past" Intelligence's cost shares)
+  const schoolOf = (E, IH) => ({ knowPerEnergy: E.knowPerEnergy, knowBase: E.knowBase, shift: E.scholarShift, most: E.maxScholars, ...(IH ? { dearerPast: IH.dearerPast } : {}) });
   const resourcesOf = (R) => ({ fleece: R.fleece, regrow: R.regrow, perEnergy: { wool: R.woolPerEnergy, stone: R.stonePerEnergy, wood: R.woodPerEnergy }, tiers: { wood: R.forestTier, stone: R.mineTier }, crew: { wood: R.forestCrew, stone: R.mineCrew } });
   const happinessOf = (H) => ({ iqStep: H.iqStep });
   const skillsOf = (K) => ({ exp: [K.exp1, K.exp2, K.exp3, K.exp4], bonus: [K.bonus1, K.bonus2, K.bonus3, K.bonus4] });
@@ -152,7 +154,7 @@
   // The rain (the Clothing page too): the same weather, with its 笠 and limit
   const rainOf = (K) => { const { sets, stats } = coldOf(K); return { sets, stats, hatStep: K.hatStep, limit: K.rainLimit }; };
 
-  // The pages in order; each page reads (and its Reset clears) the settings of the pages before it
+  // The pages in order; each page reads the settings of the pages before it
   // (the Food page keeps the food and the rationing settings)
   const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering"];
   const KEYS = { herd: [HerdModel.STORE_KEY], humans: [HumanModel.STORE_KEY], food: [FoodModel.STORE_KEY, RationModel.STORE_KEY], map: [MapModel.STORE_KEY], weather: window.WeatherModel ? [WeatherModel.STORE_KEY] : [],
@@ -213,7 +215,7 @@
       o.shares = R.who === "you" ? { grown: R.grown / 100, kids: R.kids / 100 } : null;
       if (A) { o.attrs = { power: A.power, intel: A.intel }; o.elderAttr = 1 - A.elderPenalty / 100; }
       if (at("inheritance")) o.inherit = c.IH;
-      if (at("education")) o.school = schoolOf(c.ED);
+      if (at("education")) o.school = schoolOf(c.ED, c.IH);
       if (at("happiness")) o.happiness = happinessOf(c.set.happiness);
       if (at("resources")) { o.resources = resourcesOf(c.RS); o.skills = skillsOf(c.RS); }
       if (at("craft")) { o.craft = craftOf(c.CR); o.kit = { tier: 2, blade: c.CR.startBlades, fork: c.CR.startForks, clothes: c.CR.startClothes, hat: c.CR.startHats }; }
@@ -545,16 +547,16 @@
       }
       if ($("edu-params")) {
         $("edu-params").innerHTML = paramRows([
-          ["", "Most scholars", fmt(c.ED.maxScholars)], ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", `(max(100, Intelligence) − 100)² + ${fmt(c.ED.knowBase)}`], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
+          ["", "Most scholars", fmt(c.ED.maxScholars)], ["", "Knowledge effectiveness", `1 energy = ${fmtNum(c.ED.knowPerEnergy)} knowledge`], ["", "Knowledge per +1 Intelligence", `(max(${fmt(c.IH.dearerPast)}, Intelligence) − ${fmt(c.IH.dearerPast)})² + ${fmt(c.ED.knowBase)}`], ["", "Scholar adjustment", `±${fmt(c.ED.scholarShift)}%`],
         ]);
         source("edu-source", c.saved.education);
       }
       if (at("education")) {
         $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(c.A.power)}</b> and <b>Intelligence ${fmt(c.A.intel)}</b>, from the Attribute page.`;
         $("inherit-params").innerHTML = paramRows([
-          ["", "Power at birth", fmt(c.IH.bornPower)], ["", "Intelligence passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
+          ["", "Passed on (h)", `${fmt(c.IH.share, 2)} × average`], ["", "Variation at birth", `±${fmt(c.IH.variation)}%`],
           ["", "Coming-of-age bonus", `+${fmt(c.IH.grow)} each`],
-          ["", "Extra milk per +1 Power", `(max(100, Power) − 100)² + ${fmt(c.IH.powerBase)}`], ["", "Hunger per −1 Power", `${fmt(c.VM.HUNGER_FOOD)} food a child goes without`],
+          ["", "Points dearer past", fmt(c.IH.dearerPast)], ["", "Extra milk per +1 Power", `(max(${fmt(c.IH.dearerPast)}, Power) − ${fmt(c.IH.dearerPast)})² + ${fmt(c.IH.powerBase)}`], ["", "Hunger per −1 Power", `${fmt(c.VM.HUNGER_FOOD)} food a child goes without`],
         ]);
         $("inherit-source").hidden = c.saved.inheritance && c.saved.attribute;
         $("inherit-source").textContent = "Showing defaults. If you changed those pages and it doesn't show here, your browser keeps each local file's settings separate.";
@@ -759,7 +761,7 @@
     // Adults' average Power and Intelligence, with where they settle without extra food (or school)
     function drawAttrChart() {
       const pm = c.result.people.main, IH = c.cfg.inherit;
-      const settles = [["Power", IH.bornPower + IH.grow], ["Int", IH.share < 1 ? IH.grow / (1 - IH.share) : Infinity]].filter(([, v]) => isFinite(v));
+      const settle = IH.share < 1 ? IH.grow / (1 - IH.share) : Infinity, settles = isFinite(settle) ? [["Power", settle], ["Int", settle]] : [];
       const end = pm.extinctDay !== null ? pm.extinctDay : pm.last;
       let yMax = Math.max(c.A.power, c.A.intel, ...settles.map(([, v]) => v), 10);
       for (let i = 0; i <= end; i++) { if (pm.pow[i] > yMax) yMax = pm.pow[i]; if (pm.int[i] > yMax) yMax = pm.int[i]; }
@@ -1245,19 +1247,7 @@
     for (const b of document.querySelectorAll("[data-speed]")) b.addEventListener("click", () => { S.speed = Number(b.dataset.speed); store(def.storeKey, S); syncSpeed(); });
     $("reroll").addEventListener("click", () => { S.seed = 1 + Math.floor(Math.random() * 1e6); recompute(); });
 
-    // Reset covers this page and the pages it follows, with the Jobs table and the Priority from the
-    // Attribute page on
-    $("reset").addEventListener("click", () => {
-      try {
-        for (const k of upstream) localStorage.removeItem(k);
-        if (at("attribute")) { localStorage.removeItem(RolesModel.STORE_KEY); localStorage.removeItem(RolesModel.PRIORITY_KEY); }
-      } catch (e) {}
-      Object.keys(S).forEach((k) => delete S[k]);
-      Object.assign(S, S_DEFAULTS);
-      if (def.key === "food") { c.F = { ...FoodModel.DEFAULTS }; c.R = { ...RationModel.DEFAULTS }; }
-      cursor = null;
-      recompute();
-    });
+    // (Reset is site.js's, for every page at once)
     // Follow the other pages when they're changed in another tab
     window.addEventListener("storage", (e) => { if (upstream.includes(e.key) || (at("attribute") && (e.key === RolesModel.STORE_KEY || e.key === RolesModel.PRIORITY_KEY))) recompute(); });
     if (at("attribute")) window.addEventListener("roles-change", () => recompute());

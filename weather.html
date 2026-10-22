@@ -90,6 +90,7 @@
   .type-table td.n { text-align: right; }
   .chart .water-line { fill: none; stroke: var(--rain); stroke-width: 1.8; }
   .chart .water-fill { fill: var(--rain); opacity: 0.18; }
+  .chart .mountain-line { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 3; opacity: 0.8; }
   .chart .drought-zone { fill: var(--allee); opacity: 0.16; }
   .chart .flood-zone { fill: var(--cows); opacity: 0.2; }
   .chart .bar.water { fill: var(--rain); opacity: 0.75; }
@@ -109,7 +110,7 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="top-actions">
-      <button type="button" class="btn reset" id="reset" title="Put this page back to its defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put every page's settings, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -117,10 +118,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Weather</h1>
-    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Five settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, how much of the time is cloudy, and how long a spell lasts (the longer, the likelier the sky you see is still the same half a day later). Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C. A water level from 0 to 10 rises with rain and falls in dry hours: at 0 it's a drought, at 10 a flood.</p>
+    <p class="lede">Clouds blow across the village's sky. The weather goes in spells: in a clear spell no clouds come; in a cloudy spell they come in at the west edge at random, drift east with the wind and leave at the east edge. The sky holds at most 10 clouds; a cloud due while it's full doesn't come. Four settings shape the clouds: how often they come in a cloudy spell, how fast the wind carries them across on average, how much it varies, and how much of the time is cloudy. The weather moves with the wind: a clear and a cloudy spell together last as long as the wind takes to cross the sky 16 times, so in a calm season the spells are long (the sky you see is likely still the same half a day later) and in a windy one the sky changes often. Rain comes from the clouds: the more there are, the likelier it rains, and the heavier. Each season has its own settings, temperature too: a day is warmer the sunnier it is, and rain falls as snow below 0 °C. A water level from 0 to 10 rises with rain and falls in dry hours: at 0 it's a drought, at 10 a flood. The mountain above the river (川) keeps a level of its own the same way, except that it doesn't drain while it's below −5 °C (the river frozen): the river runs as long as it holds any water.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness and spell length, how changeable the rain is, and the temperature; for the year, the season ramp and the water level's settings</dd>
+        <dt>Set here</dt><dd>For each season: how often clouds come, the wind's average speed and volatility, the cloudiness, how changeable the rain is, and the temperature; for the year, the season ramp and the water level's settings</dd>
         <dt>Follows</dt><dd><a href="map.html">Map</a> (drawn under the sky)</dd>
         <dt>Used by</dt><dd class="none">No page yet</dd>
       </dl>
@@ -181,14 +182,6 @@
           </div>
           <input id="cl-range" type="range" aria-label="Share of the time in cloudy spells">
           <p class="hint" id="cl-hint"></p>
-        </div>
-        <div class="param">
-          <div class="param-head">
-            <label for="sp-num">Spell length</label>
-            <span class="num-wrap"><input id="sp-num" type="number"><span class="unit">h</span></span>
-          </div>
-          <input id="sp-range" type="range" aria-label="Hours a clear spell and a cloudy one last together, on average">
-          <p class="hint" id="sp-hint"></p>
         </div>
         <p class="hint" id="load-hint"></p>
       </section>
@@ -409,7 +402,7 @@
   const hasSim = (S) => sims.has(JSON.stringify(S));
 
   // ---------- Settings ----------
-  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["sp", "spell"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"], ["dsw", "swing"]];
+  const INPUTS = [["rate", "spawnRate"], ["wind", "wind"], ["wv", "windVol"], ["cl", "cloudiness"], ["rc", "rainChange"], ["tmp", "temp"], ["tsd", "tempSd"], ["ccl", "cloudCool"], ["rcl", "rainCool"], ["dsw", "swing"]];
   function syncInputs() {
     for (const [id, key] of INPUTS) {
       const [lo, hi, step] = WM.LIMITS[key], range = $(id + "-range"), num = $(id + "-num");
@@ -536,7 +529,7 @@
     drawSeason();
     const even = WM.evenDistribution(P), cross = WM.crossHours(P), a = WM.loadOf(P), sp = WM.spellHours(P);
     $("rate-hint").innerHTML = P.spawnRate > 0 ? `In a cloudy spell a cloud is due on average every <b>${hours(1 / P.spawnRate)}</b>, at random: some come close together, some far apart.` : "No clouds come.";
-    $("wind-hint").innerHTML = P.wind > 0 ? `At the average speed a cloud takes <b>${hours(cross)}</b> to cross the ${W}-tile map.` : "With no wind, clouds stay where they are: the sky fills up in the first cloudy spell and stays full.";
+    $("wind-hint").innerHTML = P.wind > 0 ? `At the average speed a cloud takes <b>${hours(cross)}</b> to cross the ${W}-tile map. The weather moves with it: a clear spell and a cloudy one last ${fmt(WM.SPELL_CROSSINGS)} crossings together on average, <b>${hours(WM.spellOf(P))}</b>${P.cloudiness > 0 && P.cloudiness < 100 ? `, so now a cloudy spell lasts about <b>${hours(sp.cloudy)}</b> and a clear one <b>${hours(sp.clear)}</b> (each a random length around that)` : ""}. The calmer, the steadier the weather: a sky that's cloudy now is likelier to be cloudy ${WM.LAG_HOURS} h later, and a clear one clear (the figures in How many clouds); and each cloud stays overhead longer.` : "With no wind, clouds stay where they are and the spell never changes: the sky fills up in a cloudy spell and stays full.";
     if (!(P.wind > 0)) $("wv-hint").innerHTML = "No wind at all, so nothing to vary.";
     else if (!(P.windVol > 0)) $("wv-hint").innerHTML = "Steady: the wind always blows at the average speed.";
     else {
@@ -545,9 +538,7 @@
       $("wv-hint").innerHTML = `The wind holds a speed for about ${fmt(WM.WIND_HOURS)} h, then shifts to a new one at random around the average. With these settings it's between <b>${fmt(xs[400], 1)}</b> and <b>${fmt(xs[3600], 1)}</b> tiles/h 80% of the time. Calm stretches hold clouds overhead and let them pile up, gusts clear them away: the more volatile, the more clouds on average and the more full skies.`;
     }
     $("cl-hint").innerHTML = P.cloudiness >= 100 ? "Always a cloudy spell: clouds come all the time, evenly at random." : P.cloudiness <= 0 ? "Always a clear spell: no clouds ever come." :
-      `The share of time in cloudy spells: how much of the time is cloudy, not how long it stays so (that's the spell length). The lower it is, the more the clouds come in bunches.`;
-    $("sp-hint").innerHTML = P.cloudiness >= 100 || P.cloudiness <= 0 ? "With cloudiness at " + fmt(P.cloudiness) + "% the spell never changes." :
-      `A clear spell and a cloudy one last this long together on average, so now a cloudy spell lasts about <b>${hours(sp.cloudy)}</b> and a clear one <b>${hours(sp.clear)}</b> (each a random length around that). The longer, the steadier the weather: a sky that's cloudy now is likelier to be cloudy ${WM.LAG_HOURS} h later, and a clear one clear (the figures in How many clouds). Shorter: the sky changes its mind more often, with the same share of cloudy time.`;
+      `The share of time in cloudy spells: how much of the time is cloudy, not how long it stays so (that's the wind's doing: see Average wind speed). The lower it is, the more the clouds come in bunches.`;
     $("rc-hint").innerHTML = `The sky keeps a rain die, re-rolled on average every <b>${hours(1 / P.rainChange)}</b>: it's raining whenever the die is under the chance for the clouds there are. So rain starts or stops when the die is re-rolled, or when clouds come or go. Higher: rain comes and goes in short showers; lower: longer rains and longer dry stretches. The share of time raining stays the same.`;
     const ramped = WM.seasonAverages(ALL)[WM.SEASONS.findIndex((s) => s.id === season)];
     $("tmp-hint").innerHTML = `The season's temperature away from its ends; below 0 °C, rain falls as snow.` + (ALL.rampDays > 0 ? ` Through the year it ramps to its neighbours' near the season's ends (Season ramp), so the season as a whole averages <b>${fmt(ramped, 1)}</b> °C.` : "");
@@ -592,7 +583,7 @@
       `<tr class="feel"><th></th>${S.map((s) => cell(s.id, s.feel)).join("")}</tr>` +
       `<tr class="grp"><th colspan="5">Settings</th></tr>` +
       row("Cloud spawn rate", (x) => `${fmt(x.spawnRate, 2)}/h`) + row("Average wind speed", (x) => fmt(x.wind, 1)) + row("Wind volatility", (x) => fmt(x.windVol, 1)) +
-      row("Cloudiness", (x) => `${fmt(x.cloudiness)}%`) + row("Spell length", (x) => `${fmt(x.spell)} h`) + row("Rain changeability", (x) => `${fmt(x.rainChange, 2)}/h`) +
+      row("Cloudiness", (x) => `${fmt(x.cloudiness)}%`) + row("Spells, by the wind", (x) => (isFinite(WM.spellOf(x)) ? hours(WM.spellOf(x)) : "never change")) + row("Rain changeability", (x) => `${fmt(x.rainChange, 2)}/h`) +
       row("Average temperature", (x) => `${fmt(x.temp)} °C`) + row("Temperature spread", (x) => `${fmt(x.tempSd, 1)} °C`) + row("Cloud cooling", (x) => `${fmt(x.cloudCool, 1)} °C`) + row("Rain cooling", (x) => `${fmt(x.rainCool, 1)} °C`) + row("Daily swing", (x) => `${fmt(x.swing, 1)} °C`) +
       `<tr class="grp"><th colspan="5">Weather</th></tr>` +
       res("Average clouds", (s) => fmt(WM.meanOf(s.share), 1)) + res("Clear sky", (s) => pct(s.share[0])) +
@@ -628,25 +619,29 @@
     });
     const pts = year.map((d, i) => `${x(i + 1).toFixed(1)} ${y(d.water).toFixed(1)}`);
     s += `<path class="water-fill" d="M${x(0).toFixed(1)} ${y(0)} L${pts.join(" L")} L${x(D).toFixed(1)} ${y(0)} Z"/><path class="water-line" d="M${pts.join(" L")}"/>`;
+    // The mountain's level, dashed (it's never below the land's)
+    if (year[0] && isFinite(year[0].mountain)) s += `<path class="mountain-line" d="M${year.map((d, i) => `${x(i + 1).toFixed(1)} ${y(d.mountain).toFixed(1)}`).join(" L")}"/><text class="tag" x="${m.l + 4}" y="${y(year[0].mountain) - 5}">山 mountain</text>`;
     s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/>`;
     svg.innerHTML = s;
   }
   // Droughts and floods over 100 years in a row, run once the page has settled (about a second)
   let waterKey = "", waterRes = null, waterTimer = 0;
+  // (with the seasons' temperatures once they're all in: the mountain freezes by them)
   function drawWater() {
-    const key = JSON.stringify(ALL);
+    const ready = WM.SEASONS.every((s) => hasSim(ALL[s.id])), key = JSON.stringify(ALL) + ready;
     if (key !== waterKey) {
       waterKey = key; waterRes = null;
       clearTimeout(waterTimer);
-      waterTimer = setTimeout(() => { waterRes = WM.waterRun(ALL, 1, null, 100); drawWater(); }, 60);
+      waterTimer = setTimeout(() => { waterRes = WM.waterRun(ALL, 1, ready ? Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats])) : null, 100); drawWater(); }, 60);
     }
     const r = waterRes, v = (f) => (r ? f(r) : "…"), pd = (x) => `${fmt(x * 360, 1)} days a year`;
-    $("water-facts").innerHTML = [["Drought", v((x) => pct(x.drought))], ["Years with a drought", v((x) => pct(x.droughtYears))], ["Flood", v((x) => pct(x.flood))], ["Years with a flood", v((x) => pct(x.floodYears))]]
+    $("water-facts").innerHTML = [["Drought", v((x) => pct(x.drought))], ["Years with a drought", v((x) => pct(x.droughtYears))], ["Flood", v((x) => pct(x.flood))], ["Years with a flood", v((x) => pct(x.floodYears))], ["River dry", v((x) => pct(x.riverDry))], ["Years with a drought and a dry river", v((x) => pct(x.bothYears))]]
       .map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
     const S = WM.SEASONS;
     $("water-table").innerHTML = `<thead><tr><th></th>${S.map((s) => `<th class="n">${s.zh} ${s.en}</th>`).join("")}</tr></thead><tbody>` +
       `<tr><th scope="row">Drought, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].drought))}</td>`).join("")}</tr>` +
-      `<tr><th scope="row">Flood, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].flood))}</td>`).join("")}</tr></tbody>`;
+      `<tr><th scope="row">Flood, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].flood))}</td>`).join("")}</tr>` +
+      `<tr><th scope="row">River dry, share of the season</th>${S.map((s, k) => `<td class="n">${v((x) => pct(x.bySeason[k].riverDry))}</td>`).join("")}</tr></tbody>`;
     // The share of time at each level, 0–1 … 9–10
     const svg = $("level-chart"), H0 = 190, w = svgSize(svg, H0), m = { l: 44, r: 12, t: 18, b: 38 };
     if (!r) { svg.innerHTML = `<text x="${w / 2}" y="${H0 / 2}" text-anchor="middle">Running 100 years…</text>`; }
@@ -663,7 +658,8 @@
       s += `<line class="axis" x1="${m.l}" x2="${w - m.r}" y1="${y(0)}" y2="${y(0)}"/><text class="axis-title" x="${m.l + (w - m.l - m.r) / 2}" y="${H0 - 4}" text-anchor="middle">Water level at the end of the day</text>`;
       svg.innerHTML = s;
     }
-    $("water-run-hint").innerHTML = r ? `Over ${fmt(r.years)} years in a row: a drought ${fmt(r.droughtSpells, 1)} times a year on average, lasting about <b>${fmt(r.droughtDays, 1)}</b> days (days with some drought, in a row); a flood ${fmt(r.floodSpells, 1)} times a year, about <b>${fmt(r.floodDays, 1)}</b> days. In all, ${pd(r.drought)} of drought and ${pd(r.flood)} of flood. The level carries over from one season to the next, so a dry summer leaves autumn short of water, and a wet winter can carry a flood into spring. Droughts and floods are rare, so one century is a small sample: another can differ by several points (over 1,000 years the defaults give a drought in about 11% of years and a flood in about 10%).` : "";
+    $("water-run-hint").innerHTML = r ? `Over ${fmt(r.years)} years in a row: a drought ${fmt(r.droughtSpells, 1)} times a year on average, lasting about <b>${fmt(r.droughtDays, 1)}</b> days (days with some drought, in a row); a flood ${fmt(r.floodSpells, 1)} times a year, about <b>${fmt(r.floodDays, 1)}</b> days. In all, ${pd(r.drought)} of drought and ${pd(r.flood)} of flood. The level carries over from one season to the next, so a dry summer leaves autumn short of water, and a wet winter can carry a flood into spring. Droughts and floods are rare, so one century is a small sample: another can differ by several points (over 1,500 years the defaults give a drought in about 10% of years and a flood in about 13%).` +
+      ` The mountain (dashed, 山) takes the same rain and drains the same way but not below −5 °C (the river frozen), so winter's coldest hours build it up and it starts each spring a little fuller than the land; it's never below the land, so the river can only run dry in a drought, once a dry summer has drained the mountain too. ${r.riverDryYears > 0 ? `Here the river ran dry in ${fmt(r.riverDryYears * r.years)} of the years.` : "Here the river never ran dry."} Over 1,500 years the defaults give a drought with a dry river in about <b>3%</b> of years (about one in 35: about one drought in three).` : "";
   }
   // The same year's temperatures, each day a dot by its type
   function drawYearTemp(ready) {
@@ -839,12 +835,6 @@
     requestAnimationFrame(frame);
   }
 
-  // ---------- Reset ----------
-  $("reset").addEventListener("click", () => {
-    try { localStorage.removeItem(WM.STORE_KEY); } catch (e) {}
-    ALL = WM.defaultSets(); P = ALL[season];
-    update();
-  });
   let resizeTimer = 0;
   addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(update, 150); });
 

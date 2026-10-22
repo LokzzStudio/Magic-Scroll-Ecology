@@ -1,8 +1,10 @@
 // Weather for the Magic Scroll ecology pages: clouds blown across the map's sky, a birth-move process.
 // The weather goes in spells: clear spells, when no clouds come, and cloudy spells, when clouds come in at
 // the west edge at random (spawnRate an hour on average). Cloudiness is the share of time in cloudy
-// spells; a clear and a cloudy spell last `spell` hours together on average, each spell's length drawn
-// exponentially. The longer the spells, the likelier the sky is still as it is hours later. Clouds blow east at the wind's speed and leave at the east edge; the sky holds at most
+// spells; a clear and a cloudy spell last SPELL_CROSSINGS crossings of the sky together on average, at the
+// average wind, each spell's length drawn exponentially: weather moves with the wind, so a calm season's
+// spells are long (the sky you see now is likely still the same half a day later) and a windy one's short.
+// Clouds blow east at the wind's speed and leave at the east edge; the sky holds at most
 // MAX_CLOUDS, and a cloud due while it's full doesn't come. The Weather page (weather.html) is where it's
 // set; the Clothing page's villages feel its temperatures, and its rain too (Micro mode).
 //
@@ -50,20 +52,27 @@
 // middle. At 0 it's a drought, at 10 a flood. The sky's state only changes at events, so between two the
 // level follows a set curve (a straight line rising, an exponential draining): advance works it out
 // event by event, to the exact moment it reaches 0 or 10, however the caller splits the time.
+//
+// The mountain above the river (川) is a reservoir with a level of its own, by the same rule and the
+// same settings, but it doesn't drain while the hour's temperature is below RIVER_FREEZE (−5 °C: the river is frozen).
+// While it holds any water the river runs; at 0 the river is dry.
 (function () {
   const MAX_CLOUDS = 10;
   const WIND_HOURS = 3;     // how long the wind holds a speed, on average
+  const SPELL_CROSSINGS = 16;   // a clear and a cloudy spell together: crossings of the sky at the average wind
   const TEMP_PERSIST = 0.6; // the share of a day's random temperature part that carries to the next
   const RAMP_DAYS = 15;     // season ramp: days each side of a season's start the base temperature ramps over
   const RAMP_LIMITS = [0, 45, 1];
   const COLDEST_HOUR = 6, WARMEST_HOUR = 15;   // clock hours (0–24) of the day's lowest and highest temperature
   const SWING_CLOUD = 0.6;  // the share of the daily swing a full sky all day takes away
   const WATER_MAX = 10, WATER_START = 5;   // the water level's top (flood) and where a year run starts it
+  const RIVER_FREEZE = -5;  // °C: below it the river is frozen and the mountain doesn't drain
   // Water settings, for the whole year: rain per +1 water level (rainfall × hours); the levels an hour a
   // sunny and a cloudy, dry hour take off at level 5; and the drain slope (0: the same at every level)
-  // (tuned so that about one year in ten has a drought, in summer, and one in ten a flood, after winter's
-  // blizzards, each lasting a few days)
-  const WATER = { perLevel: 320, sunnyDrain: 0.0036, cloudyDrain: 0.0015, slope: 0.5 };
+  // (tuned so that about one year in ten has a drought, in summer, and about one in eight a flood, after
+  // winter's blizzards, each lasting a few days; and so that about one year in 35 the drought dries the
+  // river too)
+  const WATER = { perLevel: 320, sunnyDrain: 0.0036, cloudyDrain: 0.0019, slope: 0.45 };
   const WATER_LIMITS = { perLevel: [10, 1000, 5], sunnyDrain: [0, 0.2, 0.0001], cloudyDrain: [0, 0.2, 0.0001], slope: [0, 1, 0.05] };
   const SEASONS = [
     { id: "spring", zh: "春", en: "Spring", feel: "Many small, light rains" },
@@ -77,7 +86,6 @@
   //   wind        average wind speed: tiles an hour the clouds blow east
   //   windVol     wind volatility: the standard deviation of the wind's speed, tiles an hour
   //   cloudiness  % of the time in cloudy spells
-  //   spell       spell length: hours a clear spell and a cloudy one last together, on average
   //   rainChange  rain changeability: times an hour the rain die is re-rolled, on average
   //   temp        average temperature, °C
   //   tempSd      temperature spread: the standard deviation of the day's temperature, °C
@@ -86,12 +94,12 @@
   //   swing       daily swing: °C from the coldest hour to the warmest on a clear day
   const TEMP = { tempSd: 5, cloudCool: 10, rainCool: 10, swing: 8 };
   const DEFAULTS = {
-    spring: { spawnRate: 0.35, wind: 3, windVol: 0.5, cloudiness: 75, spell: 24, rainChange: 3, temp: 15, ...TEMP },     // a few clouds most of the time: many short, light showers
-    summer: { spawnRate: 0.5, wind: 2.5, windVol: 1, cloudiness: 15, spell: 96, rainChange: 0.5, temp: 30, ...TEMP },    // long clear spells: the driest
-    autumn: { spawnRate: 1.5, wind: 6, windVol: 2, cloudiness: 50, spell: 48, rainChange: 0.2, temp: 15, ...TEMP },      // a rainy day, a sunny day, by turns
-    winter: { spawnRate: 3, wind: 4, windVol: 1.5, cloudiness: 10, spell: 240, rainChange: 0.3, temp: -5, ...TEMP },     // calm and clear, but now and then a day-long blizzard that fills the sky
+    spring: { spawnRate: 0.65, wind: 5.5, windVol: 1.5, cloudiness: 75, rainChange: 2.65, temp: 15, ...TEMP },   // brisk: a few clouds most of the time, many short, light showers
+    summer: { spawnRate: 0.45, wind: 2.5, windVol: 1.5, cloudiness: 15, rainChange: 0.55, temp: 30, ...TEMP },   // still: long clear spells, the driest
+    autumn: { spawnRate: 1.5, wind: 6, windVol: 2, cloudiness: 50, rainChange: 0.3, temp: 15, ...TEMP },         // windy: a rainy day, a sunny day, by turns
+    winter: { spawnRate: 1.45, wind: 1.5, windVol: 1.5, cloudiness: 10, rainChange: 0.85, temp: -5, ...TEMP },   // calm and clear for days, but now and then a day-long blizzard that fills the sky
   };
-  const LIMITS = { spawnRate: [0, 10, 0.05], wind: [0, 32, 0.5], windVol: [0, 16, 0.5], cloudiness: [0, 100, 5], spell: [6, 240, 6], rainChange: [0.05, 5, 0.05],
+  const LIMITS = { spawnRate: [0, 10, 0.05], wind: [0, 32, 0.5], windVol: [0, 16, 0.5], cloudiness: [0, 100, 5], rainChange: [0.05, 5, 0.05],
     temp: [-30, 45, 1], tempSd: [0, 15, 0.5], cloudCool: [0, 20, 0.5], rainCool: [0, 20, 0.5], swing: [0, 25, 0.5] };   // lowest, highest, step
   // The chance of rain with n clouds, and the rainfall while it rains
   const rainChance = (n) => (n > 1 ? Math.log10(n) : 0);
@@ -99,7 +107,7 @@
   // and winter cloudiness 70%) keeps the rest of v3
   // v6 (water; summer's and winter's spawn rates 0.6 and 1.6) keeps the rest of v4. (v5 was a trial of
   // other defaults, since dropped; its saves aren't read.)
-  const STORE_KEY = "weather-v12";
+  const STORE_KEY = "weather-v13";
   try {
     if (!localStorage.getItem("weather-v6")) {
       const v4 = JSON.parse(localStorage.getItem("weather-v4") || "null");
@@ -164,6 +172,18 @@
       if (v11 && typeof v11 === "object") { for (const { id } of SEASONS) if (v11[id] && typeof v11[id] === "object") delete v11[id].swing; localStorage.setItem("weather-v12", JSON.stringify(v11)); }
     }
   } catch (e) {}
+  // v13 (no spell length: spells go by the wind; each season's clouds and rain retuned to keep its
+  // character, and new water defaults to match) keeps the temperatures of v12
+  try {
+    if (!localStorage.getItem("weather-v13")) {
+      const v12 = JSON.parse(localStorage.getItem("weather-v12") || "null");
+      if (v12 && typeof v12 === "object") {
+        for (const { id } of SEASONS) if (v12[id] && typeof v12[id] === "object") for (const k of ["spawnRate", "wind", "windVol", "cloudiness", "spell", "rainChange"]) delete v12[id][k];
+        delete v12.water;
+        localStorage.setItem("weather-v13", JSON.stringify(v12));
+      }
+    }
+  } catch (e) {}
   // The season of a day (1, 2, …): its index in SEASONS
   const seasonOf = (day) => Math.floor((((day - 1) % (SEASONS.length * SEASON_DAYS)) + SEASONS.length * SEASON_DAYS) % (SEASONS.length * SEASON_DAYS) / SEASON_DAYS);
 
@@ -175,8 +195,10 @@
   const meanRate = (P) => P.spawnRate * share(P);
   // Clouds that come per crossing, on average
   const loadOf = (P) => (meanRate(P) > 0 ? meanRate(P) * crossHours(P) : 0);
-  // Average hours of a cloudy and of a clear spell
-  const spellHours = (P) => ({ cloudy: P.spell * share(P), clear: P.spell * (1 - share(P)) });
+  // Average hours of a clear and a cloudy spell together (SPELL_CROSSINGS crossings; Infinity with no
+  // wind), and of a cloudy and of a clear spell
+  const spellOf = (P) => SPELL_CROSSINGS * crossHours(P);
+  const spellHours = (P) => ({ cloudy: spellOf(P) * share(P), clear: spellOf(P) * (1 - share(P)) });
 
   // The share of time with 0 … MAX_CLOUDS clouds if the same clouds came evenly (no spells)
   function evenDistribution(P) {
@@ -208,7 +230,7 @@
       sky.clouds.sort((a, b) => b.x - a.x);   // furthest east first: the order they leave in
     } else {
       // Otherwise warm up from an empty sky until no trace of the start is left, then count from there
-      advance(sky, 5 * (crossHours(P) + P.spell + WIND_HOURS));
+      advance(sky, 5 * (crossHours(P) + spellOf(P) + WIND_HOURS));
       Object.assign(sky, { t: 0, came: 0, lost: 0 });
     }
     return sky;
@@ -251,20 +273,19 @@
   // Moves the sky on by dt hours; onEvent(t, n, cloudy, rain, v) hears every cloud coming, leaving or
   // turned away, every change of spell or wind and every re-roll, with the clouds, the rainfall and the
   // wind after it
-  // The water level over dt hours of unchanged sky (sky.water: the settings, level, and hours at 0 and 10
-  // so far; none: nothing to do), stopping at 0 or 10. Rain: up rainfall ÷ perLevel an hour, a straight
-  // line. Dry: down base × (1 + slope (L − 5) ÷ 5) an hour = a + bL, so L(t) = (L₀ + a/b) e^(−bt) − a/b,
-  // reaching 0 after ln((L₀ + a/b) ÷ (a/b)) ÷ b hours (a straight line when b = 0)
-  function flowWater(sky, dt) {
-    const w = sky.water;
-    if (!w || !(dt > 0)) return;
-    const r = rainfall(sky);
+  // A water level w (the settings, level, and hours at 0 and 10 so far) over dt hours of unchanged sky,
+  // rainfall r, sunny or not, stopping at 0 or 10; drain false: it doesn't drain. Rain: up rainfall ÷
+  // perLevel an hour, a straight line. Dry: down base × (1 + slope (L − 5) ÷ 5) an hour = a + bL, so
+  // L(t) = (L₀ + a/b) e^(−bt) − a/b, reaching 0 after ln((L₀ + a/b) ÷ (a/b)) ÷ b hours (a straight line
+  // when b = 0)
+  function flowLevel(w, dt, r, sunny, drain = true) {
+    if (!(dt > 0)) return;
     let L = w.level, t = dt;
     if (r > 0) {
       const k = r / w.perLevel;
       if (L < WATER_MAX) { const hit = (WATER_MAX - L) / k; if (hit < t) { L = WATER_MAX; t -= hit; } else { L += k * t; t = 0; } }
     } else {
-      const base = sky.clouds.length === 0 ? w.sunnyDrain : w.cloudyDrain, s = w.slope || 0;
+      const base = !drain ? 0 : sunny ? w.sunnyDrain : w.cloudyDrain, s = w.slope || 0;
       const a = base * (1 - s), b = (base * s) / (WATER_MAX / 2);
       if (L > 0 && base > 0) {
         if (b > 0) {
@@ -275,6 +296,27 @@
     }
     if (t > 0) { if (L >= WATER_MAX) w.flood += t; else if (L <= 0) w.drought += t; }   // the rest of the time, at a bound
     w.level = L;
+  }
+  // The water level (sky.water; none: nothing to do) over dt hours of unchanged sky
+  const flowWater = (sky, dt) => { if (sky.water) flowLevel(sky.water, dt, rainfall(sky), sky.clouds.length === 0); };
+  // The mountain's level m over a day: segs, its sky from clock hour 0 ([hours, rainfall, sunny, …]); it
+  // drains only in the hours at RIVER_FREEZE or above, by the day's temperature and swing (hourTemp, which
+  // crosses it at most once while cooling to dawn, once warming to the afternoon and once cooling after;
+  // worked out as 0 for the day RIVER_FREEZE warmer)
+  function flowMountain(m, segs, temp0, swing) {
+    const temp = temp0 - RIVER_FREEZE, cuts = [];
+    for (const [a, b] of [[0, COLDEST_HOUR], [COLDEST_HOUR, WARMEST_HOUR], [WARMEST_HOUR, 24]]) {
+      const fa = hourTemp(temp, swing, a);
+      if (fa < 0 === hourTemp(temp, swing, b) < 0) continue;
+      let lo = a, hi = b;
+      for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (hourTemp(temp, swing, mid) < 0 === fa < 0) lo = mid; else hi = mid; }
+      cuts.push((lo + hi) / 2);
+    }
+    let h = 0;
+    for (let i = 0; i < segs.length; i += 3) {
+      const end = h + segs[i];
+      for (const c of [...cuts.filter((c) => c > h && c < end), end]) { flowLevel(m, c - h, segs[i + 1], segs[i + 2], hourTemp(temp, swing, (h + c) / 2) >= 0); h = c; }
+    }
   }
   function advance(sky, dt, onEvent) {
     const W = width(), end = sky.t + dt;
@@ -389,18 +431,22 @@
   // temperature and swing through the day, and whether it snowed ([{ rain, wet, clouds, wind, base, temp, swing, snow }]). stats: each season's tempStats, from its long run
   // (a season without them gets no temperatures)
   // years: that many years in a row (the days of all of them); water: the water settings (sets.water by
-  // default), each day also giving the level at its end and its hours of drought and of flood. hourly: each
+  // default), each day also giving the level at its end and its hours of drought and of flood, and the
+  // mountain's level at its start and end (mountain0, mountain) and its hours with the river dry (riverDry;
+  // with no temperatures, the base temperature's hours freeze the mountain), and whether the river runs
+  // that day (river: the mountain held water at the day's start). hourly: each
   // day also gives its rainfall through the day, rainAt: [hour, rainfall, hour, rainfall, …] from hour 0, a
   // pair at each change (rainAtHour reads it); it takes no dice, so the weather is the same either way
   function simulateYear(sets, seed, stats, years = 1, water = sets.water, hourly = false) {
     const sky = newSky(sets[SEASONS[0].id], HerdModel.rng(seed)), days = [], trand = HerdModel.rng(seed + 7777);
     if (water) sky.water = { ...water, level: WATER_START, drought: 0, flood: 0 };
+    const mtn = water ? { ...water, level: WATER_START, drought: 0, flood: 0 } : null;
     let u = normal(trand);
-    let n = sky.clouds.length, r = rainfall(sky), w = sky.v, last = 0, d = null;
-    const add = (t) => { const dt = t - last; d.rain += r * dt; if (r > 0) d.wet += dt; if (n === 0) d.sun += dt; d.clouds += (n * dt) / 24; d.wind += (w * dt) / 24; last = t; };
+    let n = sky.clouds.length, r = rainfall(sky), w = sky.v, last = 0, d = null, segs = [];
+    const add = (t) => { const dt = t - last; d.rain += r * dt; if (r > 0) d.wet += dt; if (n === 0) d.sun += dt; d.clouds += (n * dt) / 24; d.wind += (w * dt) / 24; if (mtn) segs.push(dt, r, n === 0); last = t; };
     for (let day = 1; day <= years * SEASONS.length * SEASON_DAYS; day++) {
       if (day > 1 && seasonOf(day) !== seasonOf(day - 1)) { setParams(sky, sets[SEASONS[seasonOf(day)].id]); w = sky.v; }
-      d = { rain: 0, wet: 0, sun: 0, clouds: 0, wind: 0 }; last = sky.t;
+      d = { rain: 0, wet: 0, sun: 0, clouds: 0, wind: 0 }; last = sky.t; segs = [];
       const wd = sky.water ? sky.water.drought : 0, wf = sky.water ? sky.water.flood : 0, t0 = sky.t;
       if (hourly) d.rainAt = [0, r];
       advance(sky, 24, (t, m, cloudy, rain, v) => { add(t); if (hourly && rain !== r) d.rainAt.push(t - t0, rain); n = m; r = rain; w = v; });
@@ -411,6 +457,12 @@
       d.temp = st ? tempOf(sets[id], st, d, u, d.base) : NaN;
       d.swing = daySwing(sets[id], d);
       d.snow = d.wet > 0 && d.temp < 0;
+      if (mtn) {
+        const m0 = mtn.drought;
+        d.mountain0 = mtn.level; d.river = mtn.level > 0;
+        flowMountain(mtn, segs, isFinite(d.temp) ? d.temp : d.base, d.swing);
+        d.mountain = mtn.level; d.riverDry = mtn.drought - m0;
+      }
       u = nextU(u, trand);
       days.push(d);
     }
@@ -437,12 +489,15 @@
 
   // Droughts and floods over a long run of years in a row (the first one only to settle the level): the
   // share of time at 0 and at 10, overall and by season; the share of years with any; how many a year and
-  // how long they last (a run of days with some), and the share of time at each level (0–1, …, 9–10)
+  // how long they last (a run of days with some), and the share of time at each level (0–1, …, 9–10). The
+  // same for the river running dry (riverDry: the mountain at 0), and the share of years with a drought
+  // and the river dry (bothYears: the river can only run dry in a drought, the mountain never being
+  // lower than the land)
   function waterRun(sets, seed, stats, years, water = sets.water) {
     const D = SEASONS.length * SEASON_DAYS, days = simulateYear(sets, seed, stats, years + 1, water).slice(D);
-    const out = { drought: 0, flood: 0, bySeason: SEASONS.map(() => ({ drought: 0, flood: 0 })), droughtYears: 0, floodYears: 0, levels: new Array(WATER_MAX).fill(0) };
-    const runs = { drought: [], flood: [] };
-    for (const kind of ["drought", "flood"]) {
+    const out = { drought: 0, flood: 0, riverDry: 0, bySeason: SEASONS.map(() => ({ drought: 0, flood: 0, riverDry: 0 })), droughtYears: 0, floodYears: 0, riverDryYears: 0, bothYears: 0, levels: new Array(WATER_MAX).fill(0) };
+    const runs = { drought: [], flood: [], riverDry: [] };
+    for (const kind of ["drought", "flood", "riverDry"]) {
       let len = 0;
       for (let i = 0; i <= days.length; i++) {
         if (i < days.length && days[i][kind] > 0) len++;
@@ -450,20 +505,22 @@
       }
     }
     days.forEach((d, i) => {
-      out.drought += d.drought / 24; out.flood += d.flood / 24;
-      const b = out.bySeason[Math.floor((i % D) / SEASON_DAYS)]; b.drought += d.drought / 24; b.flood += d.flood / 24;
+      out.drought += d.drought / 24; out.flood += d.flood / 24; out.riverDry += d.riverDry / 24;
+      const b = out.bySeason[Math.floor((i % D) / SEASON_DAYS)]; b.drought += d.drought / 24; b.flood += d.flood / 24; b.riverDry += d.riverDry / 24;
       out.levels[Math.min(WATER_MAX - 1, Math.floor(d.water))]++;
     });
     for (let y = 0; y < years; y++) {
       const yd = days.slice(y * D, (y + 1) * D);
       if (yd.some((d) => d.drought > 0)) out.droughtYears++;
       if (yd.some((d) => d.flood > 0)) out.floodYears++;
+      if (yd.some((d) => d.riverDry > 0)) out.riverDryYears++;
+      if (yd.some((d) => d.drought > 0) && yd.some((d) => d.riverDry > 0)) out.bothYears++;
     }
     const n = days.length;
-    out.drought /= n; out.flood /= n; out.droughtYears /= years; out.floodYears /= years;
-    for (const b of out.bySeason) { b.drought /= years * SEASON_DAYS; b.flood /= years * SEASON_DAYS; }
+    out.drought /= n; out.flood /= n; out.riverDry /= n; out.droughtYears /= years; out.floodYears /= years; out.riverDryYears /= years; out.bothYears /= years;
+    for (const b of out.bySeason) { b.drought /= years * SEASON_DAYS; b.flood /= years * SEASON_DAYS; b.riverDry /= years * SEASON_DAYS; }
     out.levels = out.levels.map((c) => c / n);
-    for (const kind of ["drought", "flood"]) { const r = runs[kind]; out[kind + "Spells"] = r.length / years; out[kind + "Days"] = r.length ? r.reduce((a, b) => a + b, 0) / r.length : 0; }
+    for (const kind of ["drought", "flood", "riverDry"]) { const r = runs[kind]; out[kind + "Spells"] = r.length / years; out[kind + "Days"] = r.length ? r.reduce((a, b) => a + b, 0) / r.length : 0; }
     out.years = years;
     return out;
   }
@@ -531,5 +588,5 @@
     return sets;
   }
 
-  window.WeatherModel = { MAX_CLOUDS, LAG_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, crossHours, meanRate, loadOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, WATER, WATER_LIMITS, flowWater, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal, COLDEST_HOUR, WARMEST_HOUR, SWING_CLOUD, daySwing, hourTemp, rainAtHour, fireOut };
+  window.WeatherModel = { MAX_CLOUDS, LAG_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, SPELL_CROSSINGS, crossHours, meanRate, loadOf, spellOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, RIVER_FREEZE, WATER, WATER_LIMITS, flowWater, flowLevel, flowMountain, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal, COLDEST_HOUR, WARMEST_HOUR, SWING_CLOUD, daySwing, hourTemp, rainAtHour, fireOut };
 })();

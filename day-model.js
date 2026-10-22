@@ -331,9 +331,10 @@
   // level (each field's, 0–10, fields numbered in the order they're taken each day), farmed (tended today),
   // seeded (tended this year) }; S: the day (the walks). The river (川) never runs dry; a farmer fetches from
   // the nearer of it and the well, the well only while it has water. day: trips (water carried), river (of them).
-  function wateringOf(W, st, S) {
+  // river: whether the river runs today (the Weather page's mountain holds water); dry, it's no source
+  function wateringOf(W, st, S, river = true) {
     const day = { trips: 0, river: 0 };
-    const toWell = S.between("F", "W"), toRiver = S.between("F", "R");
+    const toWell = S.between("F", "W"), toRiver = river ? S.between("F", "R") : Infinity;
     return {
       day,
       // ix tended with `energy`: it uses water, and it's seeded

@@ -53,7 +53,7 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="top-actions">
-      <button type="button" class="btn reset" id="reset" title="Put this page and the pages it follows back to their defaults">Reset to defaults</button>
+      <button type="button" class="btn reset" id="reset" title="Put every page's settings, the Jobs table and the Priority back to their defaults">Reset to defaults</button>
     </div>
   </div>
 </header>
@@ -65,7 +65,7 @@
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The map, walking speed, carrying, and the day: waking, hours out, lunch and meals</dd>
-        <dt>Follows</dt><dd><a href="index.html">Herd</a> · <a href="humans.html">Humans</a> · <a href="farm.html">Food</a> (for Reset only)</dd>
+        <dt>Follows</dt><dd><span class="none">Nothing</span></dd>
         <dt>Used by</dt><dd><a href="attribute.html">Attribute</a> and every page after it</dd>
       </dl>
     </aside>
@@ -175,8 +175,6 @@
   const $ = (id) => document.getElementById(id);
   const fmt = (v, d = 0) => Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   const GLYPH = { H: "屋", F: "田", P: "牧", T: "林", M: "礦", W: "井", R: "川" };
-  // The pages this one follows, cleared by Reset with it
-  const UPSTREAM = [HerdModel.STORE_KEY, HumanModel.STORE_KEY, FoodModel.STORE_KEY, RationModel.STORE_KEY];
 
   let M = MapModel.savedParams() || { ...DEFAULTS };
   let tool = "H";
@@ -298,11 +296,6 @@
   // ---------- Buttons ----------
   $("default-map").addEventListener("click", () => { M.tiles = MapModel.defaultTiles(); draw(); save(); });
   $("clear-map").addEventListener("click", () => { M.tiles = ".".repeat(W * H); draw(); save(); });
-  $("reset").addEventListener("click", () => {
-    try { for (const k of UPSTREAM) localStorage.removeItem(k); localStorage.removeItem(STORE_KEY); } catch (e) {}
-    M = { ...DEFAULTS };
-    draw();
-  });
 
   draw();
 })();
