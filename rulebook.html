@@ -58,7 +58,7 @@
           <h3>Time and place <a href="map.html">Map</a></h3>
           <ul>
             <li>A year is 360 days: spring, summer, autumn and winter, 90 days each. A run lasts 50 years.</li>
-            <li>The map is 16 × 16 tiles: houses, a farm, a pasture, a forest and a mine (the well and the river do nothing yet). Walking takes 1 minute a tile.</li>
+            <li>The map is 16 × 16 tiles: houses, a farm, a pasture, a forest, a mine, the well (井) and the river (川), where farmers fetch water (from the Watering page on). Walking takes 1 minute a tile.</li>
             <li>A standard day's work is 100 energy.</li>
           </ul>
         </div>
@@ -133,11 +133,11 @@
         <div class="topic">
           <h3>Crafts and tools <a href="craft.html">Craft</a></h3>
           <ul>
-            <li>Women weave 衣 clothes (200 wool + 100 timber) and 笠 hats (100 wool + 200 timber); men forge 刀 blades (200 stone + 100 timber) and 叉 hayforks (100 stone + 200 timber). Each takes 300 energy.</li>
+            <li>Women weave 衣 clothes (200 wool + 100 timber) and 笠 hats (100 wool + 200 timber); men forge 刀 blades (200 stone + 100 timber) and 叉 hayforks (100 stone + 200 timber). Each takes 100 energy.</li>
             <li>One loom and one forge, one crafter at each a day.</li>
             <li>A hayfork adds to tending effectiveness, and a blade to the harvest (收割) and to collecting: +20% to +100%, by tier. Clothes and hats are worn by everyone (on the Clothing page, only against the cold and the rain).</li>
-            <li>Tools wear out with use: each after 3,000 energy (clothes and hats: all their wearer spends; blades: the harvest and collecting; hayforks: tending).</li>
-            <li>The village starts with 200 R blades, hayforks, clothes and hats in store. <span class="who you">you: Craft page</span></li>
+            <li>Tools wear out with use: each after 1,500 energy (clothes and hats: all their wearer spends; blades: the harvest and collecting; hayforks: tending).</li>
+            <li>The village starts with 500 R blades, hayforks, clothes and hats in store. <span class="who you">you: Craft page</span></li>
           </ul>
         </div>
         <div class="topic">
@@ -153,18 +153,29 @@
           <h3>Weather <a href="weather.html">Weather</a></h3>
           <ul>
             <li>Clouds blow across the map; the more clouds, the likelier rain, and it snows below 0 °C.</li>
+            <li>The sky goes in spells, clear and cloudy by turns. The calmer a season's wind, the longer they last: a clear and a cloudy spell together take as long as 16 crossings of the sky.</li>
             <li>Each season has its own clouds, wind, rain and temperature. Cloudy and rainy days are cooler, and the temperature swings through the day, coldest at 06:00 and warmest at 15:00.</li>
             <li>Rain raises the water level and dry hours drain it: at 0 a drought, at 10 a flood.</li>
             <li>The mountain above the river holds water the same way, but doesn't drain below −5 °C, when the river is frozen. The river runs as long as the mountain has water.</li>
-            <li>On the Clothing page the village feels the weather's temperature, and its rain too; nowhere else yet.</li>
+            <li>From the Clothing page on, the village feels the weather's temperature and its rain.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Watering <a href="watering.html">Watering</a></h3>
           <ul>
-            <li>The river (川) runs while the mountain has water: it's dry only in the deepest droughts. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
+            <li>The river (川) runs while the mountain has water: it's dry only in the deepest droughts, about one year in 35. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
             <li>Each field has its own water level, 0–10. Tending uses 0.1 level per energy; a field nobody tends goes back to the land's level within the day.</li>
             <li>A field tended this year grows rice by itself, by its water level: +20 a day at levels 3–4, +10 at 2 and 5, nothing at 1, 6 and 7, and it loses rice when too dry or too wet (−100 at 0 or 10).</li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>The player <a href="strategy.html">Strategy</a></h3>
+          <ul>
+            <li>The player may kill any villager, at any time.</li>
+            <li>They may appoint any grown-ups as scholars, as many as they like, and dismiss them.</li>
+            <li>Once a month they may give each villager their own order of jobs.</li>
+            <li>For each couple they may say whether they may have a child.</li>
+            <li>They may fill the well whenever they like, and give any number of 刀 叉 衣 笠, up to SR.</li>
           </ul>
         </div>
         <div class="topic">
@@ -255,9 +266,9 @@
         <div class="topic">
           <h3>Bookkeeping</h3>
           <ul>
-            <li>Each day goes in order: food ages and spoils, everyone works, the day's take goes into store, everyone eats, then hunger, deaths, pairing and births.</li>
+            <li>Each day goes in order: the player acts (Strategy page), food ages and spoils, everyone works, the day's take goes into store, everyone eats, then hunger, deaths, pairing and births.</li>
             <li>Energy, food made and attributes round down; fractions of food from work carry over to the next day.</li>
-            <li>Wool, timber and stone are stored in lots of 100, each lot one tier. Crafts use the lowest tiers first.</li>
+            <li>Wool, timber and stone are stored in lots of 100, each lot one tier. Crafts use the best tiers first.</li>
             <li>Skill levels are counted at the end of the day, for the next.</li>
           </ul>
         </div>
@@ -286,6 +297,15 @@
             <li>If no 衣 is enough, they wear the warmest there is and take a timber of the lowest tier that makes up the rest, to light where they work. <span class="who">fixed</span></li>
             <li>If it would still feel −5 °C or colder, they stay in and look again on the hour; warmer than that, they go and put up with it. <span class="who">fixed</span></li>
             <li>At −5 °C or colder at work, they finish what's in hand and walk home to warm up. <span class="who">fixed</span></li>
+          </ul>
+        </div>
+        <div class="topic">
+          <h3>Strategies <a href="strategy.html">Strategy</a></h3>
+          <ul>
+            <li><b>Most people</b>: the well full, SR crafts for all, the brightest teaching, food first, no children while food is short; when it runs shorter, the oldest elder goes. <span class="who you">you: Strategy</span></li>
+            <li><b>Brightest person</b>: more scholars, children in class first, no children while food is short, and the dullest adult goes now and then. <span class="who you">you: Strategy</span></li>
+            <li><b>Sustainable</b>: builds the village up for 10 years, stocks it with SR crafts, then lets go. <span class="who you">you: Strategy</span></li>
+            <li><b>A UR craft</b>: the two brightest adults on the loom and forge first while food is plentiful, and no more 刀 given once the village has made an SSR one. <span class="who you">you: Strategy</span></li>
           </ul>
         </div>
         <div class="topic">

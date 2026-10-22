@@ -300,17 +300,16 @@
   // The water level (sky.water; none: nothing to do) over dt hours of unchanged sky
   const flowWater = (sky, dt) => { if (sky.water) flowLevel(sky.water, dt, rainfall(sky), sky.clouds.length === 0); };
   // The mountain's level m over a day: segs, its sky from clock hour 0 ([hours, rainfall, sunny, …]); it
-  // drains only in the hours at RIVER_FREEZE or above, by the day's temperature and swing (hourTemp, which
-  // crosses it at most once while cooling to dawn, once warming to the afternoon and once cooling after;
-  // worked out as 0 for the day RIVER_FREEZE warmer)
+  // drains only in the hours at RIVER_FREEZE or above, by the day's temperature and swing (worked out as 0
+  // for the day RIVER_FREEZE warmer). hourTemp is temp + swing × f ÷ 2, f = −cos(π(h − lo) ÷ warm) warming
+  // from the coldest hour lo to the warmest hi, then cos(π(h − hi) ÷ cool) cooling to the next lo: it
+  // crosses 0 where f = −2 × temp ÷ swing, once warming and once cooling, if that's strictly between −1 and 1
   function flowMountain(m, segs, temp0, swing) {
-    const temp = temp0 - RIVER_FREEZE, cuts = [];
-    for (const [a, b] of [[0, COLDEST_HOUR], [COLDEST_HOUR, WARMEST_HOUR], [WARMEST_HOUR, 24]]) {
-      const fa = hourTemp(temp, swing, a);
-      if (fa < 0 === hourTemp(temp, swing, b) < 0) continue;
-      let lo = a, hi = b;
-      for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (hourTemp(temp, swing, mid) < 0 === fa < 0) lo = mid; else hi = mid; }
-      cuts.push((lo + hi) / 2);
+    const temp = temp0 - RIVER_FREEZE, cuts = [], c = swing > 0 ? (-2 * temp) / swing : Infinity;
+    if (Math.abs(c) < 1) {
+      const lo = COLDEST_HOUR, hi = WARMEST_HOUR, warm = hi - lo, cool = 24 - warm, down = hi + (cool * Math.acos(c)) / Math.PI;
+      cuts.push(lo + (warm * Math.acos(-c)) / Math.PI, down >= 24 ? down - 24 : down);
+      cuts.sort((a, b) => a - b);
     }
     let h = 0;
     for (let i = 0; i < segs.length; i += 3) {
@@ -588,5 +587,5 @@
     return sets;
   }
 
-  window.WeatherModel = { MAX_CLOUDS, LAG_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, SPELL_CROSSINGS, crossHours, meanRate, loadOf, spellOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, RIVER_FREEZE, WATER, WATER_LIMITS, flowWater, flowLevel, flowMountain, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal, COLDEST_HOUR, WARMEST_HOUR, SWING_CLOUD, daySwing, hourTemp, rainAtHour, fireOut };
+  window.WeatherModel = { MAX_CLOUDS, LAG_HOURS, WIND_HOURS, SEASONS, SEASON_DAYS, seasonOf, DEFAULTS, defaultSets, LIMITS, STORE_KEY, SPELL_CROSSINGS, crossHours, meanRate, loadOf, spellOf, spellHours, windDraw, rainChance, rainfall, evenDistribution, meanOf, newSky, advance, setParams, simulate, simulateYear, savedParams, TEMP_PERSIST, RAMP_DAYS, RAMP_LIMITS, WATER_MAX, WATER_START, RIVER_FREEZE, WATER, WATER_LIMITS, flowWater, waterRun, baseTemp, seasonAverages, weatherPart, dayType, tempOf, nextU, normal, COLDEST_HOUR, WARMEST_HOUR, SWING_CLOUD, daySwing, hourTemp, rainAtHour, fireOut };
 })();

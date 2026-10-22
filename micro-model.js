@@ -333,8 +333,10 @@
       return false;
     };
     const tiers = VM.fullOrder(x.order || VM.DEFAULT_ORDER);
+    // Each person goes down their own order if they have one (h.order: the Strategy page's player), else the village's
+    const tiersOf = (a) => (a.h.order ? a.h.order : tiers);
     function chooseGrown(a) {
-      for (const id of tiers) {
+      for (const id of tiersOf(a)) {
         if (id === "milk") {
           if (!may(a.h, "milk") || !placeFor(a, milk, !a.milkOnly && may(a.h, fieldJob) ? milkOnlyWaiting() : 0)) continue;
           if (tryPool(a, milk)) return true;
@@ -359,7 +361,7 @@
     // Children go down the order: food work the free grown-ups can't cover, or class while it's on
     // (Education). Returns "food", "class" or "" (nothing)
     function kidChoose(a) {
-      for (const id of tiers) {
+      for (const id of tiersOf(a)) {
         if (id === "teach" && classOn(a)) return "class";
         if (id === "milk" && may(a.h, "milk") && placeFor(a, milk, grownCover(milk, "milk").people)) {
           if (tryPool(a, milk)) return "food";
@@ -481,7 +483,7 @@
     function scholarStep(a) {
       if (a.e <= EPS) { idle(a); wakeIdle(); return; }
       const pupils = a.pupils.filter((k) => k.cls && k.e > EPS);
-      for (const id of tiers) {
+      for (const id of tiersOf(a)) {
         const teach = id === "teach" && pupils.length > 0;
         if (!teach && !(id === "read" && a.reads)) continue;
         a.unit = Math.min(UNIT, a.e); a.t0 = now;

@@ -15,6 +15,7 @@
     ["weather.html", "Weather", "Clouds &amp; wind"],
     ["clothing.html", "Clothing", "Cold, rain, 衣 &amp; 笠"],
     ["watering.html", "Watering", "The well &amp; the fields' water"],
+    ["strategy.html", "Strategy", "A strategic player"],
     ["rulebook.html", "Rulebook", "Game rules vs simulation"],
   ];
   const nav = document.querySelector("nav.sidenav");
@@ -93,7 +94,7 @@
   // Reset to defaults, the same on every page: clears every setting the site keeps, on every page and in
   // every saved version (an old version left behind would come back through its page's migration), with
   // the Jobs table and the Priority, then reloads the page on its defaults
-  const SAVED = /^(attribute|clothing|cow-herd-params|craft|education|farm|food-params|happiness|human-params|inheritance|map|priority|ration-params|resources|roles|skill|watering|weather)-v\d+$/;
+  const SAVED = /^(attribute|clothing|cow-herd-params|craft|education|farm|food-params|happiness|human-params|inheritance|map|priority|ration-params|resources|roles|skill|strategy|watering|weather)-v\d+$/;
   function resetAll() {
     try { for (const k of Object.keys(localStorage)) if (SAVED.test(k)) localStorage.removeItem(k); } catch (e) {}
     location.reload();

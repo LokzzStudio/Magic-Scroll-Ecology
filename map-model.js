@@ -79,13 +79,16 @@
     const { houses, spots } = nearest(m.tiles), perTile = m.minPerTile / 60;
     const home = { H: 0 };
     for (const c of PLACES) home[c] = spots[c].d * perTile;
-    const between = (a, b) => {
+    const hours = (a, b) => {
       if (a === b) return 0;
       if (a === "H") return home[b];
       if (b === "H") return home[a];
       const p = spots[a], q = spots[b];
       return isFinite(p.d) && isFinite(q.d) ? (Math.abs(p.x - q.x) + Math.abs(p.y - q.y)) * perTile : Infinity;
     };
+    // Every pair worked out once (the day's walking asks a great many times)
+    const table = Object.fromEntries(["H", ...PLACES].map((a) => [a, Object.fromEntries(["H", ...PLACES].map((b) => [b, hours(a, b)]))]));
+    const between = (a, b) => table[a][b];
     const wake0 = Math.min(m.wakeFrom, m.wakeTo), wake1 = Math.max(m.wakeFrom, m.wakeTo);
     return {
       home, between, spots, houses, tiles: m.tiles, minPerTile: m.minPerTile,

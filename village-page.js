@@ -7,9 +7,12 @@
 //   inputs     its sliders: { id, key, obj: "S" (default) | "F", round: "step" | "int" | "none" }, with
 //              lo, hi and step from its settings table (SPECS), or given here (a number box #id-num, with a
 //              slider #id-range if the page has one); or with tiers: true,
-//              a button for each tier from lo to hi (N to SSR) in #id-seg
+//              a button for each tier from lo to hi (N to SSR) in #id-seg; or with choices: [[value, label]],
+//              a button for each in #id-seg
 //   storeKey, defaults: where it keeps its settings and their defaults, for pages without a SPECS table
-//   setup(c), beforeRun(c), drawPanel(c), compare(c), config(c), ration(c): page hooks
+//   setup(c), beforeRun(c), drawPanel(c), compare(c), config(c), ration(c): page hooks. c.aliveWith(over):
+//   the survivors of the 20 villages with options changed (Macro; null until run); c.summaryWith(over): the
+//   same villages' { alive, runs: [{ survived, extinctDay, last, end (people at the end), tally }] }
 // From the Attribute page on, the top bar switches between Macro mode (each day worked out for the
 // village as a whole) and Micro mode (person by person, micro-model.js). Micro mode runs the same 20
 // villages both ways, draws Micro's, and adds a day viewer (micro-view.js) and a comparison of the two.
@@ -39,10 +42,10 @@
   // use it lasts (wear: 衣 and 笠 anything, 刀 the harvest and collecting, 叉 tending). needKey: the setting for one of its
   // materials ("hatWood")
   const CRAFTS = [
-    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 3000 },
-    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 3000 },
-    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 200, wood: 100 }, wear: 3000 },
-    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 200 }, wear: 3000 },
+    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 1500 },
+    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 1500 },
+    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 200, wood: 100 }, wear: 1500 },
+    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 200 }, wear: 1500 },
   ];
   const needKey = (it, m) => it.id + m[0].toUpperCase() + m.slice(1);
   // The settings pages' own settings, by field: [default, lowest, highest, slider step]. Each page takes
@@ -57,9 +60,10 @@
       bonus1: [5, 0, 500, 5], bonus2: [10, 0, 500, 5], bonus3: [20, 0, 500, 5], bonus4: [40, 0, 500, 5] } },
     clothing: { key: "clothing-v4", fields: { coldK: [1, 0, 5, 0.05], coldLimit: [-5, -30, 0, 1], clothStep: [5, 0, 20, 1], fireStep: [5, 0, 20, 1], fireHours: [2, 0.25, 4, 0.25], fireReach: [4, 0, 16, 1], fireEnergy: [1, 0, 20, 1],
       hatStep: [2, 0, 10, 1], rainLimit: [5, 1, 11, 1] } },
+    strategy: { key: "strategy-v1", fields: { strategy: [1, 1, 4, 1], handsOff: [10, 1, 49, 1] } },
     watering: { key: "watering-v1", fields: { wellCap: [100, 10, 1000, 10], wellGround: [50, 0, 1000, 10], waterUse: [0.1, 0, 1, 0.01], waterAt: [3, 0, 10, 0.5],
       g0: [-100, -500, 500, 5], g1: [0, -500, 500, 5], g2: [10, -500, 500, 5], g3: [20, -500, 500, 5], g4: [20, -500, 500, 5], g5: [10, -500, 500, 5], g6: [0, -500, 500, 5], g7: [0, -500, 500, 5], g8: [-10, -500, 500, 5], g9: [-50, -500, 500, 5], g10: [-100, -500, 500, 5] } },
-    craft: { key: "craft-v11", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [300, 10, 2000, 10]], [it.id + "Wear", [it.wear, 1000, 300000, 1000]]])),       startBlades: [200, 0, 1000, 10], startForks: [200, 0, 1000, 10], startClothes: [200, 0, 1000, 10], startHats: [200, 0, 1000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
+    craft: { key: "craft-v15", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [100, 10, 2000, 10]], [it.id + "Wear", [it.wear, 500, 300000, 500]]])),       startBlades: [500, 0, 5000, 10], startForks: [500, 0, 5000, 10], startClothes: [500, 0, 5000, 10], startHats: [500, 0, 5000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
   // ×10 (scale), happiness's Intelligence step ÷ 10. Each new key takes from the first of its old keys
@@ -112,6 +116,11 @@
       // v10: tool bonuses 20 / 40 / 60 / 80 / 100%
       ["craft-v10", [() => { const v9 = keyed("craft-v9") || {}; return pick(v9, Object.keys(v9).filter((k) => !k.startsWith("bonus"))); }]],
       ["craft-v11", [() => scaled(keyed("craft-v10") || {}, { clothesWear: 0, hatWear: 0 })]],
+      ["craft-v12", [() => scaled(keyed("craft-v11") || {}, { clothesWear: 0, hatWear: 0, bladeWear: 0, forkWear: 0 })]],
+      ["craft-v13", [() => scaled(keyed("craft-v12") || {}, { clothesWear: 0, hatWear: 0, bladeWear: 0, forkWear: 0 })]],
+      ["craft-v14", [() => scaled(keyed("craft-v13") || {}, { clothesWear: 0, hatWear: 0, bladeWear: 0, forkWear: 0 })]],
+      // v15: every craft 100 energy to make, lasting 1,500; 500 of each to start with
+      ["craft-v15", [() => { const v14 = keyed("craft-v14") || {}; return pick(v14, Object.keys(v14).filter((k) => !k.endsWith("Energy") && !k.endsWith("Wear") && !k.startsWith("start"))); }]],
     ];
     for (const [key, from] of MOVES) {
       if (keyed(key)) continue;
@@ -156,7 +165,7 @@
 
   // The pages in order; each page reads the settings of the pages before it
   // (the Food page keeps the food and the rationing settings)
-  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering"];
+  const CHAIN = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering", "strategy"];
   const KEYS = { herd: [HerdModel.STORE_KEY], humans: [HumanModel.STORE_KEY], food: [FoodModel.STORE_KEY, RationModel.STORE_KEY], map: [MapModel.STORE_KEY], weather: window.WeatherModel ? [WeatherModel.STORE_KEY] : [],
     ...Object.fromEntries(Object.entries(SPECS).map(([name, spec]) => [name, [spec.key]])) };
   const SHEEP_SALT = 500000;   // keeps the sheep's dice apart from the cows'
@@ -220,6 +229,7 @@
       if (at("resources")) { o.resources = resourcesOf(c.RS); o.skills = skillsOf(c.RS); }
       if (at("craft")) { o.craft = craftOf(c.CR); o.kit = { tier: 2, blade: c.CR.startBlades, fork: c.CR.startForks, clothes: c.CR.startClothes, hat: c.CR.startHats }; }
       if (at("clothing")) { const K = c.set.clothing; o.cold = coldOf(K); o.rain = rainOf(K); }
+      if (at("strategy") && window.StrategyModel) { const G = c.set.strategy; o.player = { id: StrategyModel.STRATEGIES[G.strategy - 1].id, handsOff: G.handsOff, runDays: T }; }
       if (at("watering")) { const V = c.set.watering; o.water = { cap: V.wellCap, ground: V.wellGround, use: V.waterUse, at: V.waterAt, growth: Array.from({ length: 11 }, (_, k) => V["g" + k]) }; }
       return o;
     }
@@ -232,6 +242,10 @@
         if (!isFinite(v)) v = (inp.obj === "F" ? FoodModel.DEFAULTS : S_DEFAULTS)[inp.key];
         v = inp.round === "int" ? Math.round(v) : inp.round === "none" ? v : Number((Math.round(v / step) * step).toFixed(2));
         obj[inp.key] = v;
+        if (inp.choices) {
+          $(inp.id + "-seg").innerHTML = inp.choices.map(([val, label]) => `<button type="button" data-t="${val}" aria-pressed="${v === val}">${label}</button>`).join("");
+          continue;
+        }
         if (inp.tiers) {
           $(inp.id + "-seg").innerHTML = [1, 2, 3, 4].filter((t) => t >= lo && t <= hi).map((t) => `<button type="button" data-t="${t}" aria-pressed="${v === t}" title="${HerdModel.TIERS[t].en} (${t})">${HerdModel.TIERS[t].code}</button>`).join("");
           continue;
@@ -251,7 +265,7 @@
         clearTimeout(inputTimer);
         inputTimer = setTimeout(recompute, 80);
       };
-      if (inp.tiers) {
+      if (inp.tiers || inp.choices) {
         $(inp.id + "-seg").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) { changed(Number(b.dataset.t)); syncInputs(); } });
         continue;
       }
@@ -265,24 +279,29 @@
     // not run yet comes back null and waits in `queued`: once the page is drawn, runQueued runs them a
     // slice at a time and draws the panels again as each set comes in.
     let aliveCache = new Map(), queued = new Map();
-    function aliveWith(over) {
+    // A run kept for the comparisons: whether it survived, when it died out, its last day, the people then, its totals
+    const summary = (r) => ({ survived: r.survived, extinctDay: r.extinctDay, last: r.last, end: r.counts[r.last] || 0, tally: r.tally });
+    function summaryWith(over) {
       const cfg = { ...c.cfg, ...over };
       const key = cacheKey(cfg);
       if (aliveCache.has(key)) return aliveCache.get(key);
       if (!queued.has(key)) queued.set(key, cfg);
       return null;
     }
-    c.aliveWith = aliveWith;
+    const aliveWith = (over) => { const s = summaryWith(over); return s ? s.alive : null; };
+    c.aliveWith = aliveWith; c.summaryWith = summaryWith;
     function runQueued(token) {
-      let cur = null, i = 0, n = 0;
+      let cur = null, i = 0, n = 0, kept = [];
       const step = () => {
         if (token !== job) return;
         const until = performance.now() + SLICE_MS;
         let got = false;
         while (performance.now() < until) {
-          if (!cur) { const next = queued.entries().next(); if (next.done) break; cur = next.value; i = 0; n = 0; }
-          if (VM.run({ ...cur[1], ...(microOnly ? { mode: "micro" } : {}), seed: c.base + i, detailed: false, cowAdults: c.result.cows.runs[i].adults, cowTiers: c.result.cows.runs[i].tiers, sheepAdults: sheepOf(i), sheepTiers: sheepTiersOf(i) }).survived) n++;
-          if (++i === RUNS) { aliveCache.set(cur[0], n); queued.delete(cur[0]); cur = null; got = true; }
+          if (!cur) { const next = queued.entries().next(); if (next.done) break; cur = next.value; i = 0; n = 0; kept = []; }
+          const r = VM.run({ ...cur[1], ...(microOnly ? { mode: "micro" } : {}), seed: c.base + i, detailed: false, cowAdults: c.result.cows.runs[i].adults, cowTiers: c.result.cows.runs[i].tiers, sheepAdults: sheepOf(i), sheepTiers: sheepTiersOf(i) });
+          if (r.survived) n++;
+          kept.push(summary(r));
+          if (++i === RUNS) { aliveCache.set(cur[0], { alive: n, runs: kept }); queued.delete(cur[0]); cur = null; got = true; }
         }
         if (got) drawPanelsAll();
         if (queued.size) setTimeout(step, 0);
@@ -291,7 +310,7 @@
     }
     const sheepOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].adults : null), sheepTiersOf = (i) => (c.result.sheep ? c.result.sheep.runs[i].tiers : null);
 
-    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills, cfg.cold ? { ...cfg.cold, stats: null } : null, cfg.rain ? { ...cfg.rain, sets: null, stats: null } : null, cfg.kit || null, cfg.water || null]);
+    const cacheKey = (cfg) => JSON.stringify([cfg.advisor, cfg.shares, cfg.attrs, cfg.elderAttr, cfg.inherit, cfg.school, cfg.happiness, cfg.skills, cfg.cold ? { ...cfg.cold, stats: null } : null, cfg.rain ? { ...cfg.rain, sets: null, stats: null } : null, cfg.kit || null, cfg.water || null, cfg.player || null]);
     let job = 0;   // each recompute's number, so a computation still under way stops once it's stale
     const SLICE_MS = 50;   // how long the villages run before the page gets a turn
     function recompute() {
@@ -339,7 +358,8 @@
     let macroAlive = 0;
     function finish(alive, token) {
       macroAlive = alive;
-      aliveCache = new Map([[cacheKey(c.cfg), alive]]); queued = new Map();
+      const mine = c.result.compare ? c.result.compare.macro : c.result.people.runs;   // the comparisons are Macro's
+      aliveCache = new Map([[cacheKey(c.cfg), { alive, runs: mine.map(summary) }]]); queued = new Map();
       syncSpeed();
       drawPanelsAll();
       drawStatics();

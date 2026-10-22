@@ -626,13 +626,15 @@
   }
   // Droughts and floods over 100 years in a row, run once the page has settled (about a second)
   let waterKey = "", waterRes = null, waterTimer = 0;
+  // Each season's temperature figures, from its long run (once every season has been simulated)
+  const seasonStats = () => Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats]));
   // (with the seasons' temperatures once they're all in: the mountain freezes by them)
   function drawWater() {
     const ready = WM.SEASONS.every((s) => hasSim(ALL[s.id])), key = JSON.stringify(ALL) + ready;
     if (key !== waterKey) {
       waterKey = key; waterRes = null;
       clearTimeout(waterTimer);
-      waterTimer = setTimeout(() => { waterRes = WM.waterRun(ALL, 1, ready ? Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats])) : null, 100); drawWater(); }, 60);
+      waterTimer = setTimeout(() => { waterRes = WM.waterRun(ALL, 1, ready ? seasonStats() : null, 100); drawWater(); }, 60);
     }
     const r = waterRes, v = (f) => (r ? f(r) : "…"), pd = (x) => `${fmt(x * 360, 1)} days a year`;
     $("water-facts").innerHTML = [["Drought", v((x) => pct(x.drought))], ["Years with a drought", v((x) => pct(x.droughtYears))], ["Flood", v((x) => pct(x.flood))], ["Years with a flood", v((x) => pct(x.floodYears))], ["River dry", v((x) => pct(x.riverDry))], ["Years with a drought and a dry river", v((x) => pct(x.bothYears))]]
@@ -723,7 +725,7 @@
     // Temperatures once every season's long run is in (they give each season's figures)
     const ready = WM.SEASONS.every((s) => hasSim(ALL[s.id])), key = JSON.stringify(ALL) + ready;
     // Two years in a row, the second shown, so the water level has settled from where it starts
-    if (key !== yearKey) { year = WM.simulateYear(ALL, 1, ready ? Object.fromEntries(WM.SEASONS.map((s) => [s.id, simFor(ALL[s.id]).temp.stats])) : null, 2).slice(WM.SEASONS.length * WM.SEASON_DAYS); yearKey = key; }
+    if (key !== yearKey) { year = WM.simulateYear(ALL, 1, ready ? seasonStats() : null, 2).slice(WM.SEASONS.length * WM.SEASON_DAYS); yearKey = key; }
     const svg = $("year-chart"), H0 = 210, w = svgSize(svg, H0), m = { l: 44, r: 40, t: 22, b: 26 }, D = year.length;
     const top = Math.max(10, Math.ceil(Math.max(...year.map((d) => d.rain)) / 20) * 20), vTop = Math.max(2, Math.ceil(Math.max(...year.map((d) => d.wind)) / 2) * 2);
     const x = (d) => m.l + (d / D) * (w - m.l - m.r), y = (v) => m.t + (1 - v / top) * (H0 - m.t - m.b), yv = (v) => m.t + (1 - v / vTop) * (H0 - m.t - m.b);

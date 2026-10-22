@@ -6,18 +6,18 @@
 // examples belong in page hints. The Rulebook page (rulebook.html) says the same in plain words, sorted
 // into the game's rules and the simulation's; a change here may need it there too.
 (function () {
-  const ORDER = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering"];
+  const ORDER = ["herd", "humans", "food", "map", "attribute", "inheritance", "education", "happiness", "resources", "craft", "weather", "clothing", "watering", "strategy"];
 
   function groups(page) {
     const at = (name) => ORDER.indexOf(page) >= ORDER.indexOf(name);   // this page or a later one
     const is = (...names) => names.includes(page);
     const working = at("attribute");   // people work for their food, on the Map page's map and day
-    const school = at("education"), happiness = at("happiness"), resources = at("resources"), skills = resources, crafts = at("craft"), cold = at("clothing"), wet = cold, watering = at("watering");
+    const school = at("education"), happiness = at("happiness"), resources = at("resources"), skills = resources, crafts = at("craft"), cold = at("clothing"), wet = cold, watering = at("watering"), strategy = at("strategy");
     const out = [];
     const add = (title, where, items, opts = {}) => out.push({ title, where, items, ...opts });
     const walking = () => {
       add("Map and walking", "Map", [
-        "A 16 × 16 grid of house, farm, pasture, forest and mine tiles (well and river tiles do nothing). Each kind of place is worked at its tile with the fewest steps (no diagonals) to any house (tie: first scanning rows top to bottom, left to right). Walking is 1 minute a tile: house ↔ place, that place's steps; place ↔ place, the steps between their two tiles." + "",
+        "A 16 × 16 grid of house, farm, pasture, forest and mine tiles (the well and the river are where farmers fetch water, from the Watering page on). Each kind of place is worked at its tile with the fewest steps (no diagonals) to any house (tie: first scanning rows top to bottom, left to right). Walking is 1 minute a tile: house ↔ place, that place's steps; place ↔ place, the steps between their two tiles." + "",
         "Waking: N people, N + 1 exponential gaps g₀ … g<sub>N</sub>, the people in a random order; the k-th (from 0) wakes at 4 + 4 × (g₀ + … + g<sub>k</sub>) ÷ (g₀ + … + g<sub>N</sub>) o'clock. All times below are hours since that person woke.",
         "Out of the house for 12 h. Breakfast by the house (24 min). From 5½ h: home for lunch (idle: at once; working: once the unit under way is done and carried home), eaten by the house (24 min), then back out. From 12 h: the same, home for the night; they go in on reaching the house.",
         "Work goes a unit at a time: 10 energy, or less if the person or job has less left, taking unit ÷ r hours (r: see Power and Intelligence). <b>A unit starts only if they'd finish it and be home by 12</b>; once started it's finished. Collecting (milking, harvest" + (resources ? ", timber, wool, stone" : "") + ") is carried home after every 10 energy and at the end of the job: a walk home and back each time. Anyone with nothing to do waits by the house.",
@@ -153,6 +153,13 @@
       "In Macro mode the same rules run along each person's clock, a unit at a time (as their work does): everyone wakes at an even spread over the wake-up window, in the order they come to work, and sees the fires lit by those worked out before them; the felt temperature is taken as a straight line between the times they look, to find when it crosses 0. Planning what someone could do (the 12 h rule) leaves the weather out.",
     ]);
 
+    if (strategy) add("The player", "Strategy", [
+      "Each day, before anything else (before the scholars are seen to), the player may: <b>kill</b> anyone (gone at once, counted among the day's deaths; a partner is single again that night); <b>appoint the scholars</b>: the list they give is the day's scholars (grown-ups only, any number, elders too; the brightest advises), instead of the village's own choosing; <b>pour</b> the well full to 100; and <b>give</b> any number of 刀 叉 衣 笠 of a tier up to SR, in store as if just made (unworn).",
+      "On the 1st of each month (days 1, 31, …, 331 of a year) they may give anyone their <b>own order of the day's jobs</b>; it stands until changed (a newborn has none). With one, the person goes down their own order: in Micro choosing their next job, a scholar choosing teaching or poetry, and in Macro the day's jobs go by rank: everyone's first job, then everyone's second, …, at each rank the jobs in the village's order, each with those who have it there.",
+      "For each couple they may say whether they may have a child: a couple told no has no chance of one at night (a pregnancy already under way goes on) until told yes. Couples only exist from the Happiness page on.",
+      "Strategies, as players: Most people, Brightest person and A UR craft play all 50 years; Sustainable plays its hands-off years (10 by default), gives on its last day enough SR crafts for everyone to the end, lets every couple have children again, and lets go: from the next day the village chooses its own scholars, nothing is poured or given, and the orders it gave stand.",
+    ]);
+
     if (watering) add("Watering", "Watering", [
       "The well (井, a place on the Map) holds at most 100 water and starts full. Each day, once the day's work is done, it refills over the day's 24 hours: from the ground at W ÷ 2 an hour (W: the land's water level, the Weather page's, at the day's end) while it holds under 50, and from the rain at its rainfall an hour (snow too) up to 100, worked out between the rain's changes.",
       "Each of the 4 fields has a water level, 0–10; the fields are numbered in the order they're taken each day (the first farmer's is field 1), and start at the land's level. Tending uses 0.1 level per energy. A farmer who finds their field at level 3 or lower, on arriving or after each unit, walks for 1 water and back with it: +1 level (at most 10). They go to the well (井) if it has water and is no further from the field than the river (川), otherwise to the river, while it runs: it's dry on a day that starts with the mountain (the Weather page's) at 0 (no river running, or none on the map, and the well empty: no water). In Macro this happens along their clock, as carrying home does.",
@@ -160,11 +167,11 @@
     ]);
 
     if (crafts) add("Crafts", "Craft", [
-      "Women weave (紡織) 衣 clothes (200 wool + 100 timber) or 笠 hats (100 wool + 200 timber); men forge (鍛造) 刀 blades (200 stone + 100 timber) or 叉 hayforks (100 stone + 200 timber); each takes 300 energy of work at the house. One loom and one forge, one crafter each a day; a craft takes its materials up front and is worked until done, across days, by whoever holds the station.",
-      "To start with, the store holds 200 R 刀, 200 R 叉, 200 R 衣 and 200 R 笠 (Craft page), each worn out like a made one.",
+      "Women weave (紡織) 衣 clothes (200 wool + 100 timber) or 笠 hats (100 wool + 200 timber); men forge (鍛造) 刀 blades (200 stone + 100 timber) or 叉 hayforks (100 stone + 200 timber); each takes 100 energy of work at the house. One loom and one forge, one crafter each a day; a craft takes its materials up front and is worked until done, across days, by whoever holds the station.",
+      "To start with, the store holds 500 R 刀, 500 R 叉, 500 R 衣 and 500 R 笠 (Craft page), each worn out like a made one.",
       "Next item: the station's item started fewest times (衣 before 笠, 刀 before 叉); the station waits until all its materials are in store.",
-      "In use: each day everyone with energy (and the scholars), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best left of its tool (tending: a 叉; the harvest and collecting: a 刀, the same 刀 all day), putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 3,000), 叉 tending and 刀 at the harvest and collecting with it (3,000); worn out, it's gone at the end of the day, before the day's new crafts come in.",
-      "It takes each material lowest tier first (closing the filling lot early if the full ones fall short). Done: its score = the average of three, to the nearest 0.01: its materials' average tier, and its crafters' skill tier and human tier (⌊(Intelligence − 1) ÷ 10 − 8⌋ held to 1–4), these two averaged by work on it. Tier = <b>round((score + roll) ÷ 2)</b>, half up, held to 1–5; roll: an even draw of 1.01, 1.02, …, score + 1 (worked in hundredths). All three SSR (4.00): SSR 50%, SR 49.75%, UR 1 in 400; below 4.00, never UR.",
+      "In use: each day everyone with energy (and the scholars), in village order, takes the best 衣 and 笠 left. Trying field work or collecting, someone without one today first takes the best left of its tool (tending: a 叉; the harvest and collecting: a 刀, the same 刀 all day), putting it back if they don't get the job. Best: the highest tier, the oldest on a tie; each is taken once a day. Wear, by energy spent: 衣 and 笠 all of their wearer's (lasts 1,500), 叉 tending and 刀 at the harvest and collecting with it (1,500); worn out, it's gone at the end of the day, before the day's new crafts come in.",
+      "It takes each material best tier first (closing the filling lot early if the full ones fall short). Done: its score = the average of three, to the nearest 0.01: its materials' average tier, and its crafters' skill tier and human tier (⌊(Intelligence − 1) ÷ 10 − 8⌋ held to 1–4), these two averaged by work on it. Tier = <b>round((score + roll) ÷ 2)</b>, half up, held to 1–5; roll: an even draw of 1.01, 1.02, …, score + 1 (worked in hundredths). All three SSR (4.00): SSR 50%, SR 49.75%, UR 1 in 400; below 4.00, never UR.",
     ]);
 
     if (skills) add("Skills", "Resources", [

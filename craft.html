@@ -210,7 +210,7 @@ VillagePage.start({
   },
   drawPanel(c) {
     const { S, $, fmt } = c;
-    $("craft-hint").innerHTML = `A craft takes its materials up front, worst tier first, and is worked until it's done, even across days, by whoever has the station that day: the first grown-up who's free of the jobs above crafts in the <b>Priority</b> order. Each station has one crafter a day: when they stop, it waits for tomorrow. With nothing under way, a station's next item is the one the village has started fewest of; it waits until all that item's materials are in store, so clothes and hats take turns, and so do blades and hayforks. Its tier comes from its crafters' skill and Intelligence and its materials' tier.`
+    $("craft-hint").innerHTML = `A craft takes its materials up front, best tier first, and is worked until it's done, even across days, by whoever has the station that day: the first grown-up who's free of the jobs above crafts in the <b>Priority</b> order. Each station has one crafter a day: when they stop, it waits for tomorrow. With nothing under way, a station's next item is the one the village has started fewest of; it waits until all that item's materials are in store, so clothes and hats take turns, and so do blades and hayforks. Its tier comes from its crafters' skill and Intelligence and its materials' tier.`
       + ` A standard worker (${fmt(c.VM.DAY_ENERGY)} energy a day) on their own, at skill level 0, finishes a ${fmt(S.clothesEnergy)}-energy craft in ${fmt(Math.ceil(S.clothesEnergy / c.VM.DAY_ENERGY))} days; weavers and forgers get better at it as they go (see the Resources page's skills).`;
   },
 });
