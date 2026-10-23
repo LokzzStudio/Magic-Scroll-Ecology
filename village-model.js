@@ -234,13 +234,21 @@
     // Someone who comes to 發呆 ("idle") in their order stops there for the day (stopped)
     const village = order || DEFAULT_ORDER, ordOf = (w) => w.h.order || village, stopped = new Set();
     const ranks = Math.max(village.length, ...pool.map((w) => ordOf(w).length));
-    for (let k = 0; k < ranks; k++) for (const id of village) {
-      if (id === village[0]) for (const w of pool) if (ordOf(w)[k] === "idle") stopped.add(w);
-      const ws = pool.filter((w) => ordOf(w)[k] === id && !stopped.has(w));
-      if (!ws.length && village[k] !== id) continue;
-      if (id === "milk") milk(ws);
-      else if (id === "field") field(ws);
-      else if (extra && extra[id]) extra[id](ws.filter((w) => w.e > 0 && w.c.t < S.active - 1e-9), ops);
+    for (let k = 0; k < ranks; k++) {
+      const at = new Map();   // the rank's jobs, each with those who have it there (in pool order)
+      for (const w of pool) {
+        if (stopped.has(w)) continue;
+        const id = ordOf(w)[k];
+        if (id === "idle") stopped.add(w);
+        else if (id) { const ws = at.get(id); if (ws) ws.push(w); else at.set(id, [w]); }
+      }
+      for (const id of village) {
+        const ws = at.get(id) || [];
+        if (!ws.length && village[k] !== id) continue;
+        if (id === "milk") milk(ws);
+        else if (id === "field") field(ws);
+        else if (extra && extra[id]) extra[id](ws.filter((w) => w.e > 0 && w.c.t < S.active - 1e-9), ops);
+      }
     }
     let milkers = 0, farm = 0;
     for (const w of pool) if (w.f > 0) { if (w.f >= w.m) farm++; else milkers++; } else if (w.m > 0) milkers++;
@@ -498,6 +506,8 @@
         return n;
       },
       count: (id, minTier = 1) => { if (!crafted[id]) return 0; let n = 0; for (let t = minTier; t <= CRAFT_MAX_TIER; t++) n += crafted[id][t]; return n; },
+      // units of wool, stone or timber r in store, in its lots of tier minTier or better
+      stock: (r, minTier = 1) => { let n = 0; for (let t = minTier; t <= 4; t++) n += lots[r][t]; return n; },
       canStart: (items) => ready(nextCraft(items)),
       // Starts a station's next item, taking its materials (their tier: the average of what's taken)
       startCraft(items, st) {
@@ -557,7 +567,7 @@
       },
     };
     return {
-      gift: E.gift, count: E.count,   // the Strategy page's player
+      gift: E.gift, count: E.count, stock: E.stock,   // the Strategy page's player
       startDay(day) {
         // Every sheep grows res.regrow wool a day, up to a full fleece; of each tier, sheep that came of
         // age arrive full, and sheep that died are taken from the commonest fleece
@@ -1094,19 +1104,20 @@
     // The whole run's totals, kept even without the day-by-day records (Micro mode's comparison).
     // pow, int: the adults' average, summed over the last year's days with adults (attrDays)
     // level: the grown-ups' average level over every skill, summed over the last year's days with grown-ups (levelDays)
-    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, coldCut: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, waterRice: 0, trips: 0, riverTrips: 0, riverDry: 0, peak: 0, maxIntel: 0, heldOff: 0, ur: 0, firstUR: 0, bestCraft: 0, top: 0, killed: 0, gifts: 0, refilled: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
+    const tally = { peopleDays: 0, milk: 0, rice: 0, hunger: 0, cold: 0, coldHours: 0, coldCut: 0, fires: 0, rainIn: 0, rainLost: 0, outWork: 0, hats: 0, waterRice: 0, trips: 0, riverTrips: 0, riverDry: 0, peak: 0, maxIntel: 0, heldOff: 0, ur: 0, firstUR: 0, bestCraft: 0, top: 0, killed: 0, gifts: 0, refilled: 0, riceGiven: 0, walk: 0, wool: 0, stone: 0, crafts: 0, taught: 0, gained: 0, pow: 0, int: 0, attrDays: 0, born: 0, happy: 0, happyDays: 0, level: 0, levelDays: 0 };
 
     // The player's day (StrategyModel.player's act(view)): those they kill go before the day starts; the
     // scholars they appoint teach (grown-ups only; null: the village's own way); on the 1st of a month
     // (every 30 days) the job orders they give, each person's own; for each couple, whether they may have
     // a child (a couple held off has no chance of one at night, until told otherwise); the well filled to
-    // the brim; and the crafts they give (at most SR), in store as if just made
-    function play(day, doy) {
+    // the brim; the crafts they give (at most SR), in store as if just made; and on the 1st of a month, the
+    // rice they give, any amount, in store as if harvested today
+    function play(day, doy, cows) {
       const need = HumanModel.foodNeed(st.people, p);
       const view = {
-        day, doy, month: (doy - 1) % 30 === 0, people: st.people, p, stageOf: (h) => HumanModel.stage(h, p), scholars, school: !!school, couples: joy ? couples : null,
-        foodDays: need > 0 ? (milkStored + riceStored + stores.food) / need : Infinity, need,
-        count: econ ? econ.count : () => 0, crafts: !!(econ && cfg.craft), well: waterSt ? waterSt.well : null, wellCap: waterCfg ? waterCfg.cap : null,
+        day, doy, month: (doy - 1) % 30 === 0, people: st.people, p, stageOf: (h) => HumanModel.stage(h, p), isMan: (h) => h.sex === MALE, cows, scholars, school: !!school, couples: joy ? couples : null,
+        foodDays: need > 0 ? (milkStored + riceStored + stores.food) / need : Infinity, need, rice: riceStored,
+        count: econ ? econ.count : () => 0, stock: econ ? econ.stock : () => 0, crafts: !!(econ && cfg.craft), well: waterSt ? waterSt.well : null, wellCap: waterCfg ? waterCfg.cap : null,
       };
       const a = player.act(view) || {};
       if (a.kill && a.kill.length) {
@@ -1120,6 +1131,8 @@
       if (a.births) for (const [cp, yes] of a.births) cp.noBirth = !yes;
       if (a.refill && waterSt && waterSt.well < waterCfg.cap) { tally.refilled += waterCfg.cap - waterSt.well; waterSt.well = waterCfg.cap; }
       if (a.gifts && econ) for (const g of a.gifts) tally.gifts += econ.gift(g.id, Math.max(1, Math.min(GIFT_MAX_TIER, g.tier)), Math.floor(g.n));
+      const rice = view.month && a.rice > 0 ? Math.floor(Math.min(a.rice, 1e12)) : 0;
+      if (rice) { stores.rice[0] += rice; riceStored += rice; tally.riceGiven += rice; }   // today's slot, empty since the stores aged
     }
 
     for (let day = 1; day <= stopAt; day++) {
@@ -1151,7 +1164,7 @@
       } else {
         // The player first, while they play
         killedToday = 0;
-        if (player && day <= player.until) play(day, doy);
+        if (player && day <= player.until) play(day, doy, cows);
         else playerScholars = null;
         // 2. Scholars step down at elder age or death; new ones are appointed only if the village can
         //    spare them (the player's, while they play, are theirs). Then the grown-ups (and children,
@@ -1288,7 +1301,7 @@
       const milkMade = FoodModel.yieldOf(milkEnergy, milkSpent, F.milkPerEnergy);
       milkEnergy += milkSpent;
       stores.milk[0] = milkMade;
-      stores.rice[0] = riceMade;
+      stores.rice[0] += riceMade;   // on top of any rice the player gave today
       milkStored += milkMade; riceStored += riceMade;
 
       // 4. The day's ration, as shares of need for the grown-ups and the children. The advisor plans the

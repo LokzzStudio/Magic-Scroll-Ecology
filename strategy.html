@@ -38,7 +38,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Strategy</h1>
-    <p class="lede">The Watering page's villages, with a <b>player</b>: someone playing the game strategically for a goal. Each day before work the player may kill any villager, appoint any grown-ups as scholars (as many as they like) or dismiss them, refill the well to the brim, give any number of 刀 叉 衣 笠 up to SR, for free, and say for each couple whether they may have a child; on the 1st of each month they may give each villager their own order of the day's jobs. Pick a strategy to see its villages, in Macro or Micro mode, and how all four compare with the same villages left alone.</p>
+    <p class="lede">The Watering page's villages, with a <b>player</b>: someone playing the game strategically for a goal. Each day before work the player may kill any villager, appoint any grown-ups as scholars (as many as they like) or dismiss them, refill the well to the brim, give any number of 刀 叉 衣 笠 up to SR, for free, and say for each couple whether they may have a child; on the 1st of each month they may give each villager their own order of the day's jobs, and give the village any amount of rice. Pick a strategy to see its villages, in Macro or Micro mode, and how all four compare with the same villages left alone.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The player's strategy, and for Sustainable how many years they play before letting go</dd>
@@ -76,6 +76,7 @@
           <li>Refill the well, whenever they like</li>
           <li>Give any number of 刀 叉 衣 笠, at most SR</li>
           <li>Say for each couple whether they may have a child</li>
+          <li>Give any amount of rice, once a month</li>
         </ul>
       </section>
     </aside>
@@ -108,7 +109,7 @@
       ur: sum((r) => t(r).ur), urVillages: runs.filter((r) => t(r).ur > 0).length, firstUR: Math.min(Infinity, ...runs.filter((r) => t(r).ur > 0).map((r) => t(r).firstUR)),
       best: Math.max(0, ...runs.map((r) => t(r).bestCraft || 0)), top: sum((r) => t(r).top || 0) / n,
       lasted: sum((r) => (r.extinctDay !== null ? r.extinctDay : r.last)) / n / YEAR,
-      killed: sum((r) => t(r).killed) / n, heldOff: sum((r) => t(r).heldOff || 0) / n / YEAR, gifts: sum((r) => t(r).gifts) / n, refilled: sum((r) => t(r).refilled) / n,
+      killed: sum((r) => t(r).killed) / n, heldOff: sum((r) => t(r).heldOff || 0) / n / YEAR, gifts: sum((r) => t(r).gifts) / n, refilled: sum((r) => t(r).refilled) / n, rice: sum((r) => t(r).riceGiven || 0) / n,
     };
   }
   VillagePage.start({
@@ -142,13 +143,13 @@
         ["Villages alive at the end", each ? `${fmt(f.alive)}/${fmt(RUNS)}` : f.alive ? "yes" : `no, from year ${fmt(f.lasted, 1)}`],
         [each ? "People at the end, a village" : "People at the end", fmt(f.end, each ? 1 : 0)], [each ? "Most people at once, a village" : "Most people at once", fmt(f.peak, each ? 1 : 0)],
         ["Highest Intelligence", fmt(f.intel)], ["Best craft", TIER(f.best)], [each ? "SSR or better crafts, a village" : "SSR or better crafts", fmt(f.top, each ? 1 : 0)], ["UR crafts", f.ur ? `${fmt(f.ur)} (first on day ${fmt(f.firstUR)})` : "none"],
-        [each ? "Killed, a village" : "Killed", fmt(f.killed, each ? 1 : 0)], [each ? "Couple-years held off children, a village" : "Couple-years held off children", fmt(f.heldOff, 1)], [each ? "Crafts given, a village" : "Crafts given", fmt(f.gifts)], [each ? "Water poured into the well, a village" : "Water poured into the well", fmt(f.refilled)],
+        [each ? "Killed, a village" : "Killed", fmt(f.killed, each ? 1 : 0)], [each ? "Couple-years held off children, a village" : "Couple-years held off children", fmt(f.heldOff, 1)], [each ? "Crafts given, a village" : "Crafts given", fmt(f.gifts)], [each ? "Rice given, a village" : "Rice given", fmt(f.rice)], [each ? "Water poured into the well, a village" : "Water poured into the well", fmt(f.refilled)],
       ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
       $("player-run").innerHTML = rows(one, "Run 1", false);
       $("player-all").innerHTML = rows(all, `All ${fmt(RUNS)} villages`, true);
       $("player-hint").innerHTML = s.id === "ur"
-        ? `A craft's tier comes from the average of its crafter's skill tier, their 刀's tier (0 without one) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with skilled gatherers about one lot in three comes out SSR. But a craft takes the worst lots in store first, so its materials average SSR only when nothing below SSR is left; that, an SSR crafter and the top roll together are why UR is so rare.`
-        : s.id === "sustain" ? `The player lets go on day ${fmt(S.handsOff * YEAR)}; from then on the village is on its own: no more water poured into the well, crafts or kills, and it appoints its own scholars.` : "";
+        ? `A craft's tier comes from the average of its crafter's skill tier, their 刀's tier (0 without one) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with SSR gatherers and SSR 刀 about two lots in three come out SSR. A craft takes the best lots in store first, so its materials average SSR only while there are SSR lots enough for all of it: crafting as fast as it can, the village uses them up faster than they come in. Hence the player's saving up.`
+        : s.id === "sustain" ? `The player lets go on day ${fmt(S.handsOff * YEAR)}; from then on the village is on its own: no more rice, water poured into the well, crafts or kills, and it appoints its own scholars.` : "";
       // Every strategy, and none, on the same villages (Macro)
       const sets = [[null, "No player", "the Watering page's villages"], ...ST.map((x) => [x, `${x.zh} ${x.en}`, x.goal])];
       const goalCol = { population: "end", intel: "intel", sustain: "lasted", ur: "top" };
@@ -161,7 +162,7 @@
         body += `<tr class="${x === s ? "mine" : ""}"><th scope="row">${label}</th>${cols.map(([k, , show]) => `<td class="n${x && goalCol[x.id] === k ? " goal" : ""}">${f ? show(f) : "…"}</td>`).join("")}</tr>`;
       }
       $("strat-table").innerHTML = `<thead><tr><th></th>${cols.map(([, h]) => `<th class="n">${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody>`;
-      $("strat-table-hint").innerHTML = `People at the end and years lasted are averages over the ${fmt(RUNS)} villages (a village that died out counts 0 people); the highest Intelligence and the best craft are the best of any village; SSR+ crafts, killed and crafts given are a village's, on average. The other strategies' villages run after this page is drawn, a few seconds each.`;
+      $("strat-table-hint").innerHTML = `People at the end and years lasted are averages over the ${fmt(RUNS)} villages (a village that died out counts 0 people; one that grows past ${fmt(VillageModel.MAX_PEOPLE)} stops there, the pages' limit); the highest Intelligence and the best craft are the best of any village; SSR+ crafts, killed and crafts given are a village's, on average. The other strategies' villages run after this page is drawn, a few seconds each.`;
     },
   });
 }
