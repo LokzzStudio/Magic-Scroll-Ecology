@@ -3,7 +3,8 @@
 // player can do, each day:
 //   kill       anyone, gone before the day starts
 //   scholars   appoint any grown-ups as scholars, and dismiss them (the list they give is the scholars)
-//   orders     each person's own order of the day's jobs, given on the 1st of a month (every 30 days)
+//   orders     each person's own order of the day's jobs, given on the 1st of a month (every 30 days);
+//              "idle" (發呆) in it: there they stop for the day, doing nothing more
 //   refill     fill the well to the brim
 //   gifts      any number of 刀 叉 衣 笠, at most SR, in store as if just made
 //   births     for each couple, whether they may have a child (no: no chance of one, until told yes)
@@ -84,16 +85,16 @@
       act(v, P) {
         const sch = v.school ? byIntel(grownUps(v)).slice(0, 1) : null;
         const gifts = topUp(v);
-        if (v.day === P.until && v.crafts) {   // the last day: crafts to the end of the run (a 衣 or 笠 lasts about 15 days of work)
+        if (v.day === P.until && v.crafts) {   // the last day: crafts to the end of the run (a 衣 or 笠 lasts about 20 days of work)
           const years = Math.max(0, (P.runDays - v.day) / YEAR), n = v.people.length, g = grownUps(v).length;
-          for (const [id, who] of [["clothes", n], ["hat", n], ["blade", g], ["fork", g]]) gifts.push({ id, tier: SR, n: Math.ceil(who * 24 * years * 1.5) });
+          for (const [id, who] of [["clothes", n], ["hat", n], ["blade", g], ["fork", g]]) gifts.push({ id, tier: SR, n: Math.ceil(who * 18 * years * 1.5) });
         }
         return { refill: true, gifts, scholars: sch, births: v.day === P.until ? birthsAll(v, true) : birthsFed(v), orders: v.month ? ordersFor(v, () => FOOD) : null };
       },
     },
     {
       id: "ur", zh: "神兵利器", en: "A UR craft", goal: "a UR craft, or else the most SSR ones",
-      how: "As Brightest person, but nobody killed (the well full, SR crafts as needed, the brightest grown-ups teaching, children in class first, no children while food is short), and the two brightest adults who aren't scholars work the loom and the forge before anything else while the store holds 180 days' food, so they build up the skill (otherwise they help with the food first); everyone else works the food first. Once the village has made an SSR 刀, the player gives no more 刀: collectors with the village's own SSR ones gather better materials. A craft's tier comes from its crafter's skill, their Intelligence and its materials': all three at SSR, UR is 1 in 400.",
+      how: "As Brightest person, but nobody killed (the well full, SR crafts as needed, the brightest grown-ups teaching, children in class first, no children while food is short), and the two brightest adults who aren't scholars work the loom and the forge before anything else while the store holds 180 days' food, so they build up the skill (otherwise they help with the food first); everyone else works the food first. Once the village has made an SSR 刀, the player gives no more 刀: collectors with the village's own SSR ones gather better materials. A craft's tier comes from its crafter's skill, their 刀's tier and its materials': all three at SSR, UR is 1 in 400; the brightest craft fastest.",
       act(v) {
         const sch = v.school ? brightest(v) : null, isSch = new Set(sch || []);
         const crafters = new Set(byIntel(adultsOf(v).filter((h) => !isSch.has(h))).slice(0, 2)), craftNow = v.foodDays >= 180;

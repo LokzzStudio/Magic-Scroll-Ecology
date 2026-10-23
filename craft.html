@@ -92,7 +92,7 @@
             </div>
           </div>
           <div class="craft-card">
-            <div class="craft-name"><b>刀 Blade</b><span>鍛造 · carried harvesting and collecting</span></div>
+            <div class="craft-name"><b>刀 Blade</b><span>鍛造 · carried harvesting, collecting and crafting</span></div>
             <div class="craft-grid">
               <label class="cf"><span>Stone</span><input id="bls-num" type="number"></label>
               <label class="cf"><span>Timber</span><input id="blt-num" type="number"></label>
@@ -110,7 +110,7 @@
             </div>
           </div>
         </div>
-        <p class="hint">Lasts: the energy of use before it's gone (at the end of that day). 衣 and 笠: all the energy their wearer spends; 刀: the harvest and collecting; 叉: tending.</p>
+        <p class="hint">Lasts: the energy of use before it's gone (at the end of that day). 衣 and 笠: all the energy their wearer spends; 刀: the harvest, collecting and crafting; 叉: tending.</p>
         <h3 class="sub-h">To start with</h3>
         <div class="craft-grid">
           <label class="cf"><span>R 刀 in store</span><input id="sbl-num" type="number"></label>
@@ -130,7 +130,7 @@
             <tr><td><b>UR</b><small>Ultra Rare</small></td><td class="n"><input id="tb5-num" type="number" aria-label="Bonus a UR 刀 or 叉 gives"> %</td></tr>
           </tbody>
         </table>
-        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft's tier is <b>round((score + roll) ÷ 2)</b>: halfway between its score (the average of its materials' tier, its crafters' skill tier and their human tier) and a lucky roll from 1.01 up to one more than the score. The better the inputs, the harder the roll pulls the tier down; UR takes SSR on all three, and even then it's 1 in 400. See <b>How a craft's tier is drawn</b>.</p>
+        <p class="hint">A 刀 or 叉 adds its bonus to its holder's effectiveness. A finished craft's tier is <b>round((score + roll) ÷ 2)</b>: halfway between its score (the average of its materials' tier, its crafters' skill tier and their 刀's tier) and a lucky roll from 1.01 up to one more than the score. The better the inputs, the harder the roll pulls the tier down; UR takes SSR on all three, and even then it's 1 in 400. See <b>How a craft's tier is drawn</b>.</p>
         <details class="craft-how"><summary>How the loom and forge work</summary><p class="hint" id="craft-hint"></p></details>
       </section>
     </aside>
@@ -164,7 +164,7 @@ VillagePage.start({
     document.querySelector('section[aria-label="Crafts"]').insertAdjacentHTML("afterend", `<section class="card" aria-label="Craft tier rule">
       <div class="card-head"><h2>How a craft's tier is drawn</h2><p>Halfway between how good its inputs are and a lucky roll.</p></div>
       <p class="ct-rule">Tier = round((Score + Roll) ÷ 2)</p>
-      <p class="hint">Score: the average of its materials' tier, its crafters' skill tier and their human tier, 1.00 (all N) to 4.00 (all SSR). Roll: any of 1.01, 1.02, … up to Score + 1, evenly. The roll always starts near the bottom, so the better the inputs, the harder it pulls the tier down: high tiers are rare and hard-won.</p>
+      <p class="hint">Score: the average of its materials' tier, its crafters' skill tier and their 刀's tier, 0.67 (N, with no 刀) to 4.00 (all SSR). Weaving and forging each use a 刀; without one it counts 0. Roll: any of 1.01, 1.02, … up to Score + 1, evenly. The roll always starts near the bottom, so the better the inputs, the harder it pulls the tier down: high tiers are rare and hard-won.</p>
       <div class="ct-pick"><label for="ct-num">Score</label><input id="ct-range" type="range" min="1" max="4" step="0.01" aria-label="Score to try">
         <span class="num-wrap"><input id="ct-num" type="number" min="1" max="4" step="0.01"></span><span class="muted" id="ct-rolls"></span></div>
       <div class="ct-bar" id="ct-bar" role="img"></div>

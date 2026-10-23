@@ -163,7 +163,7 @@
           id: kind, place: "H", kind: "slot", worker: null, today: null,   // today: the day's one crafter
           hasWork: () => !!st.job || E.canStart(items),
           more: (a) => (st.job || E.startCraft(items, st) ? Math.min(UNIT, a.e, st.job.left / effAt(a, kind)) : 0),
-          credit: (amt, a) => E.creditCraft(st, kind, a.h, a.r, amt),
+          credit: (amt, a, energy) => E.creditCraft(st, kind, a.h, amt, a.blade, energy),
         };
       }
     }
@@ -177,7 +177,7 @@
     const clockOf = (a) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, load: a.load, lunched: a.lunched, Lh: a.Lh || 0, walked: 0 });
     // A person's effectiveness at a job (a job id, or the jobs table's): the work each energy does there
     // plus the bonus of their tool for it (a 叉 hayfork tending, a 刀 blade at the harvest and collecting)
-    const TOOL_OF = { field: tending ? "fork" : "blade", wool: "blade", wood: "blade", stone: "blade" };
+    const TOOL_OF = { field: tending ? "fork" : "blade", wool: "blade", wood: "blade", stone: "blade", weave: "blade", forge: "blade" };   // 紡織 and 鍛造 take a 刀 too
     const effAt = (a, id) => { const t = TOOL_OF[id] && a[TOOL_OF[id]]; return a.eff[id] + (t ? t.bonus : 0); };
     // What they could still do at a place: energy, and as work at a job
     const est = (a, place, collect) => DayModel.canAt(clockOf(a), place, a.e, a.r, S, collect);
@@ -337,6 +337,7 @@
     const tiersOf = (a) => (a.h.order ? a.h.order : tiers);
     function chooseGrown(a) {
       for (const id of tiersOf(a)) {
+        if (id === "idle") return false;   // 發呆: nothing more today
         if (id === "milk") {
           if (!may(a.h, "milk") || !placeFor(a, milk, !a.milkOnly && may(a.h, fieldJob) ? milkOnlyWaiting() : 0)) continue;
           if (tryPool(a, milk)) return true;
@@ -344,7 +345,7 @@
           if (!may(a.h, fieldJob) || !field || !placeFor(a, field, 0)) continue;
           if (withTool(a, TOOL_OF.field, () => tryPool(a, field))) return true;
         } else if (id === "craft") {
-          for (const kind of ["weave", "forge"]) if (stations[kind] && may(a.h, kind) && trySlot(a, stations[kind])) return true;
+          for (const kind of ["weave", "forge"]) if (stations[kind] && may(a.h, kind) && withTool(a, "blade", () => trySlot(a, stations[kind]))) return true;   // with the day's 刀, if there's one
         } else if (id === "collect" && E) {
           if (withTool(a, "blade", () => {
             for (const r of VM.collectOrder(a.h, E.today)) {
@@ -362,6 +363,7 @@
     // (Education). Returns "food", "class" or "" (nothing)
     function kidChoose(a) {
       for (const id of tiersOf(a)) {
+        if (id === "idle") return "";
         if (id === "teach" && classOn(a)) return "class";
         if (id === "milk" && may(a.h, "milk") && placeFor(a, milk, grownCover(milk, "milk").people)) {
           if (tryPool(a, milk)) return "food";
@@ -484,6 +486,7 @@
       if (a.e <= EPS) { idle(a); wakeIdle(); return; }
       const pupils = a.pupils.filter((k) => k.cls && k.e > EPS);
       for (const id of tiersOf(a)) {
+        if (id === "idle") break;
         const teach = id === "teach" && pupils.length > 0;
         if (!teach && !(id === "read" && a.reads)) continue;
         a.unit = Math.min(UNIT, a.e); a.t0 = now;

@@ -42,10 +42,10 @@
   // use it lasts (wear: 衣 and 笠 anything, 刀 the harvest and collecting, 叉 tending). needKey: the setting for one of its
   // materials ("hatWood")
   const CRAFTS = [
-    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 1500 },
-    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 1500 },
-    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 200, wood: 100 }, wear: 1500 },
-    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 200 }, wear: 1500 },
+    { id: "clothes", zh: "衣", en: "Clothes", job: "weave", needs: { wool: 200, wood: 100 }, wear: 2000 },
+    { id: "hat", zh: "笠", en: "Hat", job: "weave", needs: { wool: 100, wood: 200 }, wear: 2000 },
+    { id: "blade", zh: "刀", en: "Blade", job: "forge", needs: { stone: 200, wood: 100 }, wear: 2000 },
+    { id: "fork", zh: "叉", en: "Hayfork", job: "forge", needs: { stone: 100, wood: 200 }, wear: 2000 },
   ];
   const needKey = (it, m) => it.id + m[0].toUpperCase() + m.slice(1);
   // The settings pages' own settings, by field: [default, lowest, highest, slider step]. Each page takes
@@ -63,7 +63,7 @@
     strategy: { key: "strategy-v1", fields: { strategy: [1, 1, 4, 1], handsOff: [10, 1, 49, 1] } },
     watering: { key: "watering-v1", fields: { wellCap: [100, 10, 1000, 10], wellGround: [50, 0, 1000, 10], waterUse: [0.1, 0, 1, 0.01], waterAt: [3, 0, 10, 0.5],
       g0: [-100, -500, 500, 5], g1: [0, -500, 500, 5], g2: [10, -500, 500, 5], g3: [20, -500, 500, 5], g4: [20, -500, 500, 5], g5: [10, -500, 500, 5], g6: [0, -500, 500, 5], g7: [0, -500, 500, 5], g8: [-10, -500, 500, 5], g9: [-50, -500, 500, 5], g10: [-100, -500, 500, 5] } },
-    craft: { key: "craft-v15", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [100, 10, 2000, 10]], [it.id + "Wear", [it.wear, 500, 300000, 500]]])),       startBlades: [500, 0, 5000, 10], startForks: [500, 0, 5000, 10], startClothes: [500, 0, 5000, 10], startHats: [500, 0, 5000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
+    craft: { key: "craft-v16", fields: { ...Object.fromEntries(CRAFTS.flatMap((it) => [...Object.entries(it.needs).map(([m, n]) => [needKey(it, m), [n, 0, 10000, 10]]), [it.id + "Energy", [100, 10, 2000, 10]], [it.id + "Wear", [it.wear, 500, 300000, 500]]])),       startBlades: [500, 0, 5000, 10], startForks: [500, 0, 5000, 10], startClothes: [500, 0, 5000, 10], startHats: [500, 0, 5000, 10], bonus1: [20, 0, 500, 5], bonus2: [40, 0, 500, 5], bonus3: [60, 0, 500, 5], bonus4: [80, 0, 500, 5], bonus5: [100, 0, 500, 5] } },
   };
   // Settings saved at 10 energy a day come over at the 100 base: food, wool, timber, knowledge and crafts
   // ×10 (scale), happiness's Intelligence step ÷ 10. Each new key takes from the first of its old keys
@@ -121,6 +121,7 @@
       ["craft-v14", [() => scaled(keyed("craft-v13") || {}, { clothesWear: 0, hatWear: 0, bladeWear: 0, forkWear: 0 })]],
       // v15: every craft 100 energy to make, lasting 1,500; 500 of each to start with
       ["craft-v15", [() => { const v14 = keyed("craft-v14") || {}; return pick(v14, Object.keys(v14).filter((k) => !k.endsWith("Energy") && !k.endsWith("Wear") && !k.startsWith("start"))); }]],
+      ["craft-v16", [() => scaled(keyed("craft-v15") || {}, { clothesWear: 0, hatWear: 0, bladeWear: 0, forkWear: 0 })]],   // every craft lasts 2,000 energy
     ];
     for (const [key, from] of MOVES) {
       if (keyed(key)) continue;

@@ -39,7 +39,8 @@
 //             under; rain burns a fire down faster, by the same cut, and at 10 none can be lit (Clothing)
 //   priority  the order of the day's jobs from the Attribute page on: "milk", "field", "craft",
 //             "collect", "teach", "read" (DEFAULT_ORDER without one); anyone with an order of their own
-//             (h.order, set by the Strategy page's player) goes by theirs
+//             (h.order, set by the Strategy page's player) goes by theirs, which may hold "idle" (發呆):
+//             there they stop for the day, doing nothing more (the energy left is unspent)
 //   player    null, or { id, handsOff } (Strategy): StrategyModel.player(it) plays the village each day
 //             until it lets go (its `until`): see play() in run
 //   happiness null, or { iqStep }: each person's happiness (0–100) sets their own chance of a
@@ -140,8 +141,11 @@
   const DEFAULT_ORDER = ["field", "milk", "craft", "collect", "teach", "read"];
   // An order with every job in it: any it lacks go at the end, as in the default
   const fullOrder = (order) => [...order, ...DEFAULT_ORDER.filter((id) => !order.includes(id))];
-  // Whether the scholar teaches before writing poetry: Education comes first, or they may not write
-  const teachesFirst = (order, mayRead) => !mayRead || order.indexOf("teach") < order.indexOf("read");
+  // Whether job a comes before 發呆 ("idle") in an order (always, without one)
+  const beforeIdle = (order, a) => { const i = order.indexOf("idle"); return i < 0 || order.indexOf(a) < i; };
+  // Whether the scholar teaches before writing poetry: Education comes first, or they may not write (and
+  // it comes before any 發呆)
+  const teachesFirst = (order, mayRead) => beforeIdle(order, "teach") && (!mayRead || order.indexOf("teach") < order.indexOf("read"));
   // weather: null, or macroWeather's day (each person's clock gets their hooks, c.wx), and each work's
   // take is × its rain cut (w.wf: the share of it the rain left)
   function assignEnergy(grownUps, cows, riceWanted, tending, kids, en, fieldE, S, rate, may, order, extra, clocks, classToday, eff, weather = null) {
@@ -227,10 +231,12 @@
     // The jobs by rank: everyone's first job, then everyone's second, …, by their own order (h.order) or
     // the village's; at each rank the jobs go in the village's order, each with those who have it there.
     // With one order for everyone that's each job in turn with everyone
-    const village = order || DEFAULT_ORDER, ordOf = (w) => w.h.order || village;
+    // Someone who comes to 發呆 ("idle") in their order stops there for the day (stopped)
+    const village = order || DEFAULT_ORDER, ordOf = (w) => w.h.order || village, stopped = new Set();
     const ranks = Math.max(village.length, ...pool.map((w) => ordOf(w).length));
     for (let k = 0; k < ranks; k++) for (const id of village) {
-      const ws = pool.filter((w) => ordOf(w)[k] === id);
+      if (id === village[0]) for (const w of pool) if (ordOf(w)[k] === "idle") stopped.add(w);
+      const ws = pool.filter((w) => ordOf(w)[k] === id && !stopped.has(w));
       if (!ws.length && village[k] !== id) continue;
       if (id === "milk") milk(ws);
       else if (id === "field") field(ws);
@@ -244,12 +250,14 @@
     if (weather) kidPool.forEach((w, k) => { w.c.wx = weather.person(w.h, wakeAt(grownUps.length + k)); });
     for (const w of kidPool) {
       let farmed = 0, milked = 0;
+      let idle = false;
       for (const id of fullOrder(w.h.order || order || DEFAULT_ORDER)) {
+        if (id === "idle") { idle = true; break; }   // 發呆: nothing more today, class neither
         if (id === "teach" && classToday) break;
         if (id === "milk" && kidsMilk) milked = milkOne(w);
         else if (id === "field" && w.e > 0 && kidsField && fieldOpen()) farmed = farmOne(w);
       }
-      w.h.spare = w.e;
+      w.h.spare = idle ? 0 : w.e;
       w.h.from = w.c.t + S.between(w.c.at, "H");   // back at the house for class
       if (milked + farmed > 0) kidsWorked++;
     }
@@ -332,11 +340,9 @@
   // ---------- Tiers ----------
   // From the Resources page on, wool, timber, stone and crafts have tiers (HerdModel.TIERS), each drawn
   // (HerdModel.drawTier) from the average of what went into it, on the village's own tier dice. What
-  // goes in: a person's tier at a skill, their level there (level 0 counting as N); their human tier, ⌊(Intelligence − 1) ÷ 10 − 8⌋
-  // held to 1–4 (from their rate, Intelligence ÷ 10: N to 100, R 101–110, SR 111–120, SSR above); the sheep's, the forest's and the mine's tier; and
-  // a craft's materials.
+  // goes in: a person's tier at a skill, their level there (level 0 counting as N); the 刀 they work with
+  // (collecting, none counting N; crafting, none counting 0); the sheep's, the forest's and the mine's tier; and a craft's materials.
   const adjSkill = (h, skill) => Math.max(1, h.level ? h.level[skill] : 0);
-  const humanTier = (rate) => Math.min(4, Math.max(1, Math.floor((rate * 10 - 1) / 10 - 8 + 1e-9)));
   const LOT = 100, KNIFE = "blade";
   // Tools: a 叉 hayfork for tending, a 刀 blade for the harvest and collecting, each adding its bonus (cr.bonus, by tier) to
   // the holder's effectiveness there (a yield, as skill's); by default +20%, +40%, +60%, +80%, +100% (toolFor:
@@ -360,7 +366,7 @@
     for (let r = lo; r <= hi; r++) odds[tierOfRoll(s, r)] += 1 / (hi - lo + 1);
     return odds;
   }
-  const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" ? w.b : null);
+  const toolFor = (w, skill) => (skill === "farm" ? w.fork : skill === "wool" || skill === "wood" || skill === "stone" || skill === "weave" || skill === "forge" ? w.b : null);
 
   // ---------- Resources ----------
   // The Resources page's jobs, for grown-ups with energy left (pool: { h, e, c }), each in its place in
@@ -411,19 +417,28 @@
   // none free, the first who may; when they run out, the station waits for tomorrow.
   // With nothing under way, a station's next item is the one of its trade the village has started fewest
   // of (the first on a tie); it waits for all that item's materials to be in store (startCraft).
-  // stations: { weave, forge }, each { job }. job: { id, left, mat (its materials' tier), w, s, h
-  // (work on it, × the crafter's skill tier, × their human tier) } or null. E.startCraft(items, st):
-  // starts the station's next item if its materials are in store (makeEconomy).
+  // stations: { weave, forge }, each { job }. job: { id, left, mat (its materials' tier), w, s, b
+  // (work on it, × the crafter's skill tier, × their 刀's tier) } or null. E.startCraft(items, st): starts
+  // the station's next item if its materials are in store (makeEconomy). 紡織 and 鍛造 each use a 刀: the
+  // crafter's for the day (taken at the station if they have none yet, put back if they craft nothing); it
+  // adds its bonus and wears by the energy. With none left they craft without, the 刀 counting 0.
   function craftAtStations(pool, ops, cr, stations, E, may) {
     for (const kind of ["weave", "forge"]) {
       const items = cr.items.filter((it) => it.job === kind);
       if (!items.length) continue;
       const st = stations[kind], able = (x) => x.e > 0 && may(x.h, kind) && ops.can(x, "H", false, kind) > 0;
       const w = pool.find((x) => !(x.m > 0) && !(x.f > 0) && able(x)) || pool.find(able);   // today's crafter
-      while (w && able(w)) {
+      if (!w) continue;
+      const fresh = w.b === undefined;
+      if (fresh) w.b = E.takeTool(KNIFE);
+      let did = false;
+      while (able(w)) {
         if (!st.job && !E.startCraft(items, st)) break;
-        E.creditCraft(st, kind, w.h, w.r, ops.work(w, "H", Math.min(st.job.left, ops.can(w, "H", false, kind)), false, kind));
+        const e0 = w.e, work = ops.work(w, "H", Math.min(st.job.left, ops.can(w, "H", false, kind)), false, kind);
+        E.creditCraft(st, kind, w.h, work, w.b, e0 - w.e);
+        did = true;
       }
+      if (fresh && !did) { if (w.b) E.untake(w.b); w.b = undefined; }
     }
   }
 
@@ -491,7 +506,7 @@
         let units = 0, tiers = 0;
         for (const m in it.needs) { tiers += take(m, it.needs[m]); units += it.needs[m]; store[m] -= it.needs[m]; }
         started[it.id]++;
-        st.job = { id: it.id, left: it.energy, mat: units ? tiers / units : 0, w: 0, s: 0, h: 0 };
+        st.job = { id: it.id, left: it.energy, mat: units ? tiers / units : 0, w: 0, s: 0, b: 0 };
         return true;
       },
       // The best of a craft nobody has taken today (the oldest of its tier), kept for the day; null: none left
@@ -529,12 +544,14 @@
         if (b) b.used += energy;
       },
       take,
-      // work on a station's craft by h (energy an hour: rate); done, it takes its tier
-      creditCraft(st, kind, h, rate, work) {
+      // work on a station's craft by h with their 刀 (blade; none counts 0), spending energy, which wears
+      // it; done, the craft takes its tier
+      creditCraft(st, kind, h, work, blade, energy) {
         const j = st.job;
-        j.left -= work; j.w += work; j.s += work * adjSkill(h, kind); j.h += work * humanTier(rate); today.craftEnergy += work;
+        j.left -= work; j.w += work; j.s += work * adjSkill(h, kind); j.b += work * (blade ? blade.tier : 0); today.craftEnergy += work;
+        if (blade) blade.used += energy;
         if (j.left <= 1e-6) {   // done, but for rounding: its tier
-          const tier = craftTier((j.s / j.w + j.h / j.w + j.mat) / 3, trand);
+          const tier = craftTier((j.s / j.w + j.b / j.w + j.mat) / 3, trand);
           today.done.push(j.id, tier); st.job = null;
         }
       },
@@ -1241,7 +1258,7 @@
               for (const [h, u] of l.used) lesson.used.set(h, u);
               left = l.energy - l.spent; kidCount += pupils.length;
             }
-            const reads = left > 0 && may(null, "read", rowOf(s)), taught = sd.energy - left;
+            const reads = left > 0 && may(null, "read", rowOf(s)) && beforeIdle(s.order || order, "read"), taught = sd.energy - left;
             if (reads) reading.read += read(s, left, school, skills ? s.eff.poetry : 1).read;
             // Their day at the house: teaching and poetry, a unit at a time like anyone's work
             const cl = newClock(Sd);

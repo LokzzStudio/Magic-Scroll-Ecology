@@ -70,7 +70,7 @@
         </div>
         <p class="hint">What a player can do:</p>
         <ul class="can-do">
-          <li>Give each villager their own order of jobs (牛奶, 耕田, crafts…), once a month</li>
+          <li>Give each villager their own order of jobs (牛奶, 耕田, crafts…, or 發呆: doing nothing), once a month</li>
           <li>Appoint any grown-ups as scholars, and dismiss them</li>
           <li>Kill any villager, at any time</li>
           <li>Refill the well, whenever they like</li>
@@ -147,7 +147,7 @@
       $("player-run").innerHTML = rows(one, "Run 1", false);
       $("player-all").innerHTML = rows(all, `All ${fmt(RUNS)} villages`, true);
       $("player-hint").innerHTML = s.id === "ur"
-        ? `A craft's tier comes from the average of its crafter's skill tier, their own tier (by Intelligence, SSR at most) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with skilled gatherers about one lot in three comes out SSR. But a craft takes the worst lots in store first, so its materials average SSR only when nothing below SSR is left; that, an SSR crafter and the top roll together are why UR is so rare.`
+        ? `A craft's tier comes from the average of its crafter's skill tier, their 刀's tier (0 without one) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with skilled gatherers about one lot in three comes out SSR. But a craft takes the worst lots in store first, so its materials average SSR only when nothing below SSR is left; that, an SSR crafter and the top roll together are why UR is so rare.`
         : s.id === "sustain" ? `The player lets go on day ${fmt(S.handsOff * YEAR)}; from then on the village is on its own: no more water poured into the well, crafts or kills, and it appoints its own scholars.` : "";
       // Every strategy, and none, on the same villages (Macro)
       const sets = [[null, "No player", "the Watering page's villages"], ...ST.map((x) => [x, `${x.zh} ${x.en}`, x.goal])];
