@@ -59,7 +59,6 @@
   .chart .main.women { stroke: var(--women); stroke-width: 1.8; }
   .chart .main.kids { stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 4 3; }
   .chart .main.elders { stroke: var(--allee); stroke-width: 1.6; stroke-dasharray: 1.5 3; }
-  .chart .ghost.total { stroke: var(--muted); stroke-width: 1; opacity: 0.3; }
   .chart .capline { stroke: var(--crash); stroke-width: 1; stroke-dasharray: 2 3; }
   .chart .caplabel { fill: var(--crash); }
   .swatch.men { border-color: var(--men); }
@@ -131,7 +130,7 @@
       </dl>
     </aside>
     <ol class="rules" aria-label="Daily rules, in order">
-      <li><span class="step">1 · Food</span><span><b>F</b> is shared by need: <b>c</b> for an adult, 70% of it for a child, 80% for an elder. Anyone short loses <span class="f">k × (missing food)²</span> days of life.</span></li>
+      <li><span class="step">1 · Food</span><span><b>F</b> is shared by need: <b>c</b> for an adult, 70% of it for a child, 80% for an elder. Anyone short loses <span class="f">k × food missed</span> days of life.</span></li>
       <li><span class="step">2 · Ageing</span><span>Anyone who reaches their lifespan dies.</span></li>
       <li><span class="step">3 · Couples</span><span><span class="f">min(adult men,</span> <span class="f">adult women)</span>; elders don't have children</span></li>
       <li><span class="step">4 · Births</span><span>Mothers who conceived <b>G</b> days ago give birth. Then each couple whose woman isn't expecting, and is young enough to give birth before she's an elder, conceives with chance <b>p</b>. A boy with chance <span class="f">(♀ + X) ÷ (♂ + ♀ + 2X)</span>, so births lean to the scarcer sex.</span></li>
@@ -237,11 +236,11 @@
         <div class="param">
           <div class="param-head">
             <label for="k-num"><span class="sym l">k</span>Hunger toll</label>
-            <span class="num-wrap"><input id="k-num" type="number" step="0.01"><span class="unit">× missing²</span></span>
+            <span class="num-wrap"><input id="k-num" type="number" step="0.1"><span class="unit">days a food</span></span>
           </div>
-          <input id="k-range" type="range" aria-label="Hunger toll: days of life lost per missing food squared">
-          <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life a grown-up loses per day against share of food"></svg>
-          <p class="hint" id="k-hint">Days of life lost = k × (missing food)², per person, each day.</p>
+          <input id="k-range" type="range" aria-label="Hunger toll: days of life lost per food missed">
+          <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life a grown-up loses over 10 short days, against share of food"></svg>
+          <p class="hint" id="k-hint">Days of life lost = k × food missed, per person.</p>
         </div>
       </section>
 
@@ -314,7 +313,7 @@
       <section class="card" aria-label="Population over time">
         <div class="card-head">
           <h2>Population over time</h2>
-          <p>Faint lines are the total population in 19 more runs with different luck.</p>
+          <p>One village; roll new runs for different luck.</p>
         </div>
         <svg class="chart" id="time-chart" height="320" role="img" aria-label="Population over time"></svg>
         <div class="legend">
@@ -323,7 +322,6 @@
           <span><i class="swatch women"></i>Adult women</span>
           <span><i class="swatch kids"></i>Children</span>
           <span><i class="swatch elders"></i>Elders</span>
-          <span><i class="swatch faint"></i>Other runs</span>
           <span><i class="swatch fed"></i>Most grown-ups the food can fully feed</span>
         </div>
       </section>
@@ -371,7 +369,6 @@
   const { MALE } = HumanModel;
   const DEFAULTS = { ...HumanModel.DEFAULTS, ...HumanModel.START, T: 10000, seed: 1, speed: 1800 };
   const STORE_KEY = HumanModel.STORE_KEY;
-  const RUNS = 20;
   const MAX_POP = 2000;       // a run stops once it grows past this, to keep the page fast
   const MAX_ICONS = 150;
   const MAX_SNAPS = 3000;     // village pictures kept per run
@@ -398,13 +395,13 @@
     S:     { min: () => 0, max: () => 90, step: 5 },
     F:     { min: () => 0, max: () => 100000, step: 100 },
     c:     { min: () => 10, max: () => 1000, step: 10 },
-    k:     { min: () => 0, max: () => 1, step: 0.01 },
+    k:     { min: () => 0, max: () => 5, step: 0.1 },
     men:   { min: () => 0, max: () => 100, step: 1 },
     women: { min: () => 0, max: () => 100, step: 1 },
     T:     { min: () => 360, max: () => 10000, step: 10 },
   };
 
-  let main = null, runs = [], alive = 0;
+  let main = null;
   let cursor = null, playing = false, rafId = 0;
 
   function clampAll() {
@@ -431,19 +428,19 @@
   }
 
   // ---------- Simulation ----------
-  function simulate(seed, detailed) {
+  function simulate(seed) {
     const rand = HerdModel.rng(seed);
     const st = HumanModel.startPeople(P.men, P.women, P, rand);
     const T = P.T;
     const total = new Int32Array(T + 1);
     const stride = Math.max(1, Math.ceil((T + 1) / MAX_SNAPS));
-    const d = detailed ? {
+    const d = {
       men: new Int32Array(T + 1), women: new Int32Array(T + 1),
       boys: new Int32Array(T + 1), girls: new Int32Array(T + 1), elders: new Int32Array(T + 1),
-      couples: new Int32Array(T + 1), born: new Int32Array(T + 1), died: new Int32Array(T + 1),
+      couples: new Int32Array(T + 1), born: new Int32Array(T + 1), joined: new Int32Array(T + 1), died: new Int32Array(T + 1),
       hungry: new Int32Array(T + 1), need: new Float32Array(T + 1), ration: new Float32Array(T + 1), lost: new Float32Array(T + 1),
       snaps: [], stride,
-    } : null;
+    };
 
     // Keep a sample of people to draw, as [id, age, sex] triples
     const snap = (people) => {
@@ -454,14 +451,13 @@
     };
     const record = (day, ev) => {
       total[day] = st.people.length;
-      if (!d) return;
       const c = HumanModel.census(st.people, P);
       d.men[day] = c.men; d.women[day] = c.women; d.boys[day] = c.boys; d.girls[day] = c.girls;
       d.elders[day] = c.elders;
       d.couples[day] = c.couples;
       if (ev) {
-        d.born[day] = ev.born; d.died[day] = ev.died; d.hungry[day] = ev.hungry;
-        d.need[day] = ev.need; d.ration[day] = ev.ration; d.lost[day] = ev.lost;
+        d.born[day] = ev.born; d.joined[day] = ev.joined; d.died[day] = ev.died; d.hungry[day] = ev.hungry;
+        d.need[day] = ev.need; d.ration[day] = ev.ration; d.lost[day] = ev.lostAll;
       } else {
         d.need[day] = HumanModel.foodNeed(st.people, P);
         d.ration[day] = HumanModel.rationFor(d.need[day], P);
@@ -472,13 +468,9 @@
     record(0, null);
     let last = T, capped = false, extinctDay = st.people.length ? null : 0;
     for (let day = 1; day <= T; day++) {
-      if (extinctDay !== null) {
-        if (d && day % stride === 0) d.snaps[day / stride] = { every: 1, data: new Int32Array(0) };
-        continue;   // arrays are already zero
-      }
-      const ev = HumanModel.stepPeople(st, P, rand);
+      const ev = HumanModel.stepPeople(st, P, rand);   // an empty village waits for an outsider
       record(day, ev);
-      if (st.people.length === 0) extinctDay = day;
+      extinctDay = st.people.length === 0 ? (extinctDay ?? day) : null;
       if (st.people.length > MAX_POP) { capped = true; last = day; break; }
     }
     return { total, last, capped, extinctDay, survived: capped || total[T] > 0, ...d };
@@ -488,10 +480,7 @@
     clampAll();
     syncInputs();
     stop();
-    main = simulate(P.seed * 7919, true);
-    runs = [main];
-    for (let i = 1; i < RUNS; i++) runs.push(simulate(P.seed * 7919 + i, false));
-    alive = runs.filter((r) => r.survived).length;
+    main = simulate(P.seed * 7919);
     if (cursor !== null && cursor > P.T) cursor = null;
     save();
     drawTexts();
@@ -516,22 +505,22 @@
     $("M-hint").innerHTML = `Child from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b>, elder from day <b>${fmt(P.E)}</b>, until death at ${deathText} days.`;
     $("E-hint").innerHTML = P.E > dieHi
       ? `Later than anyone lives (at most ${fmt(dieHi)} days), so nobody becomes an elder.`
-      : `Elders no longer have children. They eat 80% of an adult's food, and from the Attribute page on work with the elder penalty.` +
+      : `Elders no longer have children. They eat 80% of an adult's food (from the Attribute page on, their Power, like everyone), and from the Attribute page on work with the elder penalty.` +
         (P.E <= dieLo ? "" : ` With these lifespans, only some people live to be elders.`);
     $("rule-adult").textContent = fmt(P.M);
     $("rule-elder").textContent = fmt(P.E);
 
     const fed = HumanModel.fedCapacity(P);
     $("F-hint").innerHTML = `Feeds up to <b>${fmt(fed, fed < 10 ? 1 : 0)}</b> grown-ups fully, or about ${fmt(fed / HumanModel.CHILD_FOOD, fed < 10 ? 1 : 0)} children. More than that and everyone goes hungry.`;
-    $("c-hint").textContent = "What an adult needs each day. Children need 70%, elders 80%.";
+    $("c-hint").textContent = "What an adult needs each day. Children need 70%, elders 80%. From the Attribute page on, everyone's need is their Power instead.";
     const days = (v) => { v = Math.round(v * 10) / 10; return fmt(v, v < 10 && !Number.isInteger(v) ? 1 : 0); };
-    const loss = (food) => HumanModel.hungerLoss((1 - food) * P.c, P);   // a grown-up's
-    const halfFedLife = P.L / (1 + loss(0.5));   // lifespan if someone only ever got half their food
+    const loss = (food, n) => HumanModel.hungerToll(n * (1 - food) * P.c, P);   // a grown-up's, over n short days
+    const halfFedRun = Math.ceil(P.L / (P.k * 0.5 * P.c));   // days on half food that cost a whole lifespan
     $("k-hint").innerHTML = P.k > 0
-      ? `Each day, everyone loses k × (their missing food)² days of life, so small shortfalls cost little and big ones a lot. A grown-up (needs ${fmt(P.c)}), by how much of their food they get:
+      ? `Hunger's toll goes by the food someone misses: <b>k × food missed</b> days of life (${Number(P.k.toPrecision(3))} ${P.k === 1 ? "day" : "days"} a food), counted over their life and rounded down. A grown-up (needs ${fmt(P.c)}), by how much of their food they get, over 1 day / 10 days:
          <span class="loss-table">${[0.9, 0.75, 0.5, 0].map((f) =>
-           `<span>${f ? fmt(f * 100) + "% food" : "No food"}</span><b>${days(loss(f))} days</b>`).join("")}</span>
-         A child needs 70% as much, so misses 70% as much and loses about half of that (0.7² = 0.49). A grown-up on half food all their life would live about <b>${fmt(halfFedLife)}</b> days instead of ${fmt(P.L)}.`
+           `<span>${f ? fmt(f * 100) + "% food" : "No food"}</span><b>${days(loss(f, 1))} / ${days(loss(f, 10))} days</b>`).join("")}</span>
+         A child needs 70% as much, so misses and loses 70% as much. On half food, <b>${fmt(halfFedRun)}</b> days cost a whole lifespan (${fmt(P.L)} days).`
       : "Hunger doesn't shorten lives.";
     drawHungerCurve();
 
@@ -551,7 +540,7 @@
     }
     pill.className = "pill " + kind;
     pill.textContent = text;
-    $("status-note").textContent = `Survives in ${alive} of ${RUNS} runs · food feeds ${fmt(fed, fed < 10 ? 1 : 0)} grown-ups · ${fmt(perCouple, 1)} children per couple`;
+    $("status-note").textContent = `Food feeds ${fmt(fed, fed < 10 ? 1 : 0)} grown-ups · ${fmt(perCouple, 1)} children per couple`;
 
     $("snippet").textContent =
 `// Humans: men and women, adult couples have children,
@@ -564,12 +553,12 @@ const HUMAN_ADULT_AGE = ${P.M};      // M, days
 const HUMAN_ELDER_AGE = ${P.E};      // E, days
 const FOOD_PER_DAY = ${P.F};         // F, produced each day
 const FOOD_NEED = ${P.c};            // c, per adult per day; children need 70%, elders 80%
-const HUNGER_TOLL = ${P.k};          // k, days of life lost per (missing food)², per person
+const HUNGER_TOLL = ${P.k};          // k, days of life lost per food missed, per person
 const BIRTH_BALANCE = ${P.X};        // X, 0–1: smaller leans births harder toward the scarcer sex
 
 function newPerson(sex) {
   const spread = HUMAN_LIFESPAN_SPREAD * (2 * Math.random() - 1);
-  return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread), carry: 0 };
+  return { sex, age: 0, lifespan: HUMAN_LIFESPAN * (1 + spread), carry: 0, short: 0 };
 }
 
 // Grown-ups are adults and elders. Elders don't have children,
@@ -580,12 +569,17 @@ const isAdult = (h) => isGrownUp(h) && !isElder(h);
 
 // Call once per game day. Returns the new list of people.
 function stepHumans(people) {
-  // 1. Share the food. Each person loses HUNGER_TOLL × (their missing food)² days of life.
+  // 1. Share the food. Each person's hunger toll is HUNGER_TOLL × the food they've missed in their life
+  //    (h.short), in whole days, taken as it grows.
   const needOf = (h) => (isElder(h) ? FOOD_NEED * 0.8 : isGrownUp(h) ? FOOD_NEED : FOOD_NEED * 0.7);
   const need = people.reduce((sum, h) => sum + needOf(h), 0);
   const ration = FOOD_PER_DAY / need;
   const gap = Math.min(1, Math.max(0, 1 - ration));   // 0 = fully fed, 1 = no food
-  for (const h of people) h.lifespan -= HUNGER_TOLL * (gap * needOf(h)) ** 2;
+  const toll = (missed) => Math.floor(HUNGER_TOLL * missed);
+  for (const h of people) {
+    const missing = gap * needOf(h);
+    if (missing > 0) { const before = toll(h.short); h.short += missing; h.lifespan -= toll(h.short) - before; }
+  }
 
   // 2. Everyone ages; those reaching their lifespan die
   for (const h of people) h.age += 1;
@@ -607,23 +601,29 @@ function stepHumans(people) {
     if (f.carry > 0 || f.age + PREGNANCY >= HUMAN_ELDER_AGE) continue;
     if (Math.random() < HUMAN_BIRTH_CHANCE) { if (PREGNANCY > 0) f.carry = PREGNANCY; else birth(); }
   }
+  // 5. A small village draws outsiders: under 10 people (none at all too), one may join with chance 1 ÷ (people + 1)² ÷ 10,
+  //    aged 360 to 1,440 days, a boy or girl by the same rule as births
+  if (people.length < 10 && Math.random() < 1 / (people.length + 1) ** 2 / 10) {
+    birth();
+    people[people.length - 1].age = 360 + Math.floor(Math.random() * 1081);
+  }
   return people;
 }`;
   }
 
-  // Small curve under the hunger toll slider: days a grown-up loses against share of food
+  // Small curve under the hunger toll slider: days a grown-up loses over 10 short days, against share of food
   function drawHungerCurve() {
     const svg = $("hunger-curve");
     const W = Math.max(200, svg.clientWidth || 260), H = 112;
     const m = { l: 40, r: 8, t: 8, b: 20 };
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    const top = Math.max(HumanModel.hungerLoss(P.c, P), 1);
+    const lost = (food) => HumanModel.hungerToll(10 * (1 - food) * P.c, P), top = Math.max(lost(0), 1);
     const x = (food) => m.l + food * (W - m.l - m.r);
     const y = (d) => m.t + (1 - d / top) * (H - m.t - m.b);
     let path = "";
     for (let i = 0; i <= 100; i++) {
       const food = i / 100;
-      path += (i ? "L" : "M") + x(food).toFixed(1) + " " + y(HumanModel.hungerLoss((1 - food) * P.c, P)).toFixed(1);
+      path += (i ? "L" : "M") + x(food).toFixed(1) + " " + y(lost(food)).toFixed(1);
     }
     let s = "";
     for (const v of [0, top]) {
@@ -634,7 +634,7 @@ function stepHumans(people) {
     s += `<text x="${x(0.5)}" y="${H - 5}" text-anchor="middle">half</text>`;
     s += `<text x="${x(1)}" y="${H - 5}" text-anchor="end">enough</text>`;
     s += `<path class="curve" d="${path}"/>`;
-    for (const f of [0.9, 0.75, 0.5, 0]) s += `<circle class="dot" cx="${x(f)}" cy="${y(HumanModel.hungerLoss((1 - f) * P.c, P))}" r="3"/>`;
+    for (const f of [0.9, 0.75, 0.5, 0]) s += `<circle class="dot" cx="${x(f)}" cy="${y(lost(f))}" r="3"/>`;
     svg.innerHTML = s;
   }
 
@@ -666,7 +666,7 @@ function stepHumans(people) {
     const m = { l: 48, r: 16, t: 14, b: 38 };
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const T = P.T;
-    // Scale to this run; other runs that grow bigger are clipped at the top
+    // Scale to the run
     let yMax = Math.max(P.men + P.women, 5);
     for (let i = 0; i <= main.last; i++) if (main.total[i] > yMax) yMax = main.total[i];
     const fed = HumanModel.fedCapacity(P);
@@ -695,7 +695,6 @@ function stepHumans(people) {
       s += `<text class="klabel" x="${W - m.r - 4}" y="${y(fed) - 6}" text-anchor="end">food feeds ${fmt(fed, fed < 10 ? 1 : 0)} grown-ups</text>`;
     }
     s += `<g clip-path="url(#plot)">`;
-    for (const r of runs.slice(1)) s += `<path class="ghost total" d="${linePath(r.total, r.last, x, y, every)}"/>`;
     const kids = new Int32Array(main.last + 1);
     for (let i = 0; i <= main.last; i++) kids[i] = main.boys[i] + main.girls[i];
     s += `<path class="main kids" d="${linePath(kids, main.last, x, y, every)}"/>`;
@@ -882,8 +881,9 @@ function stepHumans(people) {
         ${row("Fertile couples", fmt(m.couples[day]))}
         ${row("Food made / needed", m.total[day] > 0 ? `${fmt(P.F)} / ${fmt(m.need[day], 1)}` : "—")}
         ${row("Share of need", shareText(day))}
-        ${row("Life lost to hunger, per grown-up", `${fmt(m.lost[day], 1)} days`)}
+        ${row("Life lost to hunger, everyone together", `${fmt(m.lost[day])} days`)}
         ${row("Born this day", fmt(m.born[day]))}
+        ${row("Joined from outside this day", fmt(m.joined[day]))}
         ${row("Died this day", fmt(m.died[day]))}
       </dl>`;
 
@@ -897,21 +897,16 @@ function stepHumans(people) {
       : m.extinctDay !== null ? `died out on day ${fmt(m.extinctDay)}`
       : m.capped ? `passed ${fmt(MAX_POP)} on day ${fmt(m.last)}`
       : `alive on day ${fmt(P.T)}`;
-    // Highest point reached by any of the runs, for comparison
-    let peakAll = 0;
-    for (const r of runs) for (let i = 0; i <= r.last; i++) if (r.total[i] > peakAll) peakAll = r.total[i];
     $("stats-run").innerHTML = `
       <h3>Whole run</h3>
       <dl class="rows">
         <dt class="total">Max population</dt><dd class="total">${fmt(peak)} on day ${fmt(peakDay)}</dd>
-        ${row(`Max in any of the ${RUNS} runs`, fmt(peakAll))}
         ${row("Started with", `${fmt(m.total[0])} adults`)}
         ${row("Born", fmt(born))}
         ${row("Died", fmt(died))}
         ${row("Deaths cut short by hunger", fmt(hungry))}
         ${row("Days with too little food", fmt(hungryDays))}
         ${row("Outcome", outcome)}
-        ${row("Survive in", `${alive} of ${RUNS} runs`)}
       </dl>`;
   }
 

@@ -493,9 +493,6 @@ main { display: grid; gap: 20px; min-width: 0; }
 .chart .ghost { fill: none; stroke-width: 1.3; opacity: 0.45; }
 .chart .ghost.up { stroke: var(--herd); }
 .chart .ghost.down { stroke: var(--crash); }
-.chart .ghost.cows, .chart .ghost.sheep { stroke-width: 1; opacity: 0.22; }
-.chart .ghost.cows { stroke: var(--cows); }
-.chart .ghost.sheep { stroke: var(--sheep); }
 .chart .main { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; }
 .chart .main.cows { stroke: var(--cows); stroke-width: 2.2; }
 .chart .main.sheep { stroke: var(--sheep); stroke-width: 2.2; }
@@ -522,7 +519,6 @@ main { display: grid; gap: 20px; min-width: 0; }
 .swatch.down { border-color: var(--crash); opacity: 0.6; border-top-width: 1.5px; }
 .swatch.cows { border-color: var(--cows); }
 .swatch.sheep { border-color: var(--sheep); }
-.swatch.faint { border-top-width: 1.2px; opacity: 0.5; border-color: var(--muted); }
 .swatch.zone { height: 10px; border: 0; background: var(--crash-soft); }
 
 /* Implementation details: every rule a page runs (filled by rules.js) */

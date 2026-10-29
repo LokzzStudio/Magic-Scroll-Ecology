@@ -126,7 +126,6 @@
         </table>
         <p class="hint">1 energy spent on a job = 1 exp in its skill. At a level, every energy spent at that job brings in its bonus more: more milk, more rice from the same field, more wool from the same sheep, more timber, stone, and knowledge from teaching and poetry. At the harvest the standing rice is all there is, so there it's done faster instead. Crafts get done faster. The level is also the person's tier at that skill, for what they collect and craft.</p>
         <p class="hint" id="skill-hint"></p>
-        <dl class="foods" id="skill-compare"></dl>
       </section>
     </aside>
     <main></main>
@@ -136,7 +135,6 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
-<script src="ration-model.js"></script>
 <script src="map-model.js"></script>
 <script src="day-model.js"></script>
 <script src="village-model.js"></script>
@@ -160,8 +158,6 @@ VillagePage.start({
     { id: "ex1", key: "exp1" }, { id: "ex2", key: "exp2" }, { id: "ex3", key: "exp3" }, { id: "ex4", key: "exp4" },
     { id: "bn1", key: "bonus1" }, { id: "bn2", key: "bonus2" }, { id: "bn3", key: "bonus3" }, { id: "bn4", key: "bonus4" },
   ],
-  // The same villages with everyone at level 0 for good
-  compare: (c) => { c.result.skillCompare = { now: c.result.people.alive, flat: c.aliveWith({ skills: null }) }; },
   drawPanel(c) {
     const { S, $, fmt } = c;
     $("rg-hint").innerHTML = `Every sheep, shorn or part-shorn, grows back ${fmt(S.regrow)} wool a day until its fleece is full again (${fmt(Math.ceil(S.fleece / S.regrow))} days from bare). Shearers take the fullest sheep first. A sheep gives at most <b>${fmt(S.regrow * 360)}</b> wool a year.`;
@@ -172,8 +168,6 @@ VillagePage.start({
     let total = 0;
     K.exp.forEach((e, k) => { total += e; $(`ex${k + 1}-all`).textContent = `${fmt(total)} in all`; });
     $("skill-hint").innerHTML = `A standard worker spends ${fmt(VM.DAY_ENERGY)} energy a day, so working one job every day takes about <b>${fmt(total / VM.DAY_ENERGY / c.YEAR, 1)} years</b> to reach level ${VM.MAX_LEVEL}. At level ${VM.MAX_LEVEL} each energy of milking brings in <b>${c.fmtNum(c.F.milkPerEnergy * VM.effAt(VM.MAX_LEVEL, K))}</b> milk instead of ${c.fmtNum(c.F.milkPerEnergy)}, and a field tended by masters ${fmt(VM.effAt(VM.MAX_LEVEL, K) * 100)}% of its rice.`;
-    const k = c.result.skillCompare;
-    $("skill-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With skills", k.now, k.now >= k.flat], ["Everyone at level 0", k.flat, k.flat >= k.now]]);
   },
 });
 </script>

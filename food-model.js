@@ -25,7 +25,7 @@
   // Food parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
     ricePerEnergy: 1,  // rice effectiveness: rice 1 energy of tending grows (72,000 a year)
-    foodStart: 500000, // food in store on day 0; it never spoils
+    foodStart: 50000,  // food in store on day 0; it never spoils
     milkKeep: 1,      // days milk keeps after the day it's made: 1 = good until tomorrow
     riceKeep: 360,    // days rice keeps after the day it's harvested
     milkPerEnergy: 1, // milk effectiveness: milk 1 energy collects
@@ -49,12 +49,14 @@
   // that); at 10 energy a day (v4), and before that at an older scale (v2)
   // v7: starting food 500,000 and rice effectiveness 1.2; v8: rice effectiveness 1 (the Watering page's
   // water grows rice too); saved settings keep everything else
-  const STORE_KEY = "food-params-v8", V7_KEY = "food-params-v7", V6_KEY = "food-params-v6", V5_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
+  const STORE_KEY = "food-params-v9", V8_KEY = "food-params-v8", V7_KEY = "food-params-v7", V6_KEY = "food-params-v6", V5_KEY = "food-params-v5", TEN_KEY = "food-params-v4", OLD_KEY = "food-params-v2";
   try {
     const v6 = !localStorage.getItem(V7_KEY) && JSON.parse(localStorage.getItem(V6_KEY) || "null");
     if (v6 && typeof v6 === "object") { delete v6.foodStart; delete v6.ricePerEnergy; localStorage.setItem(V7_KEY, JSON.stringify(v6)); }
-    const v7 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem(V7_KEY) || "null");
-    if (v7 && typeof v7 === "object") { delete v7.ricePerEnergy; localStorage.setItem(STORE_KEY, JSON.stringify(v7)); }
+    const v7 = !localStorage.getItem(V8_KEY) && JSON.parse(localStorage.getItem(V7_KEY) || "null");
+    if (v7 && typeof v7 === "object") { delete v7.ricePerEnergy; localStorage.setItem(V8_KEY, JSON.stringify(v7)); }
+    const v8 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem(V8_KEY) || "null");
+    if (v8 && typeof v8 === "object") { delete v8.foodStart; localStorage.setItem(STORE_KEY, JSON.stringify(v8)); }   // v9: 50,000 to start
   } catch (e) {}
   const TEN_FIELDS = ["foodStart", "fieldCap"];   // ×10 at 100 energy a day
 

@@ -102,7 +102,9 @@
   const LIMITS = { spawnRate: [0, 10, 0.05], wind: [0, 32, 0.5], windVol: [0, 16, 0.5], cloudiness: [0, 100, 5], rainChange: [0.05, 5, 0.05],
     temp: [-30, 45, 1], tempSd: [0, 15, 0.5], cloudCool: [0, 20, 0.5], rainCool: [0, 20, 0.5], swing: [0, 25, 0.5] };   // lowest, highest, step
   // The chance of rain with n clouds, and the rainfall while it rains
-  const rainChance = (n) => (n > 1 ? Math.log10(n) : 0);
+  // (a table by cloud count: there are 0 to MAX_CLOUDS)
+  const RAIN_CHANCE = Array.from({ length: MAX_CLOUDS + 1 }, (_, n) => (n > 1 ? Math.log10(n) : 0));
+  const rainChance = (n) => RAIN_CHANCE[n];
   // Weather v3: a set for each season, every default new, so nothing came over from v1 or v2. v4 (spring
   // and winter cloudiness 70%) keeps the rest of v3
   // v6 (water; summer's and winter's spawn rates 0.6 and 1.6) keeps the rest of v4. (v5 was a trial of
@@ -311,10 +313,15 @@
       cuts.push(lo + (warm * Math.acos(-c)) / Math.PI, down >= 24 ? down - 24 : down);
       cuts.sort((a, b) => a - b);
     }
+    // Whether it thaws, as hourTemp says, between the two crossings and outside them (or all day, without)
+    const two = cuts.length === 2, thawIn = hourTemp(temp, swing, two ? (cuts[0] + cuts[1]) / 2 : 12) >= 0;
+    const thawOut = two ? hourTemp(temp, swing, ((cuts[0] + cuts[1] + 24) / 2) % 24) >= 0 : thawIn;
+    const thaws = (t) => (two && t > cuts[0] && t < cuts[1] ? thawIn : thawOut);
     let h = 0;
     for (let i = 0; i < segs.length; i += 3) {
       const end = h + segs[i];
-      for (const c of [...cuts.filter((c) => c > h && c < end), end]) { flowLevel(m, c - h, segs[i + 1], segs[i + 2], hourTemp(temp, swing, (h + c) / 2) >= 0); h = c; }
+      for (const c of cuts) if (c > h && c < end) { flowLevel(m, c - h, segs[i + 1], segs[i + 2], thaws((h + c) / 2)); h = c; }
+      flowLevel(m, end - h, segs[i + 1], segs[i + 2], thaws((h + end) / 2)); h = end;
     }
   }
   function advance(sky, dt, onEvent) {
@@ -388,9 +395,9 @@
   // A day's swing, held down by its clouds (its average over the day)
   const daySwing = (P, d) => P.swing * (1 - (SWING_CLOUD * d.clouds) / MAX_CLOUDS);
   // The temperature at clock hour h (0–24) of a day whose temperature is temp and swing is swing
+  const WARM_HOURS = WARMEST_HOUR - COLDEST_HOUR, COOL_HOURS = 24 - WARM_HOURS;
   function hourTemp(temp, swing, h) {
-    const lo = COLDEST_HOUR, hi = WARMEST_HOUR, warm = hi - lo, cool = 24 - warm;
-    const f = h >= lo && h <= hi ? -Math.cos((Math.PI * (h - lo)) / warm) : Math.cos((Math.PI * ((h - hi + 24) % 24)) / cool);
+    const f = h >= COLDEST_HOUR && h <= WARMEST_HOUR ? -Math.cos((Math.PI * (h - COLDEST_HOUR)) / WARM_HOURS) : Math.cos((Math.PI * ((h - WARMEST_HOUR + 24) % 24)) / COOL_HOURS);
     return temp + (swing * f) / 2;
   }
   // Each season's average base temperature through the year, ramps and all (the weather and random

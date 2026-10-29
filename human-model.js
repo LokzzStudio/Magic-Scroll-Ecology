@@ -3,15 +3,16 @@
 (function () {
   // Human parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    p: 0.005,  // chance a fertile couple conceives each day
+    p: 0.01,   // chance a fertile couple conceives each day
     G: 300,    // pregnancy, days: the child is born this long after it's conceived
     M: 360,    // adult at age, days. Younger people are children.
     E: 3240,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
     L: 3600,   // average lifespan, days
     S: 10,     // lifespan spread, ± percent of L
     F: 2000,   // food produced per day, shared by everyone in proportion to need
-    c: 100,    // food an adult needs per day; a child needs 70%, an elder 80%
-    k: 0.1,    // hunger toll: days of lifespan lost per (missing food)², per person per day
+    c: 100,    // food an adult needs per day; a child needs 70%, an elder 80% (until there's Power: from the
+               // Attribute page on, everyone's need is their Power)
+    k: 1,      // hunger toll: days of lifespan lost per food missed
     X: 1,      // birth balance: a newborn is a boy with chance (females + X) ÷ (males + females + 2X), 0 to 1
   };
 
@@ -19,8 +20,10 @@
   // ×10 and k ÷ 100, so the same share missing costs the same; those saved before k became 10 (v9),
   // without k.
   // v12: the birth chance became 0.003; v13: elder at 3,240 days. Saved settings keep everything else.
-  // v14: 6 men and 6 women to start; v15: births through pregnancy, the chance 0.005
-  const STORE_KEY = "human-params-v15", V14 = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
+  // v14: 6 men and 6 women to start; v15: births through pregnancy, the chance 0.005; v16: hunger's toll over
+  // a run of short days, k 0.01; v17: the chance 0.004, k 0.001; v18: k days a food missed, k 1;
+  // v19: the chance 0.01
+  const STORE_KEY = "human-params-v19", V18 = "human-params-v18", V17 = "human-params-v17", V16 = "human-params-v16", V15 = "human-params-v15", V14 = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
   try {
     if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
@@ -40,7 +43,15 @@
     const v13 = JSON.parse(localStorage.getItem(V13) || "null");
     if (!localStorage.getItem(V14) && v13 && typeof v13 === "object") { delete v13.men; delete v13.women; localStorage.setItem(V14, JSON.stringify(v13)); }
     const v14 = JSON.parse(localStorage.getItem(V14) || "null");
-    if (!localStorage.getItem(STORE_KEY) && v14 && typeof v14 === "object") { delete v14.p; localStorage.setItem(STORE_KEY, JSON.stringify(v14)); }
+    if (!localStorage.getItem(V15) && v14 && typeof v14 === "object") { delete v14.p; localStorage.setItem(V15, JSON.stringify(v14)); }
+    const v15 = JSON.parse(localStorage.getItem(V15) || "null");
+    if (!localStorage.getItem(V16) && v15 && typeof v15 === "object") { delete v15.k; localStorage.setItem(V16, JSON.stringify(v15)); }
+    const v16 = JSON.parse(localStorage.getItem(V16) || "null");
+    if (!localStorage.getItem(V17) && v16 && typeof v16 === "object") { delete v16.p; delete v16.k; localStorage.setItem(V17, JSON.stringify(v16)); }
+    const v17 = JSON.parse(localStorage.getItem(V17) || "null");
+    if (!localStorage.getItem(V18) && v17 && typeof v17 === "object") { delete v17.k; localStorage.setItem(V18, JSON.stringify(v17)); }
+    const v18 = JSON.parse(localStorage.getItem(V18) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v18 && typeof v18 === "object") { delete v18.p; localStorage.setItem(STORE_KEY, JSON.stringify(v18)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
@@ -55,7 +66,7 @@
     const add = (sex) => {
       const life = lifespan(p, rand);
       const adultSpan = Math.max(1, life - p.M);
-      people.push({ id: id++, sex, age: Math.min(life - 1, p.M + Math.floor(rand() * adultSpan)), life, life0: life });
+      people.push({ id: id++, sex, age: Math.min(life - 1, p.M + Math.floor(rand() * adultSpan)), life, life0: life, short: 0, carryBy: null });
     };
     for (let i = 0; i < men; i++) add(MALE);
     for (let i = 0; i < women; i++) add(FEMALE);
@@ -80,12 +91,12 @@
     };
   }
 
-  // Children eat this share of what an adult eats, and elders this (p.elderFood, if given: the village
-  // pages tie it to the elder penalty)
+  // A person's food need a day: their Power, children and elders too (from the Attribute page on); before
+  // there's Power, c for an adult, CHILD_FOOD of it for a child, ELDER_FOOD for an elder
   const CHILD_FOOD = 0.7, ELDER_FOOD = 0.8;
-  const needOf = (h, p) => p.c * (h.age < p.M ? CHILD_FOOD : h.age < p.E ? 1 : p.elderFood ?? ELDER_FOOD);
+  const needOf = (h, p) => (h.power != null ? h.power : p.c * (h.age < p.M ? CHILD_FOOD : h.age < p.E ? 1 : ELDER_FOOD));
 
-  // Food everyone together needs in a day: c for each adult, CHILD_FOOD of it for each child, ELDER_FOOD for each elder
+  // Food everyone together needs in a day
   function foodNeed(people, p) {
     let need = 0;
     for (const h of people) need += needOf(h, p);
@@ -96,30 +107,35 @@
   // to need (1 = fully fed)
   const rationFor = (need, p) => (need > 0 ? p.F / need : Infinity);
 
-  // Days of lifespan one person loses in a day when they eat `short` food less than they need: k × short²
-  const hungerLoss = (short, p) => (short > 0 ? p.k * short * short : 0);
+  // Hunger's toll, in whole days of lifespan, for `missing` food gone without in a life: ⌊k × missing⌋,
+  // taken day by day as it grows (fractions of a day carry over)
+  const hungerToll = (missing, p) => (missing > 0 ? Math.floor(p.k * missing + 1e-9) : 0);
 
   // One day:
-  // 1. food is shared in proportion to need. If each share falls short by a gap g (0 to 1), each
-  //    person's lifespan shrinks by hungerLoss of their own missing food (g × their need).
+  // 1. food is shared in proportion to need. If each share falls short by a gap g (0 to 1), each person
+  //    goes without g × their need; their lifespan shrinks by what that adds to their hungerToll
+  //    (h.short: the food they've missed in their life so far).
   // 2. everyone ages a day; those reaching their lifespan die
   // 3. each fertile couple has a child with chance p; each child is a boy with chance
   //    (W + X) ÷ (M + W + 2X), M and W the living males and females under elder age, so births lean
   //    toward the scarcer sex (the harder the smaller X; nobody to count: even)
-  // lossOf(h), if given, is each person's hunger toll instead (the village pages with a day schedule);
+  // 4. a small village draws outsiders: with fewer than JOIN_BELOW people (none at all too), one may join
+  //    with chance 1 ÷ (people + 1)² ÷ 10, aged JOIN_AGE days, a boy or girl by the births' rule
+  // missingOf(h), if given, is the food each person went without today instead (the village pages);
   // chancesOf(people), if given, returns the day's couples as each one's chance of a child instead
   // (the Happiness page: its lasting couples of two adults, each with their own chance), called with the survivors.
   // Updates state in place and returns the day's counts.
-  function stepPeople(state, p, rand, lossOf, chancesOf) {
+  function stepPeople(state, p, rand, missingOf, chancesOf) {
     const need = foodNeed(state.people, p);
     const ration = rationFor(need, p);
     const gap = Math.max(0, 1 - ration);
-    const lost = hungerLoss(gap * p.c, p);   // an adult's
 
     let died = 0, hungry = 0, lostAll = 0;
     const people = [];
     for (const h of state.people) {
-      const loss = lossOf ? lossOf(h) : hungerLoss(gap * needOf(h, p), p);
+      const missing = missingOf ? missingOf(h) : gap * needOf(h, p);
+      let loss = 0;
+      if (missing > 1e-9) { const before = hungerToll(h.short, p); h.short += missing; loss = hungerToll(h.short, p) - before; }
       h.life -= loss; lostAll += loss;
       h.age += 1;
       if (h.age >= h.life) {
@@ -134,23 +150,32 @@
     // couples; without it, the first adult women in village order, as many as there are couples, at p),
     // only for a woman who can conceive (canConceive)
     const chances = chancesOf ? chancesOf(people) : (() => { const n = census(people, p).couples; return people.filter((h) => h.sex === FEMALE && stage(h, p) === "adult").slice(0, n).filter((f) => canConceive(f, p)).map((f) => [p.p, f]); })();
-    let born = 0, males = 0, females = 0;   // the living boys + men and girls + women, tonight's newborns too
+    let born = 0, joined = 0, males = 0, females = 0;   // the living boys + men and girls + women, tonight's newborns and newcomers too
     const x = p.X ?? 1;
     for (const h of people) if (h.age < p.E) h.sex === MALE ? males++ : females++;
-    const birth = () => {
+    const arrive = (age) => {
       const all = males + females + 2 * x, life = lifespan(p, rand), sex = rand() < (all > 0 ? (females + x) / all : 0.5) ? MALE : FEMALE;
-      sex === MALE ? males++ : females++;
-      people.push({ id: state.nextId++, sex, age: 0, life, life0: life });
-      born++;
+      if (age < p.E) sex === MALE ? males++ : females++;
+      people.push({ id: state.nextId++, sex, age: Math.min(age, life - 1), life, life0: life, short: 0, carryBy: null });
     };
+    // Each newborn's parents, in birth order: [the father (the mother's partner when she conceived; null
+    // without couples), the mother]
+    const parents = [];
+    const birth = (f) => { arrive(0); born++; parents.push([f.carryBy, f]); f.carryBy = null; };
     // Mothers whose time has come give birth, in village order; then the couples conceive (with no
     // pregnancy, G = 0, the child is born at once)
     const n0 = people.length;
-    for (let i = 0; i < n0; i++) { const f = people[i]; if (f.carry > 0 && --f.carry === 0) birth(); }
-    for (const [chance, f] of chances) if (rand() < chance) { if ((p.G || 0) > 0) f.carry = p.G; else birth(); }
+    for (let i = 0; i < n0; i++) { const f = people[i]; if (f.carry > 0 && --f.carry === 0) birth(f); }
+    for (const [chance, f] of chances) if (rand() < chance) { f.carryBy = f.partner || null; if ((p.G || 0) > 0) f.carry = p.G; else birth(f); }
+    // An outsider may join a small village (last in village order)
+    const n = people.length;
+    if (n < JOIN_BELOW && rand() < 1 / ((n + 1) * (n + 1)) / 10) { arrive(JOIN_AGE[0] + Math.floor(rand() * (JOIN_AGE[1] - JOIN_AGE[0] + 1))); joined++; }
     state.people = people;
-    return { born, died, hungry, couples: chances.length, need, ration, lost, lostAll };
+    return { born, joined, parents, died, hungry, couples: chances.length, need, ration, lostAll };
   }
+
+  // Outsiders join a village of fewer than JOIN_BELOW people, aged JOIN_AGE[0] to JOIN_AGE[1] days
+  const JOIN_BELOW = 10, JOIN_AGE = [360, 1440];
 
   // A woman can conceive while she's an adult, not already expecting, and young enough to give birth
   // before she's an elder (her age + G under E)
@@ -197,5 +222,5 @@
     }
   }
 
-  window.HumanModel = { DEFAULTS, STORE_KEY, MALE, FEMALE, lifespan, startPeople, stage, census, CHILD_FOOD, ELDER_FOOD, needOf, foodNeed, rationFor, hungerLoss, stepPeople, canConceive, childrenPerCouple, fedCapacity, savedParams, START, savedStart };
+  window.HumanModel = { DEFAULTS, STORE_KEY, MALE, FEMALE, lifespan, startPeople, stage, census, CHILD_FOOD, ELDER_FOOD, needOf, foodNeed, rationFor, hungerToll, stepPeople, canConceive, childrenPerCouple, fedCapacity, savedParams, START, savedStart };
 })();

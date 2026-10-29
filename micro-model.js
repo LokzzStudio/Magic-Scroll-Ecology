@@ -31,13 +31,12 @@
 //   order, econ (makeEconomy's state()), school: { scholars: [{ h, day, reads }], classOf: Map(child h →
 //   their scholar's h; only children with a class today), params, learn, read } | null, trace: {} | null,
 //   happyOf: h → happiness | null, eff: (h, skill) → effectiveness | null, levelsOf: h → { skill: level } | null,
-//   cold: { tempAt(clock hour) → °C, k, clothStep, fireStep, fireHours, fireReach, fireEnergy } | null (Clothing),
+//   cold: { tempAt(clock hour) → °C, limit, clothStep, fireStep, fireHours, fireReach, fireEnergy } | null (Clothing),
 //   water: DayModel.wateringOf's day | null (Watering),
 //   rain: { at(clock hour) → rainfall 0–10, fireOut(lit at, hours) → when a fire goes out, hatStep, limit } | null (Clothing) }.
 //   The cold (with x.cold): the house is warm; out of it, someone whose felt temperature (the hour's, plus
 //     clothStep × their 衣's tier, plus fireStep × the tier of the warmest fire within fireReach tiles) is
-//     below 0 °C is in hypothermia, its toll weighing k × (felt ÷ 10)² (DayModel.weatherOf; it starts again
-//     from 0 each spell), and each unit of work out there is cut by (felt ÷ 10)², taken as it starts. At the
+//     below 0 °C is in hypothermia: each unit of work out there is cut by (felt ÷ 10)², taken as it starts. At the
 //     limit (−5 °C) or colder they finish the unit in hand, then go home to warm up. Leaving the house for
 //     work, below 0 °C they first put on the 衣 of the lowest tier that's warm enough; with none, the warmest
 //     there is, and they take a timber of the lowest tier that makes up the rest, to light at the work site
@@ -45,9 +44,8 @@
 //     otherwise stay in and look again on the hour.
 //   The rain (with x.rain): out of the house, the rain someone feels is the hour's rainfall less hatStep ×
 //     their 笠's tier (never below 0), and each unit of work there does × (1 − (felt ÷ 10)²), taken as it
-//     starts. From limit on, they finish the unit in hand and go home. Leaving the house for work with the
-//     rain at the limit or more, they put on the 笠 of the lowest tier that brings it under; with none, they
-//     stay in and look again on the hour. Indoors from the weather they still eat, and hunger runs on at half its toll (DayModel.hungerOf). Rain burns
+//     starts. Nobody goes home for it. Leaving the house for work with the rain at the limit or more, they
+//     put on the 笠 of the lowest tier that brings it under, or short of that the best there is. Indoors from the weather they still eat, and get as hungry as out (only shown: DayModel.dayOut). Rain burns
 //     a fire down faster (x.rain.fireOut), and at 10 none can be lit (nobody takes a timber out then).
 //   Watering (with x.water): each field (numbered in the order taken) has a water level; while tending,
 //     each energy uses some of it, and a farmer who finds it at the fetching level or lower (arriving, or
@@ -56,7 +54,7 @@
 // Returns { work (as assignEnergy's), timelines: Map(h → { Lh, E, out }), left: Map(h → energy left
 // unspent), spent: Map(h → energy spent on each job), walk, lesson, reading, pupils }, and with the cold
 // cold: Map(h → days of life the cold took), coldHours (everyone's hours in hypothermia) and fires (lit),
-// with the rain wet: { inH (everyone's hours in from it), lost (work out of the house it took), outWork
+// with the rain wet: { lost (work out of the house it took), outWork
 // (work done out of the house), hats (笠 put on) }, and fills x.trace with everyone's day if given.
 (function () {
   const EPS = 1e-9, UNIT = DayModel.UNIT;   // work is done UNIT energy at a time
@@ -113,7 +111,7 @@
         h, kind, e, e0: e, r: er ? er.r : 0, w: 0, loc: "H", st: "asleep", freeAt: S.meal, job: null, res: 0, load: 0,
         lunched: false, Lh: null, E: null, out: null, over: false, walked: 0, ver: 0, unit: 0, cls: false, know: 0, met: false,
         spent: { milk: 0, field: 0, wood: 0, wool: 0, stone: 0, weave: 0, forge: 0, teach: 0, poetry: 0, class: 0, fire: 0 }, blade: undefined, fork: undefined,
-        cloth: null, hat: null, wetMult: 1, coldMult: 1, fieldIx: -1, water: 0, inWhy: null, timber: 0, away: false, seg: null, lastT: 0, coldSince: null, coldLost: 0, coldH: 0, spells: trace ? [] : null, inSince: null, inside: [],
+        cloth: null, hat: null, wetMult: 1, coldMult: 1, fieldIx: -1, water: 0, timber: 0, away: false, seg: null, lastT: 0, coldSince: null, coldH: 0, spells: trace ? [] : null,
         milkOnly: kind === "grown" && may(h, "milk") && !may(h, fieldJob), held: new Map(), reads: isScholar && sd.reads, teacher: null, pupils: [], taughtH: 0,
         eff: x.eff ? effTable(h) : ONE,
         tr: trace ? [] : null,
@@ -200,7 +198,7 @@
     // The cold and the rain, with the rules both modes share (DayModel.weatherOf: what a person feels,
     // dressing to go out, fires). a.away: out of the house; a.seg: where they've been since they last looked
     // (null: walking)
-    const C = x.cold || null, Rn = x.rain || null, WX = !!(C || Rn), wet = { inH: 0, lost: 0, outWork: 0, hats: 0 };
+    const C = x.cold || null, Rn = x.rain || null, WX = !!(C || Rn), wet = { lost: 0, outWork: 0, hats: 0 };
     const Wx = WX ? DayModel.weatherOf(C, Rn, E, S, wet) : null, WT = x.water || null;
     let firesLit = 0;
     // When felt crosses 0 between lo and hi (the hours change smoothly)
@@ -210,28 +208,21 @@
       if (a.spells) a.spells.push([a.coldSince, t]);
       a.coldSince = null;
     }
-    // Since they last looked: when they went into hypothermia, or came out of it, and its toll so far
+    // Since they last looked: when they went into hypothermia, or came out of it
     function coldLook(a) {
       if (!C || !a.away) return;
-      const place = a.seg, f = (t) => Wx.felt(a, place, t), t0 = Math.min(a.lastT, now), u = S.active / HumanModel.needOf(a.h, p);
-      if (a.coldSince === null) { if (f(now) < 0) { a.coldSince = f(t0) < 0 ? t0 : crossing(f, t0, now, true); a.coldLost += Wx.toll(f, a.coldSince, a.coldSince, now, u); } }
-      else if (f(now) >= 0) { const tw = f(t0) >= 0 ? t0 : crossing(f, t0, now, false); a.coldLost += Wx.toll(f, a.coldSince, t0, tw, u); warmUp(a, tw); }
-      else a.coldLost += Wx.toll(f, a.coldSince, t0, now, u);
+      const place = a.seg, f = (t) => Wx.felt(a, place, t), t0 = Math.min(a.lastT, now);
+      if (a.coldSince === null) { if (f(now) < 0) a.coldSince = f(t0) < 0 ? t0 : crossing(f, t0, now, true); }
+      else if (f(now) >= 0) warmUp(a, f(t0) >= 0 ? t0 : crossing(f, t0, now, false));
       a.lastT = now;
     }
     // Too cold to stay out: at the limit or colder where they are
     const tooCold = (a) => !!C && a.away && Wx.tooCold(a, a.loc, now);
     let coldCut = 0;   // the work out of the house the cold took
-    const tooWet = (a, t) => !!Rn && Wx.tooWet(a, t);
-    // Too cold or too wet to go out: let go of the job and look again on the hour
-    // Indoors from the weather (a.inSince: since when; a.inWhy: "cold" or "rain"; a.inside: the spells, in
-    // hours since waking, for hunger)
-    const goIn = (a, why) => { if (a.inSince === null) { a.inSince = now; a.inWhy = why; } };
-    const comeOut = (a) => { if (a.inSince !== null) { a.inside.push([a.inSince - a.w, now - a.w]); if (a.inWhy === "rain") wet.inH += now - a.inSince; a.inSince = null; } };
-    function stayIn(a, why) {
-      goIn(a, why);
+    // Too cold to go out: let go of the job and look again on the hour
+    function stayIn(a) {
       drop(a);
-      note(a, why === "rain" ? "rain-in" : "cold-in");
+      note(a, "cold-in");
       schedule(a, Math.min(Math.floor(now + EPS) + 1, a.w + (a.lunched ? S.active : S.lunch)), "decide");
     }
     // At the work site with a timber: light it (fireEnergy energy)
@@ -405,7 +396,7 @@
       return 1;
     }
     function walk(a, dest, why) {
-      if (WX) { coldLook(a); if (a.loc === "H" && dest !== "H") { comeOut(a); a.away = true; a.lastT = now; } a.seg = null; }
+      if (WX) { coldLook(a); if (a.loc === "H" && dest !== "H") { a.away = true; a.lastT = now; } a.seg = null; }
       const d = S.between(a.loc, dest);
       a.walked += d;
       note(a, "walk", { to: dest, t1: now + d, job: a.job ? a.job.id : null, why });
@@ -416,8 +407,8 @@
     function toWork(a, depth) {
       const j = a.job;
       if (a.loc !== j.place) {
-        if (Rn && a.loc === "H" && j.place !== "H" && !Wx.hatFor(a, now)) return stayIn(a, "rain");
-        if (C && a.loc === "H" && j.place !== "H" && !Wx.dressFor(a, j.place, now, a.e)) return stayIn(a, "cold");
+        if (Rn && a.loc === "H" && j.place !== "H") Wx.hatFor(a, now);   // the rain first: a 笠 if it's heavy
+        if (C && a.loc === "H" && j.place !== "H" && !Wx.dressFor(a, j.place, now, a.e)) return stayIn(a);
         return walk(a, j.place, "work");
       }
       const amt = unitOf(a);
@@ -443,7 +434,6 @@
     function idle(a) {
       drop(a);
       if (a.loc !== "H") return walk(a, "H", "idle");
-      comeOut(a);   // waiting by the house, no longer kept in by the weather
       if (a.e <= EPS && a.out === null) a.out = rel(a);   // nothing left to do: may go in early once hungry
       note(a, "idle");
       schedule(a, Math.max(now, a.w + (a.lunched ? S.active : S.lunch)), "decide");
@@ -459,7 +449,6 @@
       arriveHome(a, night);
     }
     function arriveHome(a, night) {
-      comeOut(a);
       if (night) { a.E = rel(a); a.over = true; note(a, "inside"); if (a.kind === "scholar") wakeIdle(); return; }
       a.Lh = rel(a); a.lunched = true; a.freeAt = a.Lh + S.meal;
       note(a, "eat", { meal: "lunch", t1: now + S.meal });
@@ -515,13 +504,11 @@
             if (a.dest === "H") {
               if (a.coldSince !== null) warmUp(a, now);
               a.away = false;
-              if (a.why === "warm") goIn(a, "cold"); else if (a.why === "rain") goIn(a, "rain");
-              if (a.timber) { E.untakeTimber(a.timber); a.timber = 0; }   // turned back by the rain before lighting it
+              if (a.timber) { E.untakeTimber(a.timber); a.timber = 0; }   // turned back by the cold before lighting it
             } else a.seg = a.dest;
           }
           a.loc = a.dest;
           if (WX && a.away) {
-            if (tooWet(a, now) && a.why !== "night" && a.why !== "lunch") { walk(a, "H", "rain"); break; }   // too wet to start: back home
             if (a.timber && !Wx.noFire(now)) { lightFire(a); coldLook(a); }   // in a rain at 10 it stays unlit, and goes home with them
             if (tooCold(a) && a.why !== "night" && a.why !== "lunch") { walk(a, "H", "warm"); break; }
           }
@@ -540,7 +527,6 @@
           if (WX && a.away) {
             coldLook(a);
             if (tooCold(a)) { walk(a, "H", "warm"); break; }
-            if (tooWet(a, now)) { walk(a, "H", "rain"); break; }
           }
           if (WT && j === field && tending && WT.dry(a.fieldIx)) { walk(a, WT.source(), "water"); break; }
           // Collecting goes home after every S.load energy, and when there's no more of it for them
@@ -576,7 +562,7 @@
     let fieldsWorked = 0;
     for (const a of agents) if (a.spent.field > 0) fieldsWorked++;
     const timelines = new Map();
-    for (const a of agents) { const tl = { Lh: a.Lh !== null ? a.Lh : S.lunch, E: a.E !== null ? a.E : S.active }; if (a.out !== null) tl.out = a.out; comeOut(a); if (a.inside.length) tl.inside = a.inside; timelines.set(a.h, tl); }
+    for (const a of agents) { const tl = { Lh: a.Lh !== null ? a.Lh : S.lunch, E: a.E !== null ? a.E : S.active }; if (a.out !== null) tl.out = a.out; timelines.set(a.h, tl); }
     const left = new Map(), spent = new Map();
     for (const a of agents) { left.set(a.h, Math.max(0, a.e)); spent.set(a.h, a.spent); }
     if (C) for (const a of agents) if (a.coldSince !== null) warmUp(a, now);   // still out at the end (never, as everyone goes in)
@@ -586,8 +572,7 @@
       timelines, walk: walked, lesson: { knowledge: 0, gained: 0, hours: 0, spent: 0, energy: 0 }, reading: { read: 0 }, pupils: 0,
     };
     if (C) {
-      out.cold = new Map(agents.map((a) => [a.h, a.coldLost]));
-      out.coldHours = agents.reduce((t, a) => t + a.coldH, 0); out.fires = firesLit; out.coldCut = coldCut;
+      out.chill = { coldHours: agents.reduce((t, a) => t + a.coldH, 0), fires: firesLit, coldCut };
     }
     if (Rn) out.wet = wet;
     if (sch) {

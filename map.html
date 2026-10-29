@@ -164,7 +164,6 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
-<script src="ration-model.js"></script>
 <script src="map-model.js"></script>
 <script src="day-model.js"></script>
 <script src="village-model.js"></script>
@@ -235,13 +234,13 @@
     const S = MapModel.travelOf(M), c = DM.newClock(S);
     if (!isFinite(S.between("H", place))) return null;
     const done = DM.workAt(c, place, DM.canAt(c, place, e, r, S, collect), r, S, collect), tl = DM.dayEnd(c, S, done >= e - 1e-9);
-    return { done, walk: c.walked, tl, hunger: DM.hungerOf(1, tl, S, HumanModel.DEFAULTS.k, HumanModel.DEFAULTS.c) };
+    return { done, walk: c.walked, tl, hungry: DM.hungryHours(1, tl, S) > 1 / 60 };
   };
   const dayText = (place, e, r, collect) => {
     const d = dayAt(place, e, r, collect);
     if (!d) return "—";
     const work = d.done >= e ? `all ${fmt(e)} energy` : `<span class="lost">${fmt(d.done)} of ${fmt(e)} energy</span>`;
-    const hungry = d.hunger > 0.005 ? `<br><span class="lost">hungry: −${fmt(d.hunger, 2)} days of life</span>` : "";
+    const hungry = d.hungry ? `<br><span class="lost">home hungry</span>` : "";
     return `${work}<br>${hText(d.walk)} walking · home at +${hText(d.tl.E)}${hungry}`;
   };
   // The furthest a place can be before walking cuts a worker's day
@@ -287,9 +286,9 @@
       row("Pasture: milking, shearing", "P", true) + row("Farm: tending", "F", false) + row("Farm: harvest", "F", true) + row("Forest: timber", "T", true) + row("Mine: stone", "M", true) + `</tbody>`;
     const work = Math.max(0, M.activeHours - (2 * M.mealMin) / 60);
     $("dist-hint").innerHTML = `A day out has <b>${hText(work)}</b> for work and walking once both meals are eaten. A worker walks out, carries home what they collect every ${fmt(M.load)} energy, comes home for lunch and goes back out, all within the day; the walk home at night comes after it. A standard worker milking still gets all 100 energy done up to <b>${fmt(freeUpTo(100, 10))}</b> tiles from a house. ` +
-      `A meal keeps someone full for half the day's hours, so anyone still out after that (home late for lunch, or working on at night) goes hungry, even on a full ration. The table shows that hunger toll for one day.`;
+      `A meal keeps someone full for half the day's hours, so anyone still out after that (home late for lunch, or working on at night) goes hungry, even on a full ration. The table shows who comes home hungry; it costs no days of life (hunger's toll goes by the food people go without, on the Humans page).`;
     $("mpt-hint").innerHTML = `The pasture, ${fmt(isFinite(d.P) ? d.P : 0)} tiles from a house, is <b>${fmt(isFinite(d.P) ? oneWay("P") * 60 : 0)}</b> minutes' walk each way.`;
-    $("act-hint").innerHTML = `Breakfast to bedtime. A full ration keeps someone full for exactly these hours, so one food lasts <b>${fmt((M.activeHours / HumanModel.DEFAULTS.c) * 60)}</b> minutes (${fmt(M.activeHours, 1)} h ÷ ${fmt(HumanModel.DEFAULTS.c)} food). Out longer, or eating less, and they go hungry; each hungry hour costs more life than the last.`;
+    $("act-hint").innerHTML = `Breakfast to bedtime. A full ration keeps someone full for exactly these hours, so one food lasts <b>${fmt((M.activeHours / HumanModel.DEFAULTS.c) * 60)}</b> minutes (${fmt(M.activeHours, 1)} h ÷ ${fmt(HumanModel.DEFAULTS.c)} food). Out longer, or eating less, and they go hungry, which shows but costs nothing in itself.`;
     $("wake-hint").innerHTML = `In real time, 5 minutes of play is 2 hours of the game, so a ${fmt(M.activeHours, 1)}-hour day out is <b>${fmt((M.activeHours * 60) / 24)}</b> minutes of play.`;
   }
 

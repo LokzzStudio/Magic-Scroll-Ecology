@@ -4,7 +4,7 @@
   const PAGES = [
     ["index.html", "Herd", "Set the parameters"],
     ["humans.html", "Humans", "Couples &amp; children"],
-    ["farm.html", "Food", "Harvest, stores &amp; rations"],
+    ["farm.html", "Food", "Harvest &amp; stores"],
     ["map.html", "Map", "Where things are"],
     ["attribute.html", "Attribute", "Power &amp; intelligence"],
     ["inheritance.html", "Inheritance", "Children take after parents"],

@@ -26,10 +26,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Food</h1>
-    <p class="lede">Cows and people on one farm for 18,000 days (fifty years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. A <b>food advisor</b> decides how much is eaten each day, rationing the stores to last until the next harvest; without one, everyone eats what they need until the food runs out.</p>
+    <p class="lede">Cows and people on one farm for 18,000 days (fifty years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. The children eat their need first, milk first; the grown-ups eat what they need from what's left, and short of it, each gets the same share of their need.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), food in store at start, how long food keeps, and the food advisor</dd>
+        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), food in store at start, and how long food keeps</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
         <dt>Used by</dt><dd><a href="attribute.html">Attribute</a> and every page after it</dd>
       </dl>
@@ -96,50 +96,7 @@
           <dt>Milk</dt><dd id="milk-source">10 a day per adult cow</dd>
           <dt>Rice</dt><dd>harvest, days 181–210</dd>
         </dl>
-        <p class="hint">Whatever spoils soonest is eaten first. Leftovers are stored until they spoil.</p>
-      </section>
-      <section class="panel-section" id="advice">
-        <div class="section-head">
-          <h2>Rationing</h2>
-          <p class="scope">Also used by the <b><a href="attribute.html">Attribute page</a></b> and every page after it</p>
-        </div>
-
-        <div class="param">
-          <div class="param-head">
-            <span class="lbl">Who rations</span>
-            <div class="seg" role="group" aria-label="Who rations">
-              <button type="button" data-who="off" aria-pressed="false">Off</button>
-              <button type="button" data-who="advisor" aria-pressed="true">Advisor</button>
-              <button type="button" data-who="you" aria-pressed="false">You</button>
-            </div>
-          </div>
-          <p class="hint" id="who-hint"></p>
-        </div>
-
-        <div class="param" id="iq-block">
-          <div class="param-head">
-            <label for="iq-num">Advisor IQ</label>
-            <span class="num-wrap"><input id="iq-num" type="number" min="40" max="200" step="1"></span>
-          </div>
-          <input id="iq-range" type="range" min="40" max="200" step="1" aria-label="Advisor IQ">
-          <p class="hint" id="iq-hint"></p>
-        </div>
-
-        <div class="param" id="shares-block" hidden>
-          <div class="param-head">
-            <label for="sg-num">Grown-ups' share</label>
-            <span class="num-wrap"><input id="sg-num" type="number" min="0" max="100" step="5"><span class="unit">% of need</span></span>
-          </div>
-          <input id="sg-range" type="range" min="0" max="100" step="5" aria-label="Grown-ups' share of their need">
-          <div class="param-head">
-            <label for="sk-num">Children's share</label>
-            <span class="num-wrap"><input id="sk-num" type="number" min="0" max="200" step="5"><span class="unit">% of need</span></span>
-          </div>
-          <input id="sk-range" type="range" min="0" max="200" step="5" aria-label="Children's share of their need">
-          <p class="hint" id="shares-hint"></p>
-        </div>
-
-        <dl class="foods" id="advisor-compare"></dl>
+        <p class="hint">Children eat first, their full need, milk first; then the grown-ups, whatever spoils soonest. Leftovers are stored until they spoil. Short of the grown-ups' need, each gets the same share of it, and goes without the rest.</p>
       </section>
     </aside>
     <main></main>
@@ -149,33 +106,15 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
-<script src="ration-model.js"></script>
 <script src="map-model.js"></script>
 <script src="day-model.js"></script>
 <script src="village-model.js"></script>
 <script src="village-page.js"></script>
 <script>
-// Food: nobody works; the food and rationing settings here are shared with every page after this one
+// Food: nobody works; the food settings here are shared with every page after this one
 const lim = (k) => ({ lo: FoodModel.LIMITS[k][0], hi: FoodModel.LIMITS[k][1] });
 VillagePage.start({
   key: "food", storeKey: "farm-v5", work: "none",
-  beforeRun: (c) => {
-    const num = (k, [lo, hi]) => Math.round(c.clamp(isFinite(Number(c.R[k])) ? Number(c.R[k]) : RationModel.DEFAULTS[k], lo, hi));
-    c.R.iq = num("iq", RationModel.IQ_RANGE); c.R.grown = num("grown", RationModel.GROWN_RANGE); c.R.kids = num("kids", RationModel.KIDS_RANGE);
-    if (!RationModel.WHO.includes(c.R.who)) c.R.who = RationModel.DEFAULTS.who;
-  },
-  setup(c) {
-    const { $ } = c;
-    for (const b of document.querySelectorAll("[data-who]")) b.addEventListener("click", () => { c.R.who = b.dataset.who; c.recompute(); });
-    // The advisor's IQ and your two shares: a slider and a number box each
-    let timer = 0;
-    for (const [id, key] of [["iq", "iq"], ["sg", "grown"], ["sk", "kids"]]) {
-      const changed = (v) => { if (!isFinite(v)) return; c.R[key] = v; clearTimeout(timer); timer = setTimeout(c.recompute, 80); };
-      $(id + "-range").addEventListener("input", (e) => { $(id + "-num").value = e.target.value; changed(Number(e.target.value)); });
-      $(id + "-num").addEventListener("input", (e) => { if (e.target.value !== "") changed(Number(e.target.value)); });
-      $(id + "-num").addEventListener("change", () => { if (document.activeElement !== $(id + "-num")) $(id + "-num").value = c.R[key]; });
-    }
-  },
   inputs: [
     { id: "rice", key: "ricePerEnergy", obj: "F", ...lim("ricePerEnergy"), step: 0.01, round: "none" },
     { id: "fcap", key: "fieldCap", obj: "F", ...lim("fieldCap"), step: 5000, round: "int" },
@@ -186,22 +125,7 @@ VillagePage.start({
 
   ],
   drawPanel(c) {
-    const { F, UP, US, fmt, milkText, $, YEAR, R, PERFECT_IQ } = c, HARVEST_FIRST = 181, HARVEST_LAST = 210, HARVEST_DAYS = 30;
-    // Rationing
-    const err = RationModel.iqError(R.iq);
-    for (const b of document.querySelectorAll("[data-who]")) b.setAttribute("aria-pressed", String(b.dataset.who === R.who));
-    $("iq-block").hidden = R.who !== "advisor"; $("shares-block").hidden = R.who !== "you";
-    for (const [id, key] of [["iq", "iq"], ["sg", "grown"], ["sk", "kids"]]) {
-      $(id + "-range").value = R[key];
-      if (document.activeElement !== $(id + "-num")) $(id + "-num").value = R[key];
-    }
-    $("who-hint").innerHTML = R.who === "off" ? "Nobody rations: everyone eats what they need until the food runs out."
-      : R.who === "advisor" ? "The advisor plans each day's food: the food in store plus what's still to come, spread evenly over the days until the next harvest. Short of everyone's need, everyone gets the same share. From the Inheritance page on, once everyone's need is met, the children get all the extra milk and rice it expects, split evenly; the starting food is kept as a reserve, never given as extra."
-      : "You set the two shares. If the stores run short, every share shrinks alike.";
-    $("shares-hint").innerHTML = `Grown-ups (adults and elders) get ${fmt(R.grown)}% of their need, children ${fmt(R.kids)}%. Children's food above 100% is extra food, which buys Power when they come of age; it counts from the Inheritance page on, with no limit a day (a child needs 70, so about 143%), and only out of milk and rice: the starting food is eaten last, and any extra that comes out of it buys nothing. On this page children get at most their need.`;
-    $("iq-hint").innerHTML = err === 0
-      ? "Spot on: the advisor knows exactly how much food there will be, so its ration is the best plan."
-      : `Food estimates are typically off by <b>±${fmt(err * 100)}%</b>, with a lasting lean one way. Too high and the food runs out; too low and people go hungry for nothing. At IQ ${PERFECT_IQ}+ it's spot on.`;
+    const { F, UP, US, fmt, milkText, $, YEAR } = c, HARVEST_FIRST = 181, HARVEST_LAST = 210, HARVEST_DAYS = 30;
     // Food
     const milkPerCow = FoodModel.milkPerDay(F), fieldE = FoodModel.fieldEnergyOf(F), eats = YEAR * UP.c;
     $("eff-hint").innerHTML = `The milk 1 energy collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Attribute page and every page after it use it for their milkers, and there each adult cow has one milker a day, who gets as much from it as they milk: a cow has no limit.`;

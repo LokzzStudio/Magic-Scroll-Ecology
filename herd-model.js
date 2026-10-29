@@ -5,7 +5,7 @@
   // Model parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
     r: 0.02,  // intrinsic growth rate, per day
-    K: 11,    // carrying capacity, animals
+    K: 10,    // carrying capacity, animals
     A: 2,     // Allee threshold, animals
     L: 360,   // average lifespan, days
     S: 15,    // lifespan spread, ± percent of L
@@ -13,11 +13,14 @@
               // Only a label: young animals still count toward births and crowding.
   };
 
-  // Where the cow page saves its sliders. v9 (carrying capacity 11) keeps the rest of v8.
-  const STORE_KEY = "cow-herd-params-v9";
+  // Where the cow page saves its sliders. v9 (carrying capacity 11) keeps the rest of v8; v10 (carrying
+  // capacity 10, 10 to start) the rest of v9.
+  const STORE_KEY = "cow-herd-params-v10";
   try {
-    const v8 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem("cow-herd-params-v8") || "null");
-    if (v8 && typeof v8 === "object") { delete v8.K; localStorage.setItem(STORE_KEY, JSON.stringify(v8)); }
+    const v8 = !localStorage.getItem("cow-herd-params-v9") && JSON.parse(localStorage.getItem("cow-herd-params-v8") || "null");
+    if (v8 && typeof v8 === "object") { delete v8.K; localStorage.setItem("cow-herd-params-v9", JSON.stringify(v8)); }
+    const v9 = !localStorage.getItem(STORE_KEY) && JSON.parse(localStorage.getItem("cow-herd-params-v9") || "null");
+    if (v9 && typeof v9 === "object") { delete v9.K; delete v9.N0; localStorage.setItem(STORE_KEY, JSON.stringify(v9)); }
   } catch (e) {}
 
   function rng(seed) {
@@ -139,7 +142,7 @@
 
   // Starting herd size, and the starting cows' and sheep's tier, set on the Herd tuner and also used by
   // the Food Model and every page after it
-  const START = { N0: 11, cowTier: 3, sheepTier: 3 };
+  const START = { N0: 10, cowTier: 3, sheepTier: 3 };
 
   // The starting herd the Herd tuner last saved, or null
   function savedStart() {

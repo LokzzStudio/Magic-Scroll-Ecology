@@ -73,7 +73,6 @@
         </div>
         <dl class="foods" id="workday"></dl>
         <p class="hint" id="attr-hint"></p>
-        <dl class="foods" id="attr-compare"></dl>
       </section>
     </aside>
     <main></main>
@@ -83,7 +82,6 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
-<script src="ration-model.js"></script>
 <script src="map-model.js"></script>
 <script src="day-model.js"></script>
 <script src="village-model.js"></script>
@@ -99,11 +97,6 @@ VillagePage.start({
     { id: "int", key: "intel" },
     { id: "eld", key: "elderPenalty" },
   ],
-  // The same villages with everyone at a standard 100 and 100
-  compare: (c) => {
-    const isDefault = c.S.power === 100 && c.S.intel === 100;
-    c.result.attrCompare = { now: c.result.people.alive, base: isDefault ? c.result.people.alive : c.aliveWith({ attrs: { power: 100, intel: 100 } }), isDefault };
-  },
   drawPanel(c) {
     const { S, F, UP, $, fmt, VM } = c, elder = 1 - S.elderPenalty / 100;
     const w = VM.workDay(S.power, S.intel), we = VM.workDay(S.power * elder, S.intel * elder);
@@ -128,8 +121,6 @@ VillagePage.start({
     $("attr-hint").innerHTML = left > 1e-9
       ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the day out ends with <b>${fmt(left)}</b> energy unspent. Raising Power alone won't help.`
       : `Power is the limit: the energy runs out after <b>${hoursText(Math.round(worked * 10) / 10)}</b> of work, before the day out is over. Raising Intelligence alone won't help.`;
-    const k = c.result.attrCompare;
-    $("attr-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [[`Power ${S.power}, Intelligence ${S.intel}`, k.now, k.now >= k.base], ...(k.isDefault ? [] : [["Standard, 100 and 100", k.base, k.base >= k.now]])]);
   },
 });
 </script>

@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Education</h1>
-    <p class="lede">The Inheritance page, with a school. The village appoints its adult with the highest <b>Intelligence (智力)</b> as its <b>Scholar (文人)</b>, if it can spare them from the food work, and a scholar does no food work until they become an elder: they teach the children, and spend any energy the lessons leave on poetry (吟詩). A class shares its lesson out: a scholar with two children gives each half as much. More scholars are possible (Most scholars): then the children are split evenly among them. A child takes home knowledge by how much energy they keep up with, and it buys Intelligence for life, dearer the brighter they already are. The brightest scholar is also the village's food advisor, with their Intelligence at work as the advisor's IQ; with no scholar, nobody rations.</p>
+    <p class="lede">The Inheritance page, with a school. The village appoints its adult with the highest <b>Intelligence (智力)</b> as its <b>Scholar (文人)</b>, if it can spare them from the food work, and a scholar does no food work until they become an elder: they teach the children, and spend any energy the lessons leave on poetry (吟詩). A class shares its lesson out: a scholar with two children gives each half as much. More scholars are possible (Most scholars): then the children are split evenly among them. A child takes home knowledge by how much energy they keep up with, and it buys Intelligence for life, dearer the brighter they already are.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Most scholars, knowledge effectiveness, the base cost of +1 Intelligence and the scholar adjustment</dd>
@@ -51,7 +51,7 @@
           <input id="ms-range" type="range" aria-label="The most scholars the village appoints">
           <p class="hint" id="ms-hint"></p>
         </div>
-        <p class="hint">Each morning, while there are fewer scholars than this and than the children (or none at all), the village appoints its adult with the highest Intelligence as <b>Scholar (文人)</b>, if it can spare them: without the scholars and the children, there must still be a full crew of 4 grown-ups who may tend the fields, and from a second scholar on, enough milkers left to milk the village's need. Once appointed, a scholar stays, even if food work later runs short or the children grow up, until they become an elder (then they're like any other elder) or die. Scholars do no other work: any energy the lessons leave, they spend on poetry. In the job, they work with more Intelligence and less Power (the scholar adjustment). Every child comes to class; with more than one scholar, each day the children are split among them as evenly as can be, at random. The brightest scholar is also the <b>food advisor</b>; with no scholar, nobody rations (see Rationing).</p>
+        <p class="hint">Each morning, while there are fewer scholars than this and than the children, the village appoints its adult with the highest Intelligence as <b>Scholar (文人)</b>, if it can spare them: without the scholars and the children, there must still be a full crew of 4 grown-ups who may tend the fields, and from a second scholar on, enough milkers left to milk the village's need. Once appointed, a scholar stays, even if food work later runs short or the children grow up, until they become an elder (then they're like any other elder) or die. Scholars do no other work: any energy the lessons leave, they spend on poetry. In the job, they work with more Intelligence and less Power (the scholar adjustment). Every child comes to class; with more than one scholar, each day the children are split among them as evenly as can be, at random.</p>
         <div class="param">
           <div class="param-head eq">
             <label for="kpe-num">Knowledge effectiveness</label>
@@ -79,7 +79,6 @@
         <p class="hint">Whenever none of their class is in it, a scholar spends their energy on poetry (吟詩). It doesn't change their Intelligence.</p>
         <dl class="foods" id="classroom"></dl>
         <p class="hint" id="class-hint"></p>
-        <dl class="foods" id="school-compare"></dl>
       </section>
     </aside>
     <main></main>
@@ -89,7 +88,6 @@
 <script src="herd-model.js"></script>
 <script src="human-model.js"></script>
 <script src="food-model.js"></script>
-<script src="ration-model.js"></script>
 <script src="map-model.js"></script>
 <script src="day-model.js"></script>
 <script src="village-model.js"></script>
@@ -97,7 +95,7 @@
 <script src="micro-view.js"></script>
 <script src="village-page.js"></script>
 <script>
-// Education: scholars teach the children, and the brightest advises on food
+// Education: scholars teach the children
 VillagePage.start({
   key: "education", work: "energy", inherit: true, school: true,
   inputs: [
@@ -107,15 +105,13 @@ VillagePage.start({
     { id: "sch", key: "scholarShift" },
 
   ],
-  // The same villages without a school, so without a scholar to advise on food
-  compare: (c) => { c.result.schoolCompare = { now: c.result.people.alive, none: c.aliveWith({ school: null, advisor: null }) }; },
   drawPanel(c) {
     const { S, A, IH, UP, $, fmt, VM } = c, school = VillagePage.schoolOf(S, IH), p = { M: UP.M, E: UP.E };
     const cost = (v) => VM.nextIntelCost(v, school);
     $("ms-hint").innerHTML = S.maxScholars > 1
       ? `Up to <b>${fmt(S.maxScholars)}</b> scholars, one for each child, while the village can spare them. Each one is a worker taken off the food work for good, so a small village can't afford many; in the game, appointing more is the player's call.`
-      : `One scholar teaches every child, and advises on food. In the game, appointing more is the player's call; here, raise this to see what more would do.`;
-    $("sch-hint").innerHTML = `In the job, a scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>, and advises on food with that Intelligence. It isn't passed on to their children.`;
+      : `One scholar teaches every child. In the game, appointing more is the player's call; here, raise this to see what more would do.`;
+    $("sch-hint").innerHTML = `In the job, a scholar works with <b>+${fmt(S.scholarShift)}% Intelligence</b> and <b>−${fmt(S.scholarShift)}% Power</b>. It isn't passed on to their children.`;
     $("kc-hint").innerHTML = `Knowledge buys Intelligence one point at a time as it comes, for life. The next point costs <b>(max(${fmt(IH.dearerPast)}, Intelligence) − ${fmt(IH.dearerPast)})² + ${fmt(S.knowBase)}</b> knowledge (the base cost, plus the square of how far Intelligence is past ${fmt(IH.dearerPast)}, the Inheritance page's "points dearer past"): ${fmt(cost(IH.dearerPast))} up to Intelligence ${fmt(IH.dearerPast)}, ${fmt(cost(IH.dearerPast + 10))} at ${fmt(IH.dearerPast + 10)}, ${fmt(cost(IH.dearerPast + 30))} at ${fmt(IH.dearerPast + 30)}, ${fmt(cost(IH.dearerPast + 50))} at ${fmt(IH.dearerPast + 50)}, ${fmt(cost(IH.dearerPast + 100))} at ${fmt(IH.dearerPast + 100)}.`;
     // The first class: a scholar with the starting attributes, and a child of two starting grown-ups
     const scholar = { power: A.power, intel: A.intel, age: UP.M };
@@ -141,8 +137,6 @@ VillagePage.start({
       `<dt></dt><dd>Scholar's poetry, after class</dd><dd class="v">${fmt(readAfter)} knowledge a day</dd>`;
     const scholarFirst = sc.rate > 0 && w.rate > 0 && sc.energy / sc.rate < w.energy / w.rate;
     $("class-hint").innerHTML = `${scholarFirst ? "Here the scholar's energy runs out first, so the child doesn't spend all of theirs." : "Here the child's energy runs out first, and the scholar spends the rest on poetry."} Each wakes at their own time and goes home for lunch on their own clock, so on average they share <b>${hoursText(t.hours)}</b> of class, not the ${hoursText(together.hours)} they would if they woke together. Children who learn grow brighter and keep up for longer, so they learn faster as they go. Each scholar is taken off the food work until they become an elder, so a small village is a worker short for every one.`;
-    const k = c.result.schoolCompare;
-    $("school-compare").innerHTML = c.compareRows(`Villages alive at day ${fmt(c.T)}`, [["With scholars", k.now, k.now >= k.none], ["No school, so no food advisor", k.none, k.none >= k.now]]);
   },
 });
 </script>

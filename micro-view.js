@@ -1,6 +1,6 @@
 // Micro mode's day viewer: one village day from MicroModel's record (a run's cfg.trace), drawn on the map
 // minute by minute, with everyone's job, energy and fullness. village-page.js mounts it:
-//   const view = MicroView.mount(element); view.show(trace, { day, k }); view.stop()
+//   const view = MicroView.mount(element); view.show(trace, { day }); view.stop()
 (function () {
   const GLYPH = { milk: "奶", field: "田", wood: "木", wool: "毛", stone: "石", weave: "織", forge: "鍛", class: "學", teach: "教", poetry: "詩" };
   const PLACE = { H: "the house", F: "the farm", P: "the pasture", T: "the forest", M: "the mine", W: "the well", R: "the river" };
@@ -72,23 +72,18 @@
       const e = s.s === "work" || s.s === "teach" || s.s === "poetry" ? Math.max(0, s.e - (time - s.t) * a.r) : s.e;
       return { s: s.s, job: s.job, meal: s.meal, at: s.at, pos: spotOf(s.at, a), inside: s.s === "inside", e };
     }
-    // Fullness (share of a full day's food still in them), whether they're out, and the day's hunger toll
-    // so far: the hours out with nothing in them, until they eat or go in (DayModel.dayOut)
+    // Fullness: the share of a full day's food still in them (DayModel.dayOut; shown only)
     function fullAt(a, time) {
-      const S = tr.S, g = a.g, B = (g * S.active) / 2, u = S.active / a.need;
-      if (time < a.w) return { full: 0, lost: 0 };
-      const lunch = a.plan.Lh !== null ? a.w + a.plan.Lh : Infinity, night = a.w + a.plan.E;
+      const S = tr.S, g = a.g, B = (g * S.active) / 2;
+      if (time < a.w) return { full: 0 };
+      const lunch = a.plan.Lh !== null ? a.w + a.plan.Lh : Infinity;
       const end1 = a.w + B, end2 = lunch < Infinity ? Math.max(end1, lunch) + B : end1;
       const until = time < lunch ? end1 : end2;
-      // The day's hungry hours so far (they add up over the day), and what they've cost
-      const hours = (from, to) => Math.max(0, Math.min(time, to) - from);
-      const h = lunch < Infinity ? hours(end1, lunch) + (time > lunch ? hours(end2, night) : 0) : hours(end1, night);
-      const lost = a.tl && a.tl.inside ? (info.k * DayModel.emptyWeight(a.plan, a.tl, time - a.w)) / (u * u) : (info.k * h * h) / (u * u);
-      return { full: Math.max(0, until - time) / S.active, lost };
+      return { full: Math.max(0, until - time) / S.active };
     }
-    // Hunger status: at HUNGRY_AT or less, out of the house; empty: losing life
+    // Hunger status (shown only), at home or out alike: at HUNGRY_AT or less; empty: nothing left in them
     // Hypothermia (the Clothing page) shows over hunger
-    const statusOf = (a, st, fl) => (a.cold && a.cold.some(([s0, s1]) => t >= s0 && t < s1) ? "cold" : st.inside || t < a.w ? "" : fl.full <= 1e-9 ? "empty" : fl.full <= DayModel.HUNGRY_AT + 1e-9 ? "hungry" : "");
+    const statusOf = (a, st, fl) => (a.cold && a.cold.some(([s0, s1]) => t >= s0 && t < s1) ? "cold" : st.s === "asleep" || t < a.w ? "" : fl.full <= 1e-9 ? "empty" : fl.full <= DayModel.HUNGRY_AT + 1e-9 ? "hungry" : "");
     const nameOf = (a) => {
       const sex = a.sex === HumanModel.MALE;
       if (a.kind === "scholar") return `Scholar (${sex ? "man" : "woman"})`;
@@ -106,7 +101,6 @@
         case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : st.why === "warm" ? "Walking home to warm up" : st.why === "rain" ? "Walking home out of the rain" : st.why === "water" ? `Fetching water from ${PLACE[st.to]}` : st.why === "pour" ? "Carrying water to the field" : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
         case "class": return "In class";
         case "cold-in": return "Staying in from the cold";
-        case "rain-in": return "Staying in from the rain";
         case "fire": return `Lighting a fire at ${PLACE[st.at]}`;
         default: return `${JOB[st.job] || st.job}${st.at !== "H" ? ` at ${PLACE[st.at]}` : ""}`;
       }
@@ -178,8 +172,7 @@
         R.f.style.width = `${Math.min(100, 100 * fl.full)}%`;
         const status = statusOf(a, st, fl);
         R.f.classList.toggle("empty", status === "empty");
-        R.tag.hidden = !status; R.tag.textContent = status === "cold" ? "Hypothermia" : status === "empty" ? "Starving" : "Hungry"; R.tag.className = `mv-tag ${status}`;
-        R.lost.textContent = fl.lost > 0.005 ? `−${fmt(fl.lost, 2)} d` : "";
+        R.tag.hidden = !status; R.tag.textContent = status === "cold" ? "Hypothermia" : status === "empty" ? "Empty" : "Hungry"; R.tag.className = `mv-tag ${status}`;
         R.row.classList.toggle("sel", k === selected);
       });
     }
@@ -220,11 +213,10 @@
         t = Math.min(t1, Math.max(t0, t));
         buildRows();
         const sum = (k) => tr.people.reduce((s, a) => s + (a.spent[k] || 0), 0);
-        const lost = tr.people.reduce((s, a) => s + fullAt(a, 99).lost, 0);
         const parts = [["milk", "milking"], ["field", "the fields"], ["wood", "timber"], ["wool", "shearing"], ["stone", "quarrying"], ["weave", "weaving"], ["forge", "forging"], ["teach", "teaching"], ["poetry", "poetry"], ["class", "class"]]
           .filter(([k]) => sum(k) > 0.05).map(([k, label]) => `${label} ${fmt(sum(k), 1)}`);
         const walked = tr.people.reduce((s, a) => s + a.tr.filter((x) => x.s === "walk").reduce((q, x) => q + (x.t1 - x.t), 0), 0);
-        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people, fed <b>${fmt((tr.share ?? 1) * 100)}%</b> today (children <b>${fmt((tr.shareKids ?? 1) * 100)}%</b>). Energy spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. Hunger toll: <b>${fmt(lost, 1)}</b> days of life, everyone together. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their energy is spent; a red ring is someone out of food, losing life.`;
+        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people; today the children ate <b>${fmt((tr.shareKids ?? 1) * 100)}%</b> of their need and the grown-ups <b>${fmt((tr.share ?? 1) * 100)}%</b>. Energy spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their energy is spent; a red ring is someone out of food. Neither costs days of life: hunger's toll goes by the food missed.`;
         draw();
       },
       stop,
