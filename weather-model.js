@@ -69,10 +69,10 @@
   const RIVER_FREEZE = -5;  // °C: below it the river is frozen and the mountain doesn't drain
   // Water settings, for the whole year: rain per +1 water level (rainfall × hours); the levels an hour a
   // sunny and a cloudy, dry hour take off at level 5; and the drain slope (0: the same at every level)
-  // (tuned so that about one year in ten has a drought, in summer, and about one in eight a flood, after
-  // winter's blizzards, each lasting a few days; and so that about one year in 35 the drought dries the
-  // river too)
-  const WATER = { perLevel: 320, sunnyDrain: 0.0036, cloudyDrain: 0.0019, slope: 0.45 };
+  // (tuned so that about one year in seven (15%) has a drought, in summer, and about one in nine a flood,
+  // after winter's blizzards, each lasting a few days; and so that about one year in 20 (5%) the drought
+  // dries the river too)
+  const WATER = { perLevel: 320, sunnyDrain: 0.0036, cloudyDrain: 0.0022, slope: 0.45 };
   const WATER_LIMITS = { perLevel: [10, 1000, 5], sunnyDrain: [0, 0.2, 0.0001], cloudyDrain: [0, 0.2, 0.0001], slope: [0, 1, 0.05] };
   const SEASONS = [
     { id: "spring", zh: "春", en: "Spring", feel: "Many small, light rains" },
@@ -109,7 +109,7 @@
   // and winter cloudiness 70%) keeps the rest of v3
   // v6 (water; summer's and winter's spawn rates 0.6 and 1.6) keeps the rest of v4. (v5 was a trial of
   // other defaults, since dropped; its saves aren't read.)
-  const STORE_KEY = "weather-v13";
+  const STORE_KEY = "weather-v14";
   try {
     if (!localStorage.getItem("weather-v6")) {
       const v4 = JSON.parse(localStorage.getItem("weather-v4") || "null");
@@ -183,6 +183,16 @@
         for (const { id } of SEASONS) if (v12[id] && typeof v12[id] === "object") for (const k of ["spawnRate", "wind", "windVol", "cloudiness", "spell", "rainChange"]) delete v12[id][k];
         delete v12.water;
         localStorage.setItem("weather-v13", JSON.stringify(v12));
+      }
+    }
+  } catch (e) {}
+  // v14 (cloudy drain 0.0022: droughts in about 15% of years, the river dry in about 5%) keeps the rest of v13
+  try {
+    if (!localStorage.getItem("weather-v14")) {
+      const v13 = JSON.parse(localStorage.getItem("weather-v13") || "null");
+      if (v13 && typeof v13 === "object") {
+        if (v13.water && typeof v13.water === "object") delete v13.water.cloudyDrain;
+        localStorage.setItem("weather-v14", JSON.stringify(v13));
       }
     }
   } catch (e) {}

@@ -26,10 +26,10 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Food</h1>
-    <p class="lede">Cows and people on one farm for 18,000 days (fifty years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. The children eat their need first, milk first; the grown-ups eat what they need from what's left, and short of it, each gets the same share of their need.</p>
+    <p class="lede">Cows and people on one farm for 36,000 days (a hundred years of 360 days). People eat two foods: milk from adult cows every day, and rice they harvest in early autumn. The children eat their need first, milk first; the grown-ups eat what they need from what's left, and short of it, each gets the same share of their need.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
-        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per energy), food in store at start, and how long food keeps</dd>
+        <dt>Set here</dt><dd>Rice and milk effectiveness (rice and milk per Power), food in store at start, and how long food keeps</dd>
         <dt>Follows</dt><dd><a href="index.html">Herd tuner</a> · <a href="humans.html">Humans</a></dd>
         <dt>Used by</dt><dd><a href="attribute.html">Attribute</a> and every page after it</dd>
       </dl>
@@ -46,9 +46,9 @@
         <div class="param">
           <div class="param-head eq">
             <label for="rice-num">Rice effectiveness</label>
-            <span class="num-wrap"><span class="unit">1 energy =</span><input id="rice-num" type="number"><span class="unit">rice</span></span>
+            <span class="num-wrap"><span class="unit">1 Power =</span><input id="rice-num" type="number"><span class="unit">rice</span></span>
           </div>
-          <input id="rice-range" type="range" aria-label="Rice that 1 energy of tending grows">
+          <input id="rice-range" type="range" aria-label="Rice that 1 Power of tending grows">
           <p class="hint" id="rice-hint"></p>
         </div>
         <div class="param">
@@ -86,9 +86,9 @@
         <div class="param">
           <div class="param-head eq">
             <label for="eff-num">Milk effectiveness</label>
-            <span class="num-wrap"><span class="unit">1 energy =</span><input id="eff-num" type="number"><span class="unit">milk</span></span>
+            <span class="num-wrap"><span class="unit">1 Power =</span><input id="eff-num" type="number"><span class="unit">milk</span></span>
           </div>
-          <input id="eff-range" type="range" aria-label="Milk that 1 energy collects">
+          <input id="eff-range" type="range" aria-label="Milk that 1 Power collects">
           <p class="hint" id="eff-hint"></p>
         </div>
 
@@ -128,11 +128,11 @@ VillagePage.start({
     const { F, UP, US, fmt, milkText, $, YEAR } = c, HARVEST_FIRST = 181, HARVEST_LAST = 210, HARVEST_DAYS = 30;
     // Food
     const milkPerCow = FoodModel.milkPerDay(F), fieldE = FoodModel.fieldEnergyOf(F), eats = YEAR * UP.c;
-    $("eff-hint").innerHTML = `The milk 1 energy collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} energy) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Attribute page and every page after it use it for their milkers, and there each adult cow has one milker a day, who gets as much from it as they milk: a cow has no limit.`;
+    $("eff-hint").innerHTML = `The milk 1 Power collects. Nobody works on this page, so each adult cow gives what one standard working day (${FoodModel.DAY_ENERGY} Power) collects: <b>${milkText(milkPerCow)}</b> milk a day. The Attribute page and every page after it use it for their milkers, and there each adult cow has one milker a day, who gets as much from it as they milk: a cow has no limit.`;
     $("milk-source").textContent = `${milkText(milkPerCow)} a day per adult cow`;
 
-    $("fcap-hint").innerHTML = `The most rice one field gives in a year; there are ${FoodModel.TEND_CREW} fields, so at most <b>${fmt(FoodModel.TEND_CREW * F.fieldCap)}</b>. A field is full at <b>${fmt(fieldE, 1)}</b> energy of tending a day; a standard day (${FoodModel.DAY_ENERGY} energy) gives ${fmt(Math.min(F.fieldCap, FoodModel.wholeFood(FoodModel.DAY_ENERGY * FoodModel.TEND_DAYS, F.ricePerEnergy)))}.`;
-    $("rice-hint").innerHTML = `The rice 1 energy of tending grows. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} energy = ${fmt(FoodModel.CREW_ENERGY)} energy) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly (in whole rice) over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child 70%), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
+    $("fcap-hint").innerHTML = `The most rice one field gives in a year; there are ${FoodModel.TEND_CREW} fields, so at most <b>${fmt(FoodModel.TEND_CREW * F.fieldCap)}</b>. A field is full at <b>${fmt(fieldE, 1)}</b> Power of tending a day; a standard day (${FoodModel.DAY_ENERGY} Power) gives ${fmt(Math.min(F.fieldCap, FoodModel.wholeFood(FoodModel.DAY_ENERGY * FoodModel.TEND_DAYS, F.ricePerEnergy)))}.`;
+    $("rice-hint").innerHTML = `The rice 1 Power of tending grows. A full crew (${FoodModel.TEND_CREW} people × ${FoodModel.TEND_DAYS} days × ${FoodModel.DAY_ENERGY} Power = ${fmt(FoodModel.CREW_ENERGY)} Power) grows <b>${fmt(F.riceYear)}</b> rice a year. Nobody works on this page, so it comes in evenly (in whole rice) over the ${HARVEST_DAYS} harvest days: <b>${milkText(F.riceYear / HARVEST_DAYS)}</b> a day. A grown-up eats <b>${milkText(eats)}</b> food a year (a child 70%), so this alone feeds about <b>${fmt(F.riceYear / eats, 1)}</b> grown-ups for a year.`;
     const people = US.men + US.women, dailyNeed = people * UP.c;
     $("food0-hint").innerHTML = F.foodStart > 0 && dailyNeed > 0
       ? `It never spoils, so it's eaten last, after milk and rice: a reserve for lean days. On its own it would feed the ${fmt(people)} starting people for about <b>${fmt(F.foodStart / dailyNeed)}</b> days; the first harvest starts on day ${HARVEST_FIRST}.`

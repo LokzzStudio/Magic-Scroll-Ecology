@@ -236,7 +236,7 @@
         <div class="param">
           <div class="param-head">
             <label for="k-num"><span class="sym l">k</span>Hunger toll</label>
-            <span class="num-wrap"><input id="k-num" type="number" step="0.1"><span class="unit">days a food</span></span>
+            <span class="num-wrap"><input id="k-num" type="number" step="0.01"><span class="unit">days a food</span></span>
           </div>
           <input id="k-range" type="range" aria-label="Hunger toll: days of life lost per food missed">
           <svg class="chart mini-curve" id="hunger-curve" height="112" role="img" aria-label="Days of life a grown-up loses over 10 short days, against share of food"></svg>
@@ -395,7 +395,7 @@
     S:     { min: () => 0, max: () => 90, step: 5 },
     F:     { min: () => 0, max: () => 100000, step: 100 },
     c:     { min: () => 10, max: () => 1000, step: 10 },
-    k:     { min: () => 0, max: () => 5, step: 0.1 },
+    k:     { min: () => 0, max: () => 5, step: 0.01 },
     men:   { min: () => 0, max: () => 100, step: 1 },
     women: { min: () => 0, max: () => 100, step: 1 },
     T:     { min: () => 360, max: () => 10000, step: 10 },
@@ -505,14 +505,14 @@
     $("M-hint").innerHTML = `Child from birth to day ${fmt(P.M - 1)}, then adult from day <b>${fmt(P.M)}</b>, elder from day <b>${fmt(P.E)}</b>, until death at ${deathText} days.`;
     $("E-hint").innerHTML = P.E > dieHi
       ? `Later than anyone lives (at most ${fmt(dieHi)} days), so nobody becomes an elder.`
-      : `Elders no longer have children. They eat 80% of an adult's food (from the Attribute page on, their Power, like everyone), and from the Attribute page on work with the elder penalty.` +
+      : `Elders no longer have children. They eat 80% of an adult's food (from the Attribute page on, the Power they work with, after the elder penalty), and from the Attribute page on work with the elder penalty.` +
         (P.E <= dieLo ? "" : ` With these lifespans, only some people live to be elders.`);
     $("rule-adult").textContent = fmt(P.M);
     $("rule-elder").textContent = fmt(P.E);
 
     const fed = HumanModel.fedCapacity(P);
     $("F-hint").innerHTML = `Feeds up to <b>${fmt(fed, fed < 10 ? 1 : 0)}</b> grown-ups fully, or about ${fmt(fed / HumanModel.CHILD_FOOD, fed < 10 ? 1 : 0)} children. More than that and everyone goes hungry.`;
-    $("c-hint").textContent = "What an adult needs each day. Children need 70%, elders 80%. From the Attribute page on, everyone's need is their Power instead.";
+    $("c-hint").textContent = "What an adult needs each day. Children need 70%, elders 80%. From the Attribute page on, everyone's need is their Power instead (an elder's after the elder penalty).";
     const days = (v) => { v = Math.round(v * 10) / 10; return fmt(v, v < 10 && !Number.isInteger(v) ? 1 : 0); };
     const loss = (food, n) => HumanModel.hungerToll(n * (1 - food) * P.c, P);   // a grown-up's, over n short days
     const halfFedRun = Math.ceil(P.L / (P.k * 0.5 * P.c));   // days on half food that cost a whole lifespan

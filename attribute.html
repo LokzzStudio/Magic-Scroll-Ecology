@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Attribute</h1>
-    <p class="lede">The Food page's farm, but now food only comes in if people work for it, on the Map page's map and day. Every person has two attributes: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on energy: Intelligence sets how fast someone spends it, Power sets how much they have for the day, and each energy collects a set amount of milk (milk effectiveness, from the Food page). Each adult cow takes one milker for the day and each of the 4 rice fields one farmer, so a stronger villager simply gets more out of their cow or their field, and once every cow and field has someone, the rest have no food work. Elders have less of both (the elder penalty). At 100 and 100, everyone under elder age does a standard day: 100 energy at 10 an hour.</p>
+    <p class="lede">The Food page's farm, but now food only comes in if people work for it, on the Map page's map and day. Every person has two attributes: <b>Power (力量)</b> and <b>Intelligence (智力)</b>. Work runs on Power: each morning a villager has their full Power to spend, Intelligence sets how fast they spend it, and each Power spent collects a set amount of milk (milk effectiveness, from the Food page). Each adult cow takes one milker for the day and each of the 4 rice fields one farmer, so a stronger villager simply gets more out of their cow or their field, and once every cow and field has someone, the rest have no food work. Elders have less of both (the elder penalty), and eat that much less. At 100 and 100, everyone under elder age does a standard day: 100 Power at 10 an hour. In short, a villager's <b>Power</b> is both what they can spend in a day and what they eat: they spend it through the day, down to nothing at most, and have it all back the next morning. Short of food, they still have their full Power the next day, but lose <span data-n="d.tollText">a day</span> of life for each food missed (the Humans page's hunger toll).</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power and Intelligence</dd>
@@ -49,7 +49,7 @@
             <span class="num-wrap"><input id="pow-num" type="number"></span>
           </div>
           <input id="pow-range" type="range" aria-label="Power">
-          <p class="hint">Work durability (耐力): the energy someone can spend in a day. 100 Power = 100 energy; when it's used up, they stop for the day.</p>
+          <p class="hint">Work durability (耐力): how much someone can spend in a day, all of their Power, back in full each morning; when it's used up, they stop for the day.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -57,7 +57,7 @@
             <span class="num-wrap"><input id="int-num" type="number"></span>
           </div>
           <input id="int-range" type="range" aria-label="Intelligence">
-          <p class="hint">Work efficiency (效率): how fast someone spends energy at work. 100 Intelligence = 10 energy an hour, for as long as the day out allows (the Map page: about 11 hours once meals are eaten, less the walking).</p>
+          <p class="hint">Work efficiency (效率): how fast someone spends Power at work. 100 Intelligence = 10 Power an hour, for as long as the day out allows (the Map page: about 11 hours once meals are eaten, less the walking).</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -68,8 +68,8 @@
           <p class="hint" id="eld-hint"></p>
         </div>
         <div class="param">
-          <div class="param-head"><span class="lbl">Milk effectiveness</span><span class="num-wrap" id="eff-text">1 energy = 1 milk</span></div>
-          <p class="hint">The same for everyone; set on the <a href="farm.html#farming">Food page</a>. So is the most a field gives (a cow has no limit: one milker to a cow a day, and it gives as much as they milk). Rice works the same way: its effectiveness (rice per energy of tending) is set there too, and harvesting brings in 25 rice per energy.</p>
+          <div class="param-head"><span class="lbl">Milk effectiveness</span><span class="num-wrap" id="eff-text">1 Power = 1 milk</span></div>
+          <p class="hint">The same for everyone; set on the <a href="farm.html#farming">Food page</a>. So is the most a field gives (a cow has no limit: one milker to a cow a day, and it gives as much as they milk). Rice works the same way: its effectiveness (rice per Power of tending) is set there too, and harvesting brings in 25 rice per Power.</p>
         </div>
         <dl class="foods" id="workday"></dl>
         <p class="hint" id="attr-hint"></p>
@@ -109,18 +109,18 @@ VillagePage.start({
     const lo = FoodModel.wholeFood(done, F.milkPerEnergy), hi = Math.ceil(done * F.milkPerEnergy - 1e-7);
     const milking = `${lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`} milk`;
     $("eld-hint").innerHTML = `Elders (from ${fmt(UP.E)} days) work with <b>${fmt(elder * 100)}%</b> of their Power and Intelligence, and eat ${fmt(elder * 100)}% of an adult's food (${fmt(UP.c * elder, 1)} a day). It isn't passed on to their children.`;
-    $("eff-text").textContent = `1 energy = ${c.fmtNum(F.milkPerEnergy)} milk`;
+    $("eff-text").textContent = `1 Power = ${c.fmtNum(F.milkPerEnergy)} milk`;
     $("workday").innerHTML =
       `<dt></dt><dd class="h">One person's working day</dd><dd class="h v"></dd>` +
-      `<dt></dt><dd>Durability</dd><dd class="v">${fmt(w.durability)} energy</dd>` +
-      `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} energy/h</dd>` +
+      `<dt></dt><dd>Durability</dd><dd class="v">${fmt(w.durability)} Power</dd>` +
+      `<dt></dt><dd>Efficiency</dd><dd class="v">${fmt(w.rate, w.rate % 1 ? 1 : 0)} Power/h</dd>` +
       `<dt></dt><dd>Time worked, milking</dd><dd class="v">${hoursText(Math.round(worked * 10) / 10)}</dd>` +
-      `<dt></dt><dd>Energy spent / left</dd><dd class="v">${fmt(done)} / ${fmt(left)}</dd>` +
+      `<dt></dt><dd>Power spent / Power left</dd><dd class="v">${fmt(done)} / ${fmt(left)}</dd>` +
       `<dt></dt><dd>Milking</dd><dd class="v">${milking}</dd>` +
-      `<dt></dt><dd>An elder (${attrText(S.power * elder)} / ${attrText(S.intel * elder)})</dd><dd class="v">${fmt(we.energy)} energy</dd>`;
+      `<dt></dt><dd>An elder (${attrText(S.power * elder)} / ${attrText(S.intel * elder)})</dd><dd class="v">${fmt(we.energy)} Power</dd>`;
     $("attr-hint").innerHTML = left > 1e-9
-      ? `Intelligence is the limit: at ${fmt(w.rate, 1)} energy an hour, the day out ends with <b>${fmt(left)}</b> energy unspent. Raising Power alone won't help.`
-      : `Power is the limit: the energy runs out after <b>${hoursText(Math.round(worked * 10) / 10)}</b> of work, before the day out is over. Raising Intelligence alone won't help.`;
+      ? `Intelligence is the limit: at ${fmt(w.rate, 1)} Power an hour, the day out ends with <b>${fmt(left)}</b> Power unspent. Raising Power alone won't help.`
+      : `Power is the limit: the Power runs out after <b>${hoursText(Math.round(worked * 10) / 10)}</b> of work, before the day out is over. Raising Intelligence alone won't help.`;
   },
 });
 </script>

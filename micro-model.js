@@ -227,7 +227,8 @@
     }
     // At the work site with a timber: light it (fireEnergy energy)
     function lightFire(a) {
-      a.e = Math.max(0, a.e - C.fireEnergy); a.spent.fire += C.fireEnergy;
+      const fe = Math.min(a.e, C.fireEnergy);   // its energy, or what they have left
+      a.e -= fe; a.spent.fire += fe;
       Wx.light(a, a.loc, now); firesLit++;
       note(a, "fire");
     }
@@ -337,12 +338,16 @@
           if (withTool(a, TOOL_OF.field, () => tryPool(a, field))) return true;
         } else if (id === "craft") {
           for (const kind of ["weave", "forge"]) if (stations[kind] && may(a.h, kind) && withTool(a, "blade", () => trySlot(a, stations[kind]))) return true;   // with the day's 刀, if there's one
-        } else if (id === "collect" && E) {
+        } else if ((id === "own" || id === "wood") && E) {
           if (withTool(a, "blade", () => {
-            for (const r of VM.collectOrder(a.h, E.today)) {
+            for (const r of VM.collectOrder(a.h, E.today, id)) {
               if (!may(a.h, r)) continue;
               const j = r === "wool" ? wool : r === "stone" ? stone : wood;
-              if (placeFor(a, j, 0) && tryPool(a, j)) return true;
+              if (placeFor(a, j, 0) && tryPool(a, j)) {
+                const c = a.collecting || (a.collecting = new Set());   // counted once a day among those collecting it (collectOrder)
+                if (!c.has(r)) { c.add(r); E.today.atPlace[r]++; }
+                return true;
+              }
             }
             return false;
           })) return true;
@@ -592,7 +597,7 @@
     }
     if (trace) {
       trace.people = agents.map((a) => ({ id: a.h.id, sex: a.h.sex, kind: a.kind, stage: HumanModel.stage(a.h, p), power: a.h.power, intel: a.h.intel,
-        e0: a.e0, r: a.r, w: a.w, tl: timelines.get(a.h), Lh: timelines.get(a.h).Lh, E: timelines.get(a.h).E, spent: a.spent, tr: a.tr, need: HumanModel.needOf(a.h, p), happy: x.happyOf ? x.happyOf(a.h) : null, levels: x.levelsOf ? { ...x.levelsOf(a.h) } : null, left: Math.max(0, a.e), cold: a.spells, coldLost: a.coldLost }));
+        e0: a.e0, r: a.r, w: a.w, tl: timelines.get(a.h), Lh: timelines.get(a.h).Lh, E: timelines.get(a.h).E, spent: a.spent, tr: a.tr, need: HumanModel.needOf(a.h, p, x.elderAttr ?? 1), happy: x.happyOf ? x.happyOf(a.h) : null, levels: x.levelsOf ? { ...x.levelsOf(a.h) } : null, left: Math.max(0, a.e), cold: a.spells, coldLost: a.coldLost }));
       if (C) { trace.fires = Wx.fires; trace.temps = Array.from({ length: 25 }, (_, h) => C.tempAt(h)); }
       if (Rn) trace.rains = Array.from({ length: 25 }, (_, h) => Rn.at(h));
       trace.board = { milkNeed: milk.need, milkDone: milk.done, field: field ? { need: field.need, done: field.done } : null };

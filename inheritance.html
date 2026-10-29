@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Inheritance</h1>
-    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from an adult man and woman drawn at random (from the <a href="happiness.html">Happiness</a> page on, where couples last, from their own parents): a share of their average, give or take a random variation. Coming of age adds 30 to both. Milk goes to the children first: milk they drink above their need adds Power as they grow, for good, while going hungry as a child takes Power away, even below what they were born with. Rice doesn't build Power, so milking for the children is time not spent in the fields. Without that extra milk, a village drifts toward the same level whatever it starts at. Points are cheap up to 70; past it, each costs more and more.</p>
+    <p class="lede">The Attribute page, with families: children take after their parents. A newborn's <b>Power (力量)</b> and <b>Intelligence (智力)</b> come from an adult man and woman drawn at random (from the <a href="happiness.html">Happiness</a> page on, where couples last, from their own parents): a share of their average, give or take a random variation. Coming of age adds a bonus to both (<span data-n="inheritance.grow">24</span>). Milk goes to the children first: milk they drink above their need adds Power as they grow, for good, while going hungry as a child takes Power away, even below what they were born with. Rice doesn't build Power, so milking for the children is time not spent in the fields. Without that extra milk, a village drifts toward the same level whatever it starts at. Power points are cheap up to <span data-n="inheritance.dearerPast">100</span>; past it, each costs more and more.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>Power at birth, Intelligence passed on, variation at birth, coming-of-age bonus and the base cost of +1 Power</dd>
@@ -48,10 +48,10 @@
         <div class="btn-row"><a class="btn" href="attribute.html#attributes">Change on Attribute →</a></div>
         <div class="param">
           <div class="param-head">
-            <label for="dp-num">Points dearer past</label>
-            <span class="num-wrap"><input id="dp-num" type="number"><span class="unit">Power / Int</span></span>
+            <label for="dp-num">Power points dearer past</label>
+            <span class="num-wrap"><input id="dp-num" type="number"><span class="unit">Power</span></span>
           </div>
-          <input id="dp-range" type="range" aria-label="The Power or Intelligence past which each point costs more and more">
+          <input id="dp-range" type="range" aria-label="The Power past which each point costs more and more">
           <p class="hint" id="dp-hint"></p>
         </div>
         <p class="hint">At birth, a child's Power and Intelligence are each <b>h × (man + woman) ÷ 2</b>, give or take the variation, rounded down: a share of the average of an adult man's and an adult woman's, drawn at random (from the Happiness page on, the child's own parents).</p>
@@ -125,22 +125,22 @@ VillagePage.start({
 
   ],
   drawPanel(c) {
-    const { S, A, UP, $, fmt } = c, settle = S.share < 1 ? S.grow / (1 - S.share) : Infinity;
+    const { S, A, UP, $, fmt } = c, settle = S.share < 1 ? Math.max(70, S.grow / (1 - S.share)) : Infinity;
     const x = S.dearerPast, floor = 70 - S.grow, born = Math.max(floor, Math.floor(S.share * A.power + 1e-9));
-    $("dp-hint").innerHTML = `Up to this, each point of Power or Intelligence costs only its base (extra milk below for Power, knowledge on the <a href="education.html">Education</a> page for Intelligence); past it, the base plus the square of how far past: <b>(max(${fmt(x)}, A) − ${fmt(x)})² + base</b>. So the 10th point past it costs the base + 100, the 30th + 900, the 50th + 2,500: easy to build a village up to ${fmt(x)}, hard to push far beyond it.`;
+    $("dp-hint").innerHTML = `Up to this, each point of Power costs only its base in extra milk (Intelligence has its own, on the <a href="education.html">Education</a> page); past it, the base plus the square of how far past: <b>(max(${fmt(x)}, A) − ${fmt(x)})² + base</b>. So the 10th point past it costs the base + 100, the 30th + 900, the 50th + 2,500: easy to build a village up to ${fmt(x)}, hard to push far beyond it.`;
     // What extra food buys at coming of age, for a child at the base Power and a stronger one
     const buy = (power, food) => c.VM.powerFromFood(power, food, S), cost = (power) => c.VM.nextPointCost(power, S);
     const year = 100 * UP.M;
     $("pf-hint").innerHTML = `A child's extra milk buys Power one point at a time as it comes, for good. The next point costs <b>(max(${fmt(x)}, Power) − ${fmt(x)})² + ${fmt(S.powerBase)}</b> extra milk (the base cost, plus the square of how far Power is past ${fmt(x)}): ${fmt(cost(x))} up to Power ${fmt(x)}, ${fmt(cost(x + 10))} at ${fmt(x + 10)}, ${fmt(cost(x + 30))} at ${fmt(x + 30)}, ${fmt(cost(x + 50))} at ${fmt(x + 50)}, ${fmt(cost(x + 100))} at ${fmt(x + 100)}. ` +
       `A childhood of 100 extra milk a day (${fmt(year)}) buys <b>+${fmt(buy(born, year))}</b> for a child of two starting grown-ups (born at ${fmt(born)}). ` +
       `What's put by toward a point when they come of age is lost.`;
-    $("hf-hint").innerHTML = `Going hungry costs a child <b>1 Power for every ${fmt(S.hungerFood)} food</b> they go without, even below what they were born with, and that's for good too: a child of Power ${fmt(born)} on half rations for 30 days loses ${fmt(Math.floor((30 * born) / 2 / S.hungerFood + 1e-9))}. Nobody's Power or Intelligence goes below 70 (at birth or from hunger), a child's below <b>${fmt(floor)}</b> (70 less the ${fmt(S.grow)} they gain coming of age).`;
+    $("hf-hint").innerHTML = `Going hungry costs a child <b>1 Power for every ${fmt(S.hungerFood)} food</b> they go without, even below what they were born with, and that's for good too: a child of Power ${fmt(born)} on half rations for 30 days loses ${fmt(Math.floor((30 * born) / 2 / S.hungerFood + 1e-9))}. Nobody's Power or Intelligence goes below 70 (at birth or from hunger)${S.grow > 0 ? `, a child's below <b>${fmt(floor)}</b> (70 less the ${fmt(S.grow)} they gain coming of age)` : ""}.`;
     $("attr-start").innerHTML = `Starting grown-ups have <b>Power ${fmt(A.power)}</b> and <b>Intelligence ${fmt(A.intel)}</b>. Elders work with ${fmt(A.elderPenalty)}% less.`;
     $("attr-source").hidden = c.saved.attribute;
     $("attr-source").textContent = c.NOTE;
     $("share-hint").innerHTML = `For Power and Intelligence alike: a child of parents with 100 and 120 starts at <b>${fmt(Math.floor(S.share * 110 + 1e-9))}</b> (${fmt(S.share, 2)} × 110)${S.variation > 0 ? `, give or take ${fmt(S.variation)}%` : ""}. The more that's passed on, the more milk, school and luck carry over to the next generation.`;
     $("grow-hint").innerHTML = `When a child turns ${fmt(UP.M)} days, both go up by <b>${fmt(S.grow)}</b>. ` + (isFinite(settle)
-      ? `Each generation's Power and Intelligence are ${fmt(S.share, 2)} × its parents' average plus ${fmt(S.grow)}, so without extra milk or school a village moves ${fmt((1 - S.share) * 100)}% of the way to <b>${fmt(settle)}</b> every generation (${fmt(S.grow)} ÷ ${fmt(1 - S.share, 2)}), whatever it starts at.`
+      ? `Each generation's Power and Intelligence are ${fmt(S.share, 2)} × its parents' average plus ${fmt(S.grow)}, so without extra milk or school a village moves ${fmt((1 - S.share) * 100)}% of the way to <b>${fmt(settle)}</b> every generation (${S.grow / (1 - S.share) > 70 ? `${fmt(S.grow)} ÷ ${fmt(1 - S.share, 2)}` : "the floor: nobody goes below 70"}), whatever it starts at.`
       : `With the whole average passed on, nothing pulls a village's Power and Intelligence back: they climb by ${fmt(S.grow)} every generation.`);
   },
 });

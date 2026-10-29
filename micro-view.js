@@ -30,7 +30,7 @@
       </div>
       <div class="mv-main">
         <div class="mv-map"><canvas aria-label="The village map with everyone on it"></canvas></div>
-        <div class="mv-side"><div class="mv-scroll"><table class="mv-people"><thead><tr><th>Who</th><th>Doing</th><th>Energy</th><th>Full</th></tr></thead><tbody></tbody></table></div></div>
+        <div class="mv-side"><div class="mv-scroll"><table class="mv-people"><thead><tr><th>Who</th><th>Doing</th><th>Power</th><th>Full</th></tr></thead><tbody></tbody></table></div></div>
       </div>
       <p class="hint mv-summary"></p>`;
     const $ = (sel) => root.querySelector(sel);
@@ -95,7 +95,7 @@
       switch (st.s) {
         case "asleep": return "Asleep";
         case "inside": return "Home for the night";
-        case "early": return "Gone in early: hungry, no energy left";
+        case "early": return "Gone in early: hungry, no Power left";
         case "eat": return st.meal === "breakfast" ? "Breakfast by the house" : "Lunch by the house";
         case "idle": return a.e0 > 0 && st.e > 0.01 ? "Waiting by the house" : "Done for the day, by the house";
         case "walk": return st.why === "lunch" ? "Walking home for lunch" : st.why === "night" ? "Walking home for the night" : st.why === "idle" ? "Walking back to the house" : st.why === "carry" ? `Carrying ${CARRY[st.job] || "it"} home` : st.why === "warm" ? "Walking home to warm up" : st.why === "rain" ? "Walking home out of the rain" : st.why === "water" ? `Fetching water from ${PLACE[st.to]}` : st.why === "pour" ? "Carrying water to the field" : `Walking to ${PLACE[st.to]}${st.job ? ` (${(JOB[st.job] || st.job).toLowerCase()})` : ""}`;
@@ -156,7 +156,7 @@
       return states;
     }
     function buildRows() {
-      body.innerHTML = tr.people.map((a, k) => `<tr data-k="${k}"><td><span class="mv-dot ${a.sex === HumanModel.MALE ? "m" : "f"}${a.stage === "child" ? " kid" : ""}"></span><b>${nameOf(a)}</b> #${a.id}<small>${a.power !== undefined ? `${fmt(a.power)}/${fmt(a.intel)}` : `${fmt(a.e0)} energy`} · up ${clock(a.w)}${a.happy !== null && a.happy !== undefined ? ` · happiness ${fmt(a.happy)}` : ""}${skillText(a)}</small></td>` +
+      body.innerHTML = tr.people.map((a, k) => `<tr data-k="${k}"><td><span class="mv-dot ${a.sex === HumanModel.MALE ? "m" : "f"}${a.stage === "child" ? " kid" : ""}"></span><b>${nameOf(a)}</b> #${a.id}<small>${a.power !== undefined ? `${fmt(a.power)}/${fmt(a.intel)}` : `${fmt(a.e0)} Power`} · up ${clock(a.w)}${a.happy !== null && a.happy !== undefined ? ` · happiness ${fmt(a.happy)}` : ""}${skillText(a)}</small></td>` +
         `<td><span class="mv-doing"></span> <span class="mv-tag" hidden></span></td><td><span class="mv-bar-o"><span class="mv-bar-i e"></span></span></td><td><span class="mv-bar-o"><span class="mv-bar-i f"></span></span><small class="mv-lost"></small></td></tr>`).join("");
       rows = [...body.children].map((row) => ({ row, doing: row.querySelector(".mv-doing"), tag: row.querySelector(".mv-tag"), e: row.querySelector(".mv-bar-i.e"), f: row.querySelector(".mv-bar-i.f"), lost: row.querySelector(".mv-lost") }));
     }
@@ -216,7 +216,7 @@
         const parts = [["milk", "milking"], ["field", "the fields"], ["wood", "timber"], ["wool", "shearing"], ["stone", "quarrying"], ["weave", "weaving"], ["forge", "forging"], ["teach", "teaching"], ["poetry", "poetry"], ["class", "class"]]
           .filter(([k]) => sum(k) > 0.05).map(([k, label]) => `${label} ${fmt(sum(k), 1)}`);
         const walked = tr.people.reduce((s, a) => s + a.tr.filter((x) => x.s === "walk").reduce((q, x) => q + (x.t1 - x.t), 0), 0);
-        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people; today the children ate <b>${fmt((tr.shareKids ?? 1) * 100)}%</b> of their need and the grown-ups <b>${fmt((tr.share ?? 1) * 100)}%</b>. Energy spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their energy is spent; a red ring is someone out of food. Neither costs days of life: hunger's toll goes by the food missed.`;
+        $(".mv-summary").innerHTML = `<b>${fmt(tr.people.length)}</b> people; today the children ate <b>${fmt((tr.shareKids ?? 1) * 100)}%</b> of their need and the grown-ups <b>${fmt((tr.share ?? 1) * 100)}%</b>. Power spent: ${parts.join(" · ") || "none"}. Walking: ${fmt(walked, 1)} h in all. An amber ring is someone hungry (fullness ${fmt(DayModel.HUNGRY_AT * 100)}% or less), who keeps working but goes in early once their Power is spent; a red ring is someone out of food. Neither costs days of life: hunger's toll goes by the food missed.`;
         draw();
       },
       stop,

@@ -66,7 +66,7 @@
     document.body.appendChild(dlg);
     const draw = () => {
       const order = RolesModel.currentPriority(), tier = (id) => RolesModel.TIERS.find((t) => t.id === id);
-      dlg.innerHTML = `<div class="jobs-head"><h2>Priority</h2><p>The order in which the day's jobs take people's energy, from the Attribute page on. Changes apply at once.</p></div>
+      dlg.innerHTML = `<div class="jobs-head"><h2>Priority</h2><p>The order in which the day's jobs take people's Power, from the Attribute page on. Changes apply at once.</p></div>
         <ol class="prio-list">${order.map((id, k) => {
           const t = tier(id);
           return `<li><span class="prio-n">${k + 1}</span><span class="prio-name"><span class="zh">${t.zh}</span><small>${t.en}${t.page ? ` · ${t.page} page on` : ""}</small></span>

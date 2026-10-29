@@ -3,7 +3,7 @@
 (function () {
   // Human parameters. Change these to change the defaults on every page.
   const DEFAULTS = {
-    p: 0.01,   // chance a fertile couple conceives each day
+    p: 0.005,  // chance a fertile couple conceives each day
     G: 300,    // pregnancy, days: the child is born this long after it's conceived
     M: 360,    // adult at age, days. Younger people are children.
     E: 3240,   // elder at age, days. Elders don't have children, and eat less (ELDER_FOOD).
@@ -22,8 +22,8 @@
   // v12: the birth chance became 0.003; v13: elder at 3,240 days. Saved settings keep everything else.
   // v14: 6 men and 6 women to start; v15: births through pregnancy, the chance 0.005; v16: hunger's toll over
   // a run of short days, k 0.01; v17: the chance 0.004, k 0.001; v18: k days a food missed, k 1;
-  // v19: the chance 0.01
-  const STORE_KEY = "human-params-v19", V18 = "human-params-v18", V17 = "human-params-v17", V16 = "human-params-v16", V15 = "human-params-v15", V14 = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
+  // v19: the chance 0.01; v20: the chance 0.005; v21: k 0.36; v22: k 1 (a day of life a food missed)
+  const STORE_KEY = "human-params-v22", V21 = "human-params-v21", V20 = "human-params-v20", V19 = "human-params-v19", V18 = "human-params-v18", V17 = "human-params-v17", V16 = "human-params-v16", V15 = "human-params-v15", V14 = "human-params-v14", V13 = "human-params-v13", V12 = "human-params-v12", V11 = "human-params-v11";
   try {
     if (!localStorage.getItem(V11)) {
       for (const key of ["human-params-v10", "human-params-v9"]) {
@@ -51,7 +51,13 @@
     const v17 = JSON.parse(localStorage.getItem(V17) || "null");
     if (!localStorage.getItem(V18) && v17 && typeof v17 === "object") { delete v17.k; localStorage.setItem(V18, JSON.stringify(v17)); }
     const v18 = JSON.parse(localStorage.getItem(V18) || "null");
-    if (!localStorage.getItem(STORE_KEY) && v18 && typeof v18 === "object") { delete v18.p; localStorage.setItem(STORE_KEY, JSON.stringify(v18)); }
+    if (!localStorage.getItem(V19) && v18 && typeof v18 === "object") { delete v18.p; localStorage.setItem(V19, JSON.stringify(v18)); }
+    const v19 = JSON.parse(localStorage.getItem(V19) || "null");
+    if (!localStorage.getItem(V20) && v19 && typeof v19 === "object") { delete v19.p; localStorage.setItem(V20, JSON.stringify(v19)); }
+    const v20 = JSON.parse(localStorage.getItem(V20) || "null");
+    if (!localStorage.getItem(V21) && v20 && typeof v20 === "object") { delete v20.k; localStorage.setItem(V21, JSON.stringify(v20)); }
+    const v21 = JSON.parse(localStorage.getItem(V21) || "null");
+    if (!localStorage.getItem(STORE_KEY) && v21 && typeof v21 === "object") { delete v21.k; localStorage.setItem(STORE_KEY, JSON.stringify(v21)); }
   } catch (e) {}
 
   const MALE = 0, FEMALE = 1;
@@ -91,15 +97,16 @@
     };
   }
 
-  // A person's food need a day: their Power, children and elders too (from the Attribute page on); before
-  // there's Power, c for an adult, CHILD_FOOD of it for a child, ELDER_FOOD for an elder
+  // A person's food need a day: the Power they work with (from the Attribute page on), children too, an
+  // elder's ⌊Power × elder⌋ (the elder share: their energy); before there's Power, c for an adult,
+  // CHILD_FOOD of it for a child, ELDER_FOOD for an elder
   const CHILD_FOOD = 0.7, ELDER_FOOD = 0.8;
-  const needOf = (h, p) => (h.power != null ? h.power : p.c * (h.age < p.M ? CHILD_FOOD : h.age < p.E ? 1 : ELDER_FOOD));
+  const needOf = (h, p, elder = 1) => (h.power != null ? (h.age >= p.E ? Math.floor(h.power * elder + 1e-9) : h.power) : p.c * (h.age < p.M ? CHILD_FOOD : h.age < p.E ? 1 : ELDER_FOOD));
 
   // Food everyone together needs in a day
-  function foodNeed(people, p) {
+  function foodNeed(people, p, elder = 1) {
     let need = 0;
-    for (const h of people) need += needOf(h, p);
+    for (const h of people) need += needOf(h, p, elder);
     return need;
   }
 
@@ -125,15 +132,15 @@
   // chancesOf(people), if given, returns the day's couples as each one's chance of a child instead
   // (the Happiness page: its lasting couples of two adults, each with their own chance), called with the survivors.
   // Updates state in place and returns the day's counts.
-  function stepPeople(state, p, rand, missingOf, chancesOf) {
-    const need = foodNeed(state.people, p);
+  function stepPeople(state, p, rand, missingOf, chancesOf, elder = 1) {
+    const need = foodNeed(state.people, p, elder);
     const ration = rationFor(need, p);
     const gap = Math.max(0, 1 - ration);
 
     let died = 0, hungry = 0, lostAll = 0;
     const people = [];
     for (const h of state.people) {
-      const missing = missingOf ? missingOf(h) : gap * needOf(h, p);
+      const missing = missingOf ? missingOf(h) : gap * needOf(h, p, elder);
       let loss = 0;
       if (missing > 1e-9) { const before = hungerToll(h.short, p); h.short += missing; loss = hungerToll(h.short, p) - before; }
       h.life -= loss; lostAll += loss;

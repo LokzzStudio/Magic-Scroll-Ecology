@@ -81,11 +81,13 @@
   const total = (arr) => { let t = 0; for (const v of arr) t += v; return t; };
 
   // Eat up to `want` from the stores, rounded to whole food, whatever spoils soonest first
-  // (milk first on a tie), so the starting food, which never spoils, last. Returns how much came from each.
-  function eat(stores, want) {
+  // (milk first on a tie), so the starting food, which never spoils, last; with milkFirst, all the milk
+  // (the oldest first) before anything else. Returns how much came from each.
+  function eat(stores, want, milkFirst = false) {
     const { milk, rice } = stores;
     want = Math.round(want);
     let milkEaten = 0, riceEaten = 0;
+    if (milkFirst) for (let a = milk.length - 1; a >= 0 && want > 1e-9; a--) { const take = Math.min(milk[a], want); if (take > 0) { milk[a] -= take; want -= take; milkEaten += take; } }
     let i = milk.length - 1, j = rice.length - 1;   // oldest batches first
     while (want > 1e-9) {
       while (i >= 0 && !(milk[i] > 0)) i--;   // empty batches have nothing to give

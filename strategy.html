@@ -98,13 +98,16 @@
 // Strategy: the Watering page's villages with a strategic player (strategy-model.js)
 {
   const ST = StrategyModel.STRATEGIES, TIER = (t) => (t > 0 ? HerdModel.TIERS[t].code : "—");
-  // A village's figures (a summaryWith summary, or the page's own run with end: the people at the end)
-  function figures(r, YEAR) {
+  // A village's figures (a summaryWith summary, or the page's own run with end: the people at the end);
+  // alone: the people on an average day after day `from` (Sustainable's years on its own)
+  function figures(r, YEAR, from) {
     const t = r.tally;
+    let sum = 0;
+    for (let d = from + 1; d <= r.last; d++) sum += r.counts[d];
     return {
-      alive: r.survived, end: r.survived ? r.end : 0, peak: t.peak, intel: Math.max(0, t.maxIntel),
+      alive: r.survived, end: r.survived ? r.end : 0, peak: t.peak, intel: Math.max(0, t.maxIntel), power: Math.max(0, t.maxPower || 0), sum: Math.max(0, t.maxSum || 0),
       ur: t.ur, firstUR: t.ur > 0 ? t.firstUR : Infinity, best: Math.max(0, t.bestCraft || 0), top: t.top || 0,
-      lasted: (r.extinctDay !== null ? r.extinctDay : r.last) / YEAR,
+      lasted: (r.extinctDay !== null ? r.extinctDay : r.last) / YEAR, alone: r.last > from ? sum / (r.last - from) : 0,
       killed: t.killed, heldOff: (t.heldOff || 0) / YEAR, gifts: t.gifts, refilled: t.refilled,
     };
   }
@@ -134,29 +137,31 @@
         ? `The player plays the first <b>${fmt(S.handsOff)}</b> years, then lets go: the village is on its own for the last ${fmt(c.T / YEAR - S.handsOff)}.`
         : `For Sustainable only: the other strategies play all ${fmt(c.T / YEAR)} years.`;
       // This strategy, in the page's mode
-      const f = figures({ ...pm, end: pm.counts[pm.last] || 0 }, YEAR);
+      const from = S.handsOff * YEAR, f = figures({ ...pm, end: pm.counts[pm.last] || 0 }, YEAR, from);
       $("player-run").innerHTML = `<dt class="sub">Whole run</dt>` + [
         ["Alive at the end", f.alive ? "yes" : `no, from year ${fmt(f.lasted, 1)}`],
-        ["People at the end", fmt(f.end)], ["Most people at once", fmt(f.peak)],
-        ["Highest Intelligence", fmt(f.intel)], ["Best craft", TIER(f.best)], ["SSR or better crafts", fmt(f.top)], ["UR crafts", f.ur ? `${fmt(f.ur)} (first on day ${fmt(f.firstUR)})` : "none"],
+        ["People at the end", fmt(f.end)], ["Most people at once", fmt(f.peak)], [`People on an average day, years ${fmt(S.handsOff)}–${fmt(c.T / YEAR)}`, fmt(f.alone, 1)],
+        ["Highest Intelligence", fmt(f.intel)], ["Highest Power", fmt(f.power)], ["Highest Power + Intelligence", fmt(f.sum)], ["Best craft", TIER(f.best)], ["SSR or better crafts", fmt(f.top)], ["UR crafts", f.ur ? `${fmt(f.ur)} (first on day ${fmt(f.firstUR)})` : "none"],
         ["Killed", fmt(f.killed)], ["Couple-years held off children", fmt(f.heldOff, 1)], ["Crafts given", fmt(f.gifts)], ["Water poured into the well", fmt(f.refilled)],
       ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
       $("player-hint").innerHTML = s.id === "ur"
-        ? `A craft's tier comes from the average of its crafter's skill tier, their 刀's tier (0 without one) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with skilled gatherers about one lot in three comes out SSR. A craft takes the best lots in store first, so its materials average SSR only while there are SSR lots enough for all of it: crafting as fast as it can, the village uses them up faster than they come in.`
+        ? `A craft's tier comes from the average of its crafter's skill tier, their 刀's tier (0 without one) and its materials' tier, then a roll: UR takes an average of SSR (4) and the top roll, 1 in 400. Each lot of wool, timber or stone is drawn the same way, around the average of its gatherers' skill tier, the place's (the sheep's, the forest's, the mine's: SR by default) and their 刀's (SR, the player's gift): with skilled gatherers about one lot in three comes out SSR. A craft takes the best lots in store first, so its materials average SSR only while there are SSR lots enough for all of it. The smith's skill tier goes up with his Power at the forge: SSR takes 111,100 of it.`
         : s.id === "sustain" ? `The player lets go on day ${fmt(S.handsOff * YEAR)}; from then on the village is on its own: no more water poured into the well, crafts or kills, and it appoints its own scholars.` : "";
       // Every strategy, and none, on the same village (Macro)
       const sets = [[null, "No player", "the Watering page's village"], ...ST.map((x) => [x, `${x.zh} ${x.en}`, x.goal])];
-      const goalCol = { population: "end", intel: "intel", sustain: "lasted", ur: "top" };
+      // Each strategy's goal column; A UR craft's is its UR crafts once it has any, else its SSR and better
+      const goalCol = { population: "peak", sum: "sum", sustain: "alone", ur: "top" };
+      const goalOf = (x, f) => (x.id === "ur" && f && f.ur > 0 ? "ur" : goalCol[x.id]);
       const cols = [["end", "People at the end", (f) => fmt(f.end)], ["peak", "Most at once", (f) => fmt(f.peak)],
-        ["intel", "Highest Intelligence", (f) => fmt(f.intel)], ["best", "Best craft", (f) => `${TIER(f.best)}${f.ur ? ` · ${fmt(f.ur)} UR` : ""}`], ["top", "SSR+ crafts", (f) => fmt(f.top)], ["lasted", "Years lasted", (f) => fmt(f.lasted, 1)],
+        ["intel", "Highest Intelligence", (f) => fmt(f.intel)], ["power", "Highest Power", (f) => fmt(f.power)], ["sum", "Highest Power + Int.", (f) => fmt(f.sum)], ["best", "Best craft", (f) => TIER(f.best)], ["ur", "UR crafts", (f) => fmt(f.ur)], ["top", "SSR+ crafts", (f) => fmt(f.top)], ["alone", `People, years ${fmt(S.handsOff)}–${fmt(c.T / YEAR)}`, (f) => fmt(f.alone, 1)],
         ["killed", "Killed", (f) => fmt(f.killed)], ["gifts", "Crafts given", (f) => fmt(f.gifts)]];
       let body = "";
       for (const [x, label] of sets) {
-        const sm = c.summaryWith({ player: x ? { id: x.id, handsOff: S.handsOff, runDays: c.T } : null }), f = sm ? figures(sm, YEAR) : null;
-        body += `<tr class="${x === s ? "mine" : ""}"><th scope="row">${label}</th>${cols.map(([k, , show]) => `<td class="n${x && goalCol[x.id] === k ? " goal" : ""}">${f ? show(f) : "…"}</td>`).join("")}</tr>`;
+        const sm = c.summaryWith({ player: x ? { id: x.id, handsOff: S.handsOff, runDays: c.T } : null }), f = sm ? figures(sm, YEAR, from) : null;
+        body += `<tr class="${x === s ? "mine" : ""}"><th scope="row">${label}</th>${cols.map(([k, , show]) => `<td class="n${x && goalOf(x, f) === k ? " goal" : ""}">${f ? show(f) : "…"}</td>`).join("")}</tr>`;
       }
       $("strat-table").innerHTML = `<thead><tr><th></th>${cols.map(([, h]) => `<th class="n">${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody>`;
-      $("strat-table-hint").innerHTML = `One village, the same luck for every row: a village empty at the end counts 0 people, and one that grows past ${fmt(VillageModel.MAX_PEOPLE)} stops there (the pages' limit). Roll new runs for other luck. The other strategies run after this page is drawn, a second or so each.`;
+      $("strat-table-hint").innerHTML = `One village, the same luck for every row: a village empty at the end counts 0 people, and one that grows past ${fmt(VillageModel.MAX_PEOPLE)} stops there (the pages' limit). Roll new runs for other luck. The other strategies run after this page is drawn, side by side, a few seconds each.`;
     },
   });
 }

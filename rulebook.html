@@ -57,79 +57,80 @@
         <div class="topic">
           <h3>Time and place <a href="map.html">Map</a></h3>
           <ul>
-            <li>A year is 360 days: spring, summer, autumn and winter, 90 days each. A run lasts 50 years.</li>
-            <li>The map is 16 × 16 tiles: houses, a farm, a pasture, a forest, a mine, the well (井) and the river (川), where farmers fetch water (from the Watering page on). Walking takes 1 minute a tile.</li>
-            <li>A standard day's work is 100 energy.</li>
+            <li>A year is 360 days: spring, summer, autumn and winter, 90 days each. A run lasts 100 years.</li>
+            <li>The map is 16 × 16 tiles: houses, a farm, a pasture, a forest, a mine, the well (井) and the river (川), where farmers fetch water (from the Watering page on). Walking takes <span data-n="d.walkText">1 minute</span> a tile.</li>
+            <li>A standard day's work is 100 Power.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Life <a href="humans.html">Humans</a></h3>
           <ul>
-            <li>People live about 3,600 days (±10%). Children until day 360, adults until 3,240, then elders.</li>
+            <li>People live about <span data-n="human.L">3,600</span> days (±<span data-n="human.S">10</span>%). Children until day <span data-n="human.M">360</span>, adults until <span data-n="human.E">3,240</span>, then elders.</li>
             <li>An adult man and woman pair for life; only couples of two adults have children.</li>
-            <li>A child is born 300 days after it's conceived, if the mother lives (the father needn't: the child still takes after him). A woman expecting doesn't conceive again, and conceives only while she could give birth before she's an elder. So a new couple has no child in their first 300 days. <span class="who you">you: Humans page</span></li>
-            <li>Each person's chance of conceiving is 0.01 a day × happiness ÷ 50; a couple's is the average of the two.</li>
-            <li>Births lean toward the scarcer sex: a boy with chance (females + X) ÷ (males + females + 2X), birth balance X = 1.</li>
+            <li>A child is born <span data-n="human.G">300</span> days after it's conceived, if the mother lives (the father needn't: the child still takes after him). A woman expecting doesn't conceive again, and conceives only while she could give birth before she's an elder. So a new couple has no child in their first <span data-n="human.G">300</span> days. <span class="who you">you: Humans page</span></li>
+            <li>Each person's chance of conceiving is <span data-n="human.p">0.005</span> a day × happiness ÷ 50; a couple's is the average of the two.</li>
+            <li>Births lean toward the scarcer sex: a boy with chance (females + X) ÷ (males + females + 2X), birth balance X = <span data-n="human.X">1</span>.</li>
             <li>A village of fewer than 10 people may draw an outsider: each day one joins with chance 1 ÷ (people + 1)² ÷ 10, aged 360 to 1,440 days, a man or woman by the same rule as births, with Power and Intelligence each drawn evenly from 80 to 100. An empty village is rescued the same way (1 in 10 a day).</li>
-            <li>A day's food need is a person's Power, children and elders too (before Power exists: 100 for an adult, 70 for a child, 80 for an elder).</li>
-            <li>Hunger shortens life by <b>1 day for each food missed</b>, counted over a life and rounded down.</li>
+            <li>A day's food need is a person's Power, children too, and an elder's the <span data-n="d.elderShare" data-f="pct">80</span>% of it they work with (before Power exists: <span data-n="human.c">100</span> for an adult, <span data-n="d.childNeed">70</span> for a child, <span data-n="d.elderNeed">80</span> for an elder).</li>
+            <li>Hunger shortens life by <b>a day for each food missed</b>, counted over a life and rounded down.</li>
             <li>Being hungry during the day (past a meal, at home or out) shows, but costs nothing.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Power and Intelligence <a href="attribute.html">Attribute</a></h3>
           <ul>
-            <li><b>Power</b> is a day's energy: ⌊Power⌋ a day.</li>
-            <li><b>Intelligence</b> is speed: Intelligence ÷ 10 energy an hour, so the clever get more done before the day ends.</li>
-            <li>Elders work at 80% of both. Scholars have 90% of their Power and 110% of their Intelligence.</li>
-            <li>Nobody's Power or Intelligence goes below 70; a child's below 40, so they come of age at 70 or more.</li>
+            <li><b>Power is spent through the day.</b> Each morning a person has ⌊Power⌋ to spend (their Power left, back in full every day), and they eat their Power in food. Short of food, they still wake with their full Power, but lose <span data-n="d.tollText">a day</span> of life for each food missed. The Power they don't spend becomes happiness.</li>
+            <li><b>Intelligence</b> is speed: Intelligence ÷ 10 Power an hour, so the clever get more done before the day ends.</li>
+            <li>Elders work at <span data-n="d.elderShare" data-f="pct">80</span>% of both. Scholars have <span data-n="d.scholarPower" data-f="pct">90</span>% of their Power and <span data-n="d.scholarIntel" data-f="pct">110</span>% of their Intelligence.</li>
+            <li>Nobody's Power or Intelligence goes below 70; a child's below <span data-n="d.kidFloor">46</span>, so with the coming-of-age bonus they come of age at 70 or more.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Growing up <a href="inheritance.html">Inheritance</a> · <a href="education.html">Education</a></h3>
           <ul>
-            <li>A newborn's Power and Intelligence are each 0.7 × the average of their parents', give or take 15% (before there are couples, a random adult man and woman stand in).</li>
-            <li>Children turn extra milk into Power and lessons into Intelligence, one point at a time. The next point costs <b>(max(70, A) − 70)² + 100</b>: cheap up to 70, then dearer and dearer.</li>
-            <li>A child going hungry loses 1 Power for every 10 food missed, down to 40.</li>
+            <li>A newborn's Power and Intelligence are each <span data-n="inheritance.share">0.7</span> × the average of their parents', give or take <span data-n="inheritance.variation">10</span>%, never under <span data-n="d.kidFloor">46</span> (before there are couples, a random adult man and woman stand in).</li>
+            <li>Children turn extra milk into Power and lessons into Intelligence, one point at a time. The next point costs <b>(max(x, A) − x)² + base</b>: just the base up to x, then dearer and dearer. For Power x is <span data-n="inheritance.dearerPast">100</span> and the base <span data-n="inheritance.powerBase">100</span> extra milk; for Intelligence x is <span data-n="education.intelPast">100</span> and the base <span data-n="education.knowBase">1,000</span> knowledge.</li>
+            <li>A child going hungry loses 1 Power for every <span data-n="inheritance.hungerFood">100</span> food missed, down to <span data-n="d.kidFloor">46</span>.</li>
+            <li>Coming of age adds <span data-n="inheritance.grow">24</span> to both Power and Intelligence.</li>
             <li>Children eat first, milk first; once the grown-ups have eaten their need too, the children drink all the milk left: extra milk.</li>
-            <li>At 360 days they come of age: +30 to both. After that, attributes don't change.</li>
+            <li>At <span data-n="human.M">360</span> days they come of age, with the bonus. After that, attributes don't change.</li>
             <li>Scholars teach at the house: a child learns the slower of the two's speed × the time in class × teaching skill, shared among the class. Scholars do no other work.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Happiness <a href="happiness.html">Happiness</a></h3>
           <ul>
-            <li>Happiness = 150 − Intelligence (at least 0), plus ⌊energy left unspent yesterday ÷ 10⌋, at most 100.</li>
+            <li>Happiness = <span data-n="happiness.happyBase">150</span> − ⌊Intelligence ÷ <span data-n="happiness.iqStep">1</span>⌋ (at least 0), plus the Power left unspent yesterday (⌊Power left ÷ <span data-n="happiness.joyStep">1</span>⌋), at most 100.</li>
             <li>So the clever are less happy and have fewer children, and rest makes people happier.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Food <a href="farm.html">Food</a></h3>
           <ul>
-            <li>1 energy milking an adult cow gives 1 milk. One milker to a cow a day, but no limit on what one cow gives. Calves (under 60 days) give none.</li>
-            <li>4 fields, one person to each a day. Tending (days 1–180): 1 energy grows 1 rice, at most 50,000 a field a year. Harvest (days 181–270): 1 energy brings in 25 rice; whatever's left after day 270 is lost.</li>
-            <li>Milk keeps 1 day, rice 360. The village starts with 50,000 food that never spoils.</li>
+            <li>1 Power milking an adult cow gives <span data-n="food.milkPerEnergy">1</span> milk. One milker to a cow a day, but no limit on what one cow gives. Calves (under <span data-n="herd.M">60</span> days) give none.</li>
+            <li>4 fields, one person to each a day. Tending (days 1–180): 1 Power grows <span data-n="food.ricePerEnergy">1</span> rice, at most <span data-n="food.fieldCap">50,000</span> a field a year. Harvest (days 181–270): 1 Power brings in 25 rice; whatever's left after day 270 is lost.</li>
+            <li>Milk keeps <span data-n="d.milkKeepText">1 day</span>, rice <span data-n="food.riceKeep">360</span>. The village starts with <span data-n="food.foodStart">50,000</span> food that never spoils.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Herds <a href="index.html">Herd</a></h3>
           <ul>
-            <li>Cows and sheep live about 360 days (±15%). A herd grows by r·N·(N/A − 1)·(1 − N/K) a day (r 0.02, A 2, K 10): it shrinks when very small or crowded, grows in between.</li>
-            <li>Sheep grow back 30 wool a day, up to 300.</li>
+            <li>Cows and sheep live about <span data-n="herd.L">360</span> days (±<span data-n="herd.S">15</span>%). A herd grows by r·N·(N/A − 1)·(1 − N/K) a day (r <span data-n="herd.r">0.02</span>, A <span data-n="herd.A">2</span>, K <span data-n="herd.K">10</span>): it shrinks when very small or crowded, grows in between.</li>
+            <li>Sheep grow back <span data-n="resources.regrow">30</span> wool a day, up to <span data-n="resources.fleece">300</span>.</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Resources <a href="resources.html">Resources</a></h3>
           <ul>
-            <li>1 energy gives 1 wool (shearing a sheep), 1 timber (forest) or 1 stone (mine). The forest and mine never run out.</li>
-            <li>Only so many can work a place in a day: a shearer to each sheep with wool, at most 2 quarriers at the mine and 3 woodcutters in the forest.</li>
+            <li>1 Power gives <span data-n="resources.woolPerEnergy">1</span> wool (shearing a sheep), <span data-n="resources.woodPerEnergy">1</span> timber (forest) or <span data-n="resources.stonePerEnergy">1</span> stone (mine). The forest and mine never run out.</li>
+            <li>Only so many can work a place in a day: a shearer to each sheep with wool, at most <span data-n="resources.mineCrew">2</span> at the mine (quarrying) and <span data-n="resources.forestCrew">3</span> in the forest (woodcutting).</li>
           </ul>
         </div>
         <div class="topic">
           <h3>Skills <a href="resources.html">Resources</a></h3>
           <ul>
-            <li>Nine skills: milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Every energy spent at a job is 1 exp in its skill.</li>
-            <li>Levels 1–4 take 100, 1,000, 10,000 and 100,000 more exp. Each level makes the work more effective: +10%, +20%, +30%, +40%.</li>
+            <li>Nine skills: milking, farming, woodcutting, weaving, forging, shearing, quarrying, teaching, poetry. Every Power spent at a job is 1 exp in its skill.</li>
+            <li>Levels 1–4 take <span data-n="resources.exp1">100</span>, <span data-n="resources.exp2">1,000</span>, <span data-n="resources.exp3">10,000</span> and <span data-n="resources.exp4">100,000</span> more exp. Each level makes the work more effective: +<span data-n="resources.bonus1">10</span>%, +<span data-n="resources.bonus2">20</span>%, +<span data-n="resources.bonus3">30</span>%, +<span data-n="resources.bonus4">50</span>%.</li>
             <li>Effectiveness is more out of the same work (milk, rice, wool, timber, stone, knowledge), or more speed where the amount is fixed (the harvest, crafts).</li>
             <li>Skills aren't inherited: everyone starts at level 0.</li>
           </ul>
@@ -137,11 +138,11 @@
         <div class="topic">
           <h3>Crafts and tools <a href="craft.html">Craft</a></h3>
           <ul>
-            <li>Women weave 衣 clothes (200 wool + 100 timber) and 笠 hats (100 wool + 200 timber); men forge 刀 blades (200 stone + 100 timber) and 叉 hayforks (100 stone + 200 timber). Each takes 100 energy.</li>
+            <li>Women weave 衣 clothes (<span data-n="craft.clothesWool">200</span> wool + <span data-n="craft.clothesWood">100</span> timber) and 笠 hats (<span data-n="craft.hatWool">100</span> wool + <span data-n="craft.hatWood">200</span> timber); men forge 刀 blades (<span data-n="craft.bladeStone">200</span> stone + <span data-n="craft.bladeWood">100</span> timber) and 叉 hayforks (<span data-n="craft.forkStone">100</span> stone + <span data-n="craft.forkWood">200</span> timber). <span data-n="d.craftEnergyText">Each takes 100 Power</span>.</li>
             <li>One loom and one forge, one crafter at each a day. Weaving and forging each use a blade; without one they still can, but it counts 0 toward the craft's tier.</li>
             <li>A craft's tier comes from its materials' tier, its crafter's skill and their blade's tier (0 without one), then a lucky roll.</li>
-            <li>A hayfork adds to tending effectiveness, and a blade to the harvest (收割), to collecting and to crafting: +20% to +100%, by tier. Clothes and hats are worn by everyone (on the Clothing page, only against the cold and the rain).</li>
-            <li>Tools wear out with use: each after 2,000 energy (clothes and hats: all their wearer spends; blades: the harvest, collecting and crafting; hayforks: tending).</li>
+            <li>A hayfork adds to tending effectiveness, and a blade to the harvest (收割), to collecting and to crafting: +<span data-n="craft.bonus1">20</span>% to +<span data-n="craft.bonus5">100</span>%, by tier. Clothes and hats are worn by everyone (on the Clothing page, only against the cold and the rain).</li>
+            <li>Tools wear out with use: <span data-n="d.wearText">each after 2,000 Power</span> (clothes and hats: all their wearer spends; blades: the harvest, collecting and crafting; hayforks: tending).</li>
             <li>The village starts with no blades, hayforks, clothes or hats in store (any number of R ones can be set). <span class="who you">you: Craft page</span></li>
           </ul>
         </div>
@@ -168,9 +169,9 @@
         <div class="topic">
           <h3>Watering <a href="watering.html">Watering</a></h3>
           <ul>
-            <li>The river (川) runs while the mountain has water: it's dry only in the deepest droughts, about one year in 35. The well holds 100 water. It refills from the ground (half the land's water level an hour, up to 50) and from the rain (its rainfall an hour, up to 100).</li>
-            <li>Each field has its own water level, 0–10. Tending uses 0.1 level per energy; a field nobody tends goes back to the land's level within the day.</li>
-            <li>A field tended this year grows rice by itself, by its water level: +30 a day at levels 3–4, +20 at 2 and 5, +10 at 1 and 6, nothing at 7, and it loses rice when too dry or too wet (−100 at 0 or 10).</li>
+            <li>The river (川) runs while the mountain has water: it's dry only in the deepest droughts, about one year in 20 (a drought comes about one year in 7). The well holds <span data-n="watering.wellCap">100</span> water. It refills from the ground (half the land's water level an hour, up to <span data-n="d.wellGround">50</span>) and from the rain (its rainfall an hour, up to <span data-n="watering.wellCap">100</span>).</li>
+            <li>Each field has its own water level, 0–10. Tending uses <span data-n="watering.waterUse">0.1</span> level per Power; a field nobody tends goes back to the land's level within the day.</li>
+            <li>A field tended this year grows rice by itself, by its water level: <span data-n="d.growthText">+100 a day at level 4, +50 at 3 and 5, +25 at 2 and 6, nothing at 1 and 7, and it loses rice at the others (−25 at 8, −50 at 9, −100 at 0 and 10)</span>.</li>
           </ul>
         </div>
         <div class="topic">
@@ -187,8 +188,8 @@
           <h3>The rain <a href="clothing.html">Clothing</a></h3>
           <ul>
             <li>Rain comes in levels from 0 to 10. Out of the house it slows the work: at level R, by <b>(R ÷ 10)²</b> (level 3: 9%, level 4: 16%).</li>
-            <li>A 笠 keeps off 2 levels a tier (N −2 to UR −10).</li>
-            <li>Nobody goes home for the rain, however heavy: at 10 (as felt) the work does nothing. From 5 on they go out in a 笠.</li>
+            <li>A 笠 keeps off <span data-n="clothing.hatStep">2</span> levels a tier (N −<span data-n="clothing.hatStep">2</span> to UR −<span data-n="d.hatTop">10</span>).</li>
+            <li>Nobody goes home for the rain, however heavy: at 10 (as felt) the work does nothing. From <span data-n="clothing.rainLimit">5</span> on they go out in a 笠.</li>
             <li>Rain burns a fire down faster: at level R it lasts (R ÷ 10)² less long. At 10 none can be lit.</li>
           </ul>
         </div>
@@ -196,9 +197,9 @@
           <h3>The cold <a href="clothing.html">Clothing</a></h3>
           <ul>
             <li>The house is warm. Out of it, below 0 °C (as it feels), people fall into <b>hypothermia</b>. It costs no days of life, only work.</li>
-            <li>Below 0 °C their work out of the house slows by (felt ÷ 10)², as in the rain. At −5 °C or colder they go home.</li>
-            <li>A 衣 feels warmer by 5 °C a tier (N +5 to UR +25).</li>
-            <li>A fire, lit with 1 timber and 1 energy, burns 2 hours and warms everyone within 4 tiles by 5 °C a tier of its timber (N +5 to SSR +20), on top of any 衣.</li>
+            <li>Below 0 °C their work out of the house slows by (felt ÷ 10)², as in the rain (to nothing at −10 °C). At <span data-n="clothing.coldLimit">−5</span> °C or colder they go home.</li>
+            <li>A 衣 feels warmer by <span data-n="clothing.clothStep">5</span> °C a tier (N +<span data-n="clothing.clothStep">5</span> to UR +<span data-n="d.clothTop">25</span>).</li>
+            <li>A fire, lit with 1 timber and <span data-n="clothing.fireEnergy">1</span> Power, burns <span data-n="clothing.fireHours">2</span> hours and warms everyone within <span data-n="clothing.fireReach">4</span> tiles by <span data-n="clothing.fireStep">5</span> °C a tier of its timber (N +<span data-n="clothing.fireStep">5</span> to SSR +<span data-n="d.fireTop">20</span>), on top of any 衣.</li>
           </ul>
         </div>
       </div>
@@ -214,11 +215,11 @@
         <div class="topic">
           <h3>Choosing work</h3>
           <ul>
-            <li>Jobs are taken in an order: fields, milking, crafts, collecting, education, poetry. <span class="who you">you: Priority</span></li>
+            <li>Jobs are taken in an order: fields, milking, crafts, 採石 / 羊毛 (men quarry, women shear), 伐木 (woodcutting), education, poetry. <span class="who you">you: Priority</span></li>
             <li>Who may do which job: by default children milk and go to class, men and women farm and cut wood, women shear and weave, men quarry and forge. <span class="who you">you: Jobs</span></li>
             <li>Those who can only milk get the cows first; anyone who could also farm takes a cow only if one is spare. <span class="who">fixed</span></li>
             <li>Children do only the food work the grown-ups can't cover, and spend the rest of the day in class. <span class="who">fixed</span></li>
-            <li>Collecting: each grown-up starts with their own (women wool, men stone) or timber, whichever the village has less of, then the other, then the other sex's. <span class="who">fixed</span></li>
+            <li>Collecting: going by the village's order, villagers split themselves: at the first of the two collecting jobs they come to, each takes whichever of their own (採石 / 羊毛) and timber (伐木) fewer people are collecting so far today (on a tie, the one there's less of in store), then the other. With an order of their own, each job is just that one. Each person tries each once a day. <span class="who">fixed</span></li>
             <li>A station makes next whichever of its items has been started fewest times; its crafter keeps it for the day. <span class="who">fixed</span></li>
             <li>Tools: everyone takes the best clothes and hat left; the best hayfork or blade is taken on the way to the job and put back if they don't get it. <span class="who">fixed</span></li>
           </ul>
@@ -234,7 +235,7 @@
         <div class="topic">
           <h3>Scholars and class <a href="education.html">Education</a></h3>
           <ul>
-            <li>While there are children to teach, the village appoints one scholar: the adult with the highest Intelligence, but only if it can spare them (at least 4 grown-ups must still be able to tend). <span class="who">fixed</span></li>
+            <li>While there are children to teach, the village appoints <span data-n="d.scholarsText">one scholar</span>: the adult with the highest Intelligence, but only if it can spare them (at least 4 grown-ups must still be able to tend). <span class="who">fixed</span></li>
             <li>More scholars, one per child at most, while the milkers left still cover the village's need. <span class="who you">you: in the game</span></li>
             <li>With more than one scholar, the children are split evenly and at random among them. <span class="who">fixed</span></li>
             <li>Teaching or poetry first follows the Priority order. <span class="who you">you: Priority</span></li>
@@ -243,18 +244,18 @@
         <div class="topic">
           <h3>The shape of a day <a href="map.html">Map</a></h3>
           <ul>
-            <li>People wake between 4 and 8 o'clock, spread at random. <span class="who">fixed</span></li>
-            <li>Everyone is out of the house for 12 hours. <span class="who you">you: Map page</span></li>
-            <li>Breakfast at the house (24 minutes); from 5½ hours, home for lunch once the work under way is done. <span class="who you">you: Map page</span></li>
+            <li>People wake between <span data-n="map.wakeFrom">4</span> and <span data-n="map.wakeTo">8</span> o'clock, spread at random. <span class="who">fixed</span></li>
+            <li>Everyone is out of the house for <span data-n="map.activeHours" data-f="half">12</span> hours. <span class="who you">you: Map page</span></li>
+            <li>Breakfast at the house (<span data-n="map.mealMin">24</span> minutes); from <span data-n="map.lunchAfter" data-f="half">5½</span> hours, home for lunch once the work under way is done. <span class="who you">you: Map page</span></li>
             <li>A meal keeps someone full for 6 hours on a full share, less on less. <span class="who">fixed</span></li>
-            <li>Idle, out of energy and hungry, they go in early rather than wait outside. <span class="who">fixed</span></li>
+            <li>Idle, with no Power left and hungry, they go in early rather than wait outside. <span class="who">fixed</span></li>
           </ul>
         </div>
         <div class="topic">
           <h3>Working, step by step</h3>
           <ul>
-            <li>Work goes 10 energy at a time, and a unit starts only if they could finish it and be home by the end of the day. <span class="who">fixed</span></li>
-            <li>Whatever they collect (milk, the harvest, wool, timber, stone) is carried home after every 10 energy of it, and at the end of the job. <span class="who you">you: Map page</span></li>
+            <li>Work goes 10 Power at a time, and a unit starts only if they could finish it and be home by the end of the day. <span class="who">fixed</span></li>
+            <li>Whatever they collect (milk, the harvest, wool, timber, stone) is carried home after every <span data-n="map.load">10</span> Power of it, and at the end of the job. <span class="who you">you: Map page</span></li>
             <li>Taking a shared job reserves what they could still do there, so two people don't plan the same work. <span class="who">fixed</span></li>
             <li>With nothing to do they wait at the house. When someone gives up a job with work left, everyone waiting chooses again. <span class="who">fixed</span></li>
           </ul>
@@ -270,7 +271,7 @@
           <h3>Bookkeeping</h3>
           <ul>
             <li>Each day goes in order: the player acts (Strategy page), food ages and spoils, everyone works, the day's take goes into store, everyone eats, then hunger, deaths, pairing, births and newcomers.</li>
-            <li>Energy, food made and attributes round down; fractions of food from work carry over to the next day.</li>
+            <li>Power to spend, food made and attributes round down; fractions of food from work carry over to the next day.</li>
             <li>Wool, timber and stone are stored in lots of 100, each lot one tier. Crafts use the best tiers first.</li>
             <li>Skill levels are counted at the end of the day, for the next.</li>
           </ul>
@@ -278,7 +279,7 @@
         <div class="topic">
           <h3>Fetching water <a href="watering.html">Watering</a></h3>
           <ul>
-            <li>A farmer who finds their field at level 3 or lower fetches 1 water (+1 level): from the well if it has water and is nearer, otherwise from the river if it's running. <span class="who">fixed</span></li>
+            <li>A farmer who finds their field at level <span data-n="watering.waterAt">4</span> or lower (but not full) fetches 1 water (+1 level): from the well if it has water and is nearer, otherwise from the river if it's running. <span class="who">fixed</span></li>
             <li>They look when they get to the field and after each bit of work. <span class="who">fixed</span></li>
           </ul>
         </div>
@@ -286,7 +287,7 @@
           <h3>Facing the rain <a href="clothing.html">Clothing</a></h3>
           <ul>
             <li>Nobody goes home for the rain: in any rain they work on, slower. <span class="who">fixed</span></li>
-            <li>Leaving the house in heavy rain (5 or more), they put on the 笠 of the lowest tier that brings it under 5, saving the better ones. <span class="who">fixed</span></li>
+            <li>Leaving the house in heavy rain (<span data-n="clothing.rainLimit">5</span> or more), they put on the 笠 of the lowest tier that brings it under <span data-n="clothing.rainLimit">5</span>, saving the better ones. <span class="who">fixed</span></li>
             <li>With no 笠 good enough, they take the best there is, and go anyway. <span class="who">fixed</span></li>
             <li>The work's cut goes by the rain as each bit of work starts. <span class="who">fixed</span></li>
           </ul>
@@ -296,25 +297,25 @@
           <ul>
             <li>Leaving the house on a freezing day, they put on the 衣 of the lowest tier that's warm enough, saving the warmer ones. <span class="who">fixed</span></li>
             <li>If no 衣 is enough, they wear the warmest there is and take a timber of the lowest tier that makes up the rest, to light where they work. <span class="who">fixed</span></li>
-            <li>If it would still feel −5 °C or colder, they stay in and look again on the hour; warmer than that, they go and put up with it. <span class="who">fixed</span></li>
-            <li>At −5 °C or colder at work, they finish what's in hand and walk home to warm up. <span class="who">fixed</span></li>
+            <li>If it would still feel <span data-n="clothing.coldLimit">−5</span> °C or colder, they stay in and look again on the hour; warmer than that, they go and put up with it. <span class="who">fixed</span></li>
+            <li>At <span data-n="clothing.coldLimit">−5</span> °C or colder at work, they finish what's in hand and walk home to warm up. <span class="who">fixed</span></li>
             <li>Indoors from the cold they still eat breakfast and lunch. <span class="who">fixed</span></li>
           </ul>
         </div>
         <div class="topic">
           <h3>Strategies <a href="strategy.html">Strategy</a></h3>
           <ul>
-            <li><b>Most people</b>: holds the village under 20 people, about what the cows and fields feed; one scholar once there are 6 adults; the well full and SR crafts for all. <span class="who you">you: Strategy</span></li>
-            <li><b>Brightest person</b>: as Most people, and the dullest adult goes now and then. <span class="who you">you: Strategy</span></li>
-            <li><b>Sustainable</b>: builds the village up for 10 years, stocks it with SR crafts, then lets go. <span class="who you">you: Strategy</span></li>
-            <li><b>A UR craft</b>: the two brightest adults on the loom and forge first while food is plentiful, and no more 刀 given once the village has made an SSR one. <span class="who you">you: Strategy</span></li>
+            <li><b>Most people</b>: every couple may have children while there's a month's food; once there are 4 adults the youngest man becomes the smith, at the forge first for life; children go to class while there are 3 months' food; the well full and SR crafts for all. It aims for the most people at once. <span class="who you">you: Strategy</span></li>
+            <li><b>Best all-rounder</b>: raises a strong, bright line: under 20 people and 2 children at a time, both in class; the strongest adult teaches; while there's room for a child the couple with the most Power + Intelligence gets the month off (發呆) to be happier. It aims for the highest Power + Intelligence, and comes within a few points of the best there is at Power or Intelligence alone too. <span class="who you">you: Strategy</span></li>
+            <li><b>Sustainable</b>: builds the village up for <span data-n="strategy.handsOff">10</span> years, stocks it with SR crafts, then lets go; it aims for the most people over its years alone. <span class="who you">you: Strategy</span></li>
+            <li><b>A UR craft</b>: division of labour: under 20 people and 2 children at a time; once there are 4 adults the youngest man becomes the smith, at the forge first for life, the next youngest his gatherer, quarrying first and then cutting timber, for life; nobody else crafts. A UR takes a level-4 smith, an SSR 刀 and SSR materials, and then 1 roll in 400. <span class="who you">you: Strategy</span></li>
           </ul>
         </div>
         <div class="topic">
           <h3>Running the simulation</h3>
           <ul>
             <li>Each page plays one village (Roll new runs for other luck), on separate dice for cows, sheep, people, births, waking, classes, pairing, tiers and the weather, so every setting faces the same luck.</li>
-            <li>A village survives if anyone is alive after 50 years. A run stops past 2,000 people, counted as surviving.</li>
+            <li>A village survives if anyone is alive after 100 years. A run stops past 2,000 people, counted as surviving.</li>
             <li><b>Micro mode</b> is the game's rules, person by person. <b>Macro mode</b> is a quick copy for the whole village: it averages over wake-up times for class hours, for example, and in the weather it works out one person's whole day at a time, everyone waking at an even spread, so a fire lit by someone worked out later can't warm them, and someone kept in waits for the same job rather than choosing another. It runs by default.</li>
           </ul>
         </div>
@@ -322,5 +323,15 @@
     </section>
   </main>
 </div>
+<!-- The models and rules.js, for the settings as they are now: each <span data-n> above shows its setting -->
+<script src="herd-model.js"></script>
+<script src="human-model.js"></script>
+<script src="food-model.js"></script>
+<script src="map-model.js"></script>
+<script src="weather-model.js"></script>
+<script src="day-model.js"></script>
+<script src="village-model.js"></script>
+<script src="village-page.js"></script>
+<script src="rules.js"></script>
 </body>
 </html>

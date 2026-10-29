@@ -50,7 +50,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Watering</h1>
-    <p class="lede">The Clothing page, with <b>water</b> in the fields. Each of the 4 fields has its own water level, from <b>0</b> (dry) to <b>10</b> (flooded). Once a field has been tended this year it grows rice <b>by itself</b>, by its water: best at levels <b>3–4</b>, nothing at 7, and rice is lost when it's far too dry or too wet. Tending uses water up, so when a farmer finds their field at level <b>3</b> or lower they fetch water: from the <b>well (井)</b> if it has some and is nearer, otherwise from the <b>river (川)</b>, which runs as long as the mountain above it holds water (the Weather page's). The well refills from the ground, by the land's water level (the Weather page's), and from the rain. A field nobody tends goes back to the land's level within the day.</p>
+    <p class="lede">The Clothing page, with <b>water</b> in the fields. Each of the 4 fields has its own water level, from <b>0</b> (dry) to <b>10</b> (flooded). Once a field has been tended this year it grows rice <b>by itself</b>, by its water: <span data-n="d.growthText">+100 a day at level 4, +50 at 3 and 5, +25 at 2 and 6, nothing at 1 and 7, and it loses rice at the others (−25 at 8, −50 at 9, −100 at 0 and 10)</span>. Tending uses water up, so when a farmer finds their field at level <b><span data-n="watering.waterAt">4</span></b> or lower they fetch water: from the <b>well (井)</b> if it has some and is nearer, otherwise from the <b>river (川)</b>, which runs as long as the mountain above it holds water (the Weather page's). The well refills from the ground, by the land's water level (the Weather page's), and from the rain. A field nobody tends goes back to the land's level within the day.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The well's size and how full the ground fills it; the water tending uses, and the level farmers fetch water at; the rice a field grows each day at each water level</dd>
@@ -91,9 +91,9 @@
         <div class="param">
           <div class="param-head">
             <label for="wu-num">Tending uses</label>
-            <span class="num-wrap"><input id="wu-num" type="number"><span class="unit">levels an energy</span></span>
+            <span class="num-wrap"><input id="wu-num" type="number"><span class="unit">levels an Power</span></span>
           </div>
-          <input id="wu-range" type="range" aria-label="Water levels each energy of tending uses">
+          <input id="wu-range" type="range" aria-label="Water levels each Power of tending uses">
         </div>
         <div class="param">
           <div class="param-head">
@@ -169,7 +169,7 @@ VillagePage.start({
     const G = Array.from({ length: 11 }, (_, k) => S["g" + k]), best = Math.max(...G), bestAt = G.map((g, k) => (g === best ? k : -1)).filter((k) => k >= 0);
     drawGrowthBars(G);
     $("well-hint").innerHTML = `The ground fills the well at half the land's water level an hour (at the land's level 5, 2.5 an hour), but only until it holds ${fmt(S.wellGround)}; rain fills it at its rainfall an hour (snow too), up to ${fmt(S.wellCap)}. It refills over each day's 24 hours, after the day's work, and starts full.`;
-    $("use-hint").innerHTML = `Each energy of tending uses ${fmt(S.waterUse, 2)} of its field's level: a standard day (100 energy) uses ${fmt(100 * S.waterUse, 1)}. A farmer who finds their field at level ${fmt(S.waterAt, 1)} or lower (when they get there, and after each unit) walks for 1 water and back with it, +1 level: to the well if it has water and is no further than the river, otherwise to the river, while it runs (it's dry only on days that start with the mountain empty; then the well is the only water). A field nobody tends today goes back to the land's level by the end of the day.`;
+    $("use-hint").innerHTML = `Each Power of tending uses ${fmt(S.waterUse, 2)} of its field's level: a standard day (100 Power) uses ${fmt(100 * S.waterUse, 1)}. A farmer who finds their field at level ${fmt(S.waterAt, 1)} or lower (when they get there, and after each unit) walks for 1 water and back with it, +1 level: to the well if it has water and is no further than the river, otherwise to the river, while it runs (it's dry only on days that start with the mountain empty; then the well is the only water). A field nobody tends today goes back to the land's level by the end of the day.`;
     $("growth-hint").innerHTML = `A field is seeded once it's been tended this year; until the harvest (day 181) it grows this much rice each day by itself, at its water level rounded down (best at ${bestAt.join(" and ")}: +${fmt(best)}), on top of what tending grows. On day 181 the year's water growth joins the standing rice, which never goes below 0. Fields are numbered in the order farmers take them each day.`;
     // The village, month by month
     const svg = $("water-chart"), H0 = 220, w = Math.max(280, svg.clientWidth || 640), m = { l: 34, r: 44, t: 10, b: 26 }, last = lived(pm), M = 30, bins = Math.max(1, Math.ceil(last / M));

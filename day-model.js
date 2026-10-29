@@ -239,7 +239,7 @@
     };
     const felt = (x, place, T) => C.tempAt(T) + clothWarm(x) + fireWarm(place, T);
     // The cut a felt temperature makes to work (0 at 0 °C or warmer), and whether it's too cold to stay out
-    const coldCut = (f) => (f < 0 ? (f / 10) ** 2 : 0);
+    const coldCut = (f) => (f < 0 ? Math.min(1, (f / 10) ** 2) : 0);   // all of it at −10 °C or colder
     const tooCold = (x, place, T) => !!C && felt(x, place, T) <= limit;
     // The rain x feels at T (under their 笠); whether it's at the limit (heavy) or more; whether no fire can be lit (10)
     const wetAt = (x, T) => Math.max(0, Rn.at(T) - (x.hat ? Rn.hatStep * x.hat.tier : 0));
@@ -298,8 +298,9 @@
       day,
       // ix tended with `energy`: it uses water, and it's seeded
       used(ix, energy) { if (energy > 0) { st.level[ix] = Math.max(0, st.level[ix] - W.use * energy); st.farmed[ix] = true; st.seeded[ix] = true; } },
-      // Whether the farmer of ix goes for water: the field is at W.at or lower, and there's somewhere to get it
-      dry: (ix) => st.level[ix] <= W.at + 1e-9 && (isFinite(toRiver) || (st.well >= 1 && isFinite(toWell))),
+      // Whether the farmer of ix goes for water: the field is at W.at or lower but not full (10), and there's
+      // somewhere to get it
+      dry: (ix) => st.level[ix] <= W.at + 1e-9 && st.level[ix] < 10 - 1e-9 && (isFinite(toRiver) || (st.well >= 1 && isFinite(toWell))),
       // Where to get it: the well ("W") if it has water and is no further than the river, else the river ("R")
       source: () => (st.well >= 1 && isFinite(toWell) && (!isFinite(toRiver) || toWell <= toRiver) ? "W" : isFinite(toRiver) ? "R" : null),
       fetch(src) { if (src === "W") st.well -= 1; else day.river++; },

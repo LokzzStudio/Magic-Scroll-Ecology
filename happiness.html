@@ -26,7 +26,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Happiness</h1>
-    <p class="lede">The Education page, with <b>happiness</b>. Everyone has a happiness from 0 to 100: the cleverer they are, the less content (150 − ⌊Intelligence ÷ 1⌋, at least 0), and the energy they have left over at the end of a day makes them happier that night and through the next day, by a tenth of it, rounded down; 100 at most in all. Couples now pair for life (adults without a partner pair up at random), and a happy couple is more likely to have a child, while both are adults: happiness 50 is the Humans page's chance, 0 is none, 100 is double.</p>
+    <p class="lede">The Education page, with <b>happiness</b>. Everyone has a happiness from 0 to 100: the cleverer they are, the less content (<span data-n="happiness.happyBase">150</span> − ⌊Intelligence ÷ <span data-n="happiness.iqStep">1</span>⌋, at least 0), and the Power they have left over at the end of a day makes them happier that night and through the next day, by 1 for <span data-n="d.joyText">each Power</span>; 100 at most in all. Couples now pair for life (adults without a partner pair up at random), and a happy couple is more likely to have a child, while both are adults: happiness 50 is the Humans page's chance, 0 is none, 100 is double.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>How Intelligence sets happiness</dd>
@@ -58,7 +58,14 @@
           <input id="iqs-range" type="range" aria-label="Intelligence per point of happiness lost">
           <p class="hint" id="iqs-hint"></p>
         </div>
-        <p class="hint"><b>Extra happiness = ⌊energy left ÷ 10⌋</b>: energy left unspent at the end of a day adds to happiness from that night (the night's births go by it) through the next day, up to 100. 15 energy left is +1, 25 is +2, 100 is +10.</p>
+        <div class="param">
+          <div class="param-head">
+            <label for="js-num">Power left per +1 happiness</label>
+            <span class="num-wrap"><input id="js-num" type="number"><span class="unit">Power</span></span>
+          </div>
+          <input id="js-range" type="range" aria-label="Power left unspent per point of extra happiness">
+          <p class="hint" id="js-hint"></p>
+        </div>
         <p class="hint" id="happy-hint"></p>
       </section>
     </aside>
@@ -79,13 +86,15 @@
 // Happiness: the Education page, plus each person's happiness setting their chance of a child
 VillagePage.start({
   key: "happiness", work: "energy", inherit: true, school: true, happiness: true,
-  inputs: [{ id: "hb", key: "happyBase" }, { id: "iqs", key: "iqStep" }],
+  inputs: [{ id: "hb", key: "happyBase" }, { id: "iqs", key: "iqStep" }, { id: "js", key: "joyStep" }],
   drawPanel(c) {
     const { S, $, fmt, VM, UP } = c, H = { base: S.happyBase, iqStep: S.iqStep };
     const at = (intel) => VM.baseHappiness(intel, H), chance = (h) => fmt(VM.birthChance(Math.min(VM.MAX_HAPPY, h), UP), 4);
     $("iqs-hint").innerHTML = `Base happiness = <b>${fmt(S.happyBase)} − ⌊Intelligence ÷ ${fmt(S.iqStep, S.iqStep % 1 ? 1 : 0)}⌋</b>, at least 0: Intelligence 80 gives ${fmt(at(80))}, 100 gives ${fmt(at(100))}, 120 gives ${fmt(at(120))}. With the extra happiness, 100 at most.`;
+    const joy = (left) => Math.floor(left / S.joyStep + 1e-9);
+    $("js-hint").innerHTML = `<b>Extra happiness = ⌊Power left ÷ ${fmt(S.joyStep)}⌋</b>: Power left unspent at the end of a day adds to happiness from that night (the night's births go by it) through the next day, up to 100 in all. 10 Power left is +${fmt(joy(10))}, 25 is +${fmt(joy(25))}, 100 is +${fmt(joy(100))}.`;
     const base = at(c.A.intel);
-    $("happy-hint").innerHTML = `Each person's chance of a child a day is <b>${fmt(UP.p, 4)} × happiness ÷ 50</b> (${fmt(UP.p, 4)} from the Humans page): ${chance(0)} at 0, ${chance(50)} at 50, ${chance(100)} at 100. A couple's is the average of the two partners'. Starting grown-ups (Intelligence ${fmt(c.A.intel)}) have a base of <b>${fmt(base)}</b>, so ${chance(base)} a day before any spare energy; Intelligence 100 gives ${fmt(at(100))}, 150 gives ${fmt(at(150))}.`;
+    $("happy-hint").innerHTML = `Each person's chance of a child a day is <b>${fmt(UP.p, 4)} × happiness ÷ 50</b> (${fmt(UP.p, 4)} from the Humans page): ${chance(0)} at 0, ${chance(50)} at 50, ${chance(100)} at 100. A couple's is the average of the two partners'. Starting grown-ups (Intelligence ${fmt(c.A.intel)}) have a base of <b>${fmt(base)}</b>, so ${chance(base)} a day before any spare Power; Intelligence 100 gives ${fmt(at(100))}, 150 gives ${fmt(at(150))}.`;
   },
 });
 </script>

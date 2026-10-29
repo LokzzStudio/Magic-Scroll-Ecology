@@ -81,12 +81,21 @@
     { id: "field", zh: "耕田 · 收割", en: "Fields: tending, or the harvest (one person to each of the 4 fields)" },
     { id: "milk", zh: "採牛奶", en: "Milking (one milker to each adult cow)" },
     { id: "craft", zh: "紡織 · 鍛造", en: "Crafts, when the materials are in store (one weaver, one smith a day)", page: "Craft" },
-    { id: "collect", zh: "採羊毛 · 採石 · 伐木", en: "Collecting: women shear or cut wood, men quarry or cut wood, whichever there's less of", page: "Resources" },
+    { id: "own", zh: "採石 / 羊毛", en: "Quarrying (men, 2 places at the mine) or shearing (women, one to a sheep with wool on it)", page: "Resources" },
+    { id: "wood", zh: "伐木", en: "Woodcutting (3 places in the forest)", page: "Resources" },
     { id: "teach", zh: "教育", en: "Education: children go to class, scholars teach", page: "Education" },
     { id: "read", zh: "吟詩", en: "Poetry: scholars write", page: "Education" },
   ];
   const PRIORITY_DEFAULT = TIERS.map((t) => t.id);
-  const PRIORITY_KEY = "priority-v2";   // v2: fields before milking by default (an order saved before is dropped)
+  const PRIORITY_KEY = "priority-v3";   // v2: fields before milking by default (an order saved before is dropped)
+  // v3: collecting became 採石 / 羊毛 and 伐木, two jobs; a v2 order comes over with them where collecting was
+  try {
+    const v2 = JSON.parse(localStorage.getItem("priority-v2") || "null");
+    if (!localStorage.getItem(PRIORITY_KEY) && Array.isArray(v2)) {
+      const v3 = v2.flatMap((id) => (id === "collect" ? ["own", "wood"] : id === "wool" || id === "stone" ? ["own"] : [id]));
+      localStorage.setItem(PRIORITY_KEY, JSON.stringify(v3.filter((id, k) => v3.indexOf(id) === k)));
+    }
+  } catch (e) {}
   // The saved order, with any jobs it doesn't have yet (added since it was saved) at the end
   function currentPriority() {
     try {
