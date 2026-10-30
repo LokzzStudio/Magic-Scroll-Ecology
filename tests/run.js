@@ -11,6 +11,7 @@
 // 3. Opens every page again with every slider at its lowest, then its highest (the Humans and Food
 //    pages' too), and reports errors, a page that stops answering, and NaN / undefined / Infinity in
 //    its text.
+// 4. Checks SPEC.md is what tools/spec.js makes from rules.js and the models now.
 // --quick: 20 years, 1 village, Micro for 1 year, and the pages at their defaults only (a few minutes; some
 //    slips only show over a long run, so run it in full before pushing).
 // --full: also each number in the Strategy page's config at 0 and at 3× (2 years), and Macro against
@@ -237,6 +238,10 @@ async function pageCheck(b, base, pg, saved, wait) {
     b.close();
     server.close();
   }
+  console.log("4. SPEC.md");
+  const spec = require("child_process").spawnSync(process.execPath, [path.join(ROOT, "tools", "spec.js"), "--check"], { encoding: "utf8" });
+  if (spec.status === 0) console.log("  ✓ up to date with rules.js and the models");
+  else report("spec", (spec.stdout + spec.stderr).trim() || "tools/spec.js failed");
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (warnings.length) { console.log(`
 Worth a look (Macro against Micro):`); for (const w of warnings) console.log(`  ${w}`); }
