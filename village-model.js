@@ -63,7 +63,7 @@
   const HARVEST_PER_HAND = 2500;   // rice a standard day (100 energy) brings in at harvest
   const DAY_ENERGY = FoodModel.DAY_ENERGY;
   const { MALE } = HumanModel;
-  const { newClock, workAt, canAt, dayEnd, workSpans, classSpans, sharedHours, NO_MAP } = DayModel;
+  const { newClock, workAt, canAt, carryOf, dayEnd, workSpans, classSpans, sharedHours, NO_MAP } = DayModel;
 
   const dayOfYear = (day) => ((day - 1) % YEAR) + 1;
   // Shuffles arr in place (Fisher–Yates, on the dice rnd) and returns it
@@ -141,6 +141,10 @@
   // that gets each person's clock. eff: null, or (h, skill) → their effectiveness at it (Resources):
   // what each energy brings in there; each clock then gets the energy they spent on each skill (exp).
   const DEFAULT_ORDER = ["field", "milk", "craft", "own", "wood", "teach", "read"];
+  // Goods an energy brings in, before effectiveness, for carrying home: milk and collecting by the day's
+  // settings (perGoodOf), the harvest a sheaf (HARVEST_PER_HAND ÷ DAY_ENERGY rice) an energy of work
+  const PER_GOOD = { milk: 1, farm: 1, wool: 1, wood: 1, stone: 1 };
+  const perGoodOf = (F, res) => ({ milk: F.milkPerEnergy, farm: 1, wool: res ? res.perEnergy.wool : 1, wood: res ? res.perEnergy.wood : 1, stone: res ? res.perEnergy.stone : 1 });
   // An order with every job in it: any it lacks go at the end, as in the default
   const fullOrder = (order) => [...order, ...DEFAULT_ORDER.filter((id) => !order.includes(id))];
   // Whether job a comes before 發呆 ("idle") in an order (always, without one)
@@ -149,8 +153,9 @@
   // it comes before any 發呆)
   const teachesFirst = (order, mayRead) => beforeIdle(order, "teach") && (!mayRead || order.indexOf("teach") < order.indexOf("read"));
   // weather: null, or macroWeather's day (each person's clock gets their hooks, c.wx), and each work's
-  // take is × its rain cut (w.wf: the share of it the rain left)
-  function assignEnergy(grownUps, cows, riceWanted, tending, kids, en, fieldE, S, rate, may, order, extra, clocks, classToday, eff, weather = null) {
+  // take is × its rain cut (w.wf: the share of it the rain left). perGood: goods an energy by skill, before
+  // effectiveness (carrying home: DayModel.carryOf)
+  function assignEnergy(grownUps, cows, riceWanted, tending, kids, en, fieldE, S, rate, may, order, extra, clocks, classToday, eff, weather = null, perGood = PER_GOOD) {
     let freeCows = cows, milkEnergy = 0, farmWork = 0, farmEnergy = 0, tendEnergy = 0, tendBase = 0, fields = 0;
     const fieldJob = tending ? "tend" : "harvest";
     // A person's effectiveness at a skill (SKILLS), plus the bonus of the tool they have for it (a 叉
@@ -163,10 +168,13 @@
     // in) and in work elsewhere.
     const effOf = (w, skill) => { const t = skill === "farm" && !tending ? w.b : toolFor(w, skill); return (eff ? eff(w.h, skill) : 1) + (t ? t.bonus : 0); };   // the harvest (收割) uses a 刀
     const isYield = (skill) => skill === "milk" || skill === "wool" || skill === "wood" || skill === "stone" || (skill === "farm" && tending);
+    // Collecting: what they can carry home in a trip, as energy of this job (the clock's cap)
+    const carrying = (w, collect, skill) => { if (collect) w.c.cap = carryOf(w.e0, S, (perGood[skill] ?? 1) * effOf(w, skill)); };
     const ops = {
-      can: (w, place, collect, skill) => canAt(w.c, place, w.e, w.r, S, collect) * (isYield(skill) ? 1 : effOf(w, skill)),
+      can: (w, place, collect, skill) => { carrying(w, collect, skill); return canAt(w.c, place, w.e, w.r, S, collect) * (isYield(skill) ? 1 : effOf(w, skill)); },
       work: (w, place, amount, collect, skill) => {
         const c = w.c, yieldJob = isYield(skill), m = yieldJob ? 1 : effOf(w, skill);
+        carrying(w, collect, skill);
         if (c.wx) { c.wetE = 0; c.rainE = 0; c.fireE = 0; }
         const done = amount > 1e-9 ? workAt(c, place, amount / m, w.r, S, collect) : 0;
         w.e -= done;
@@ -189,7 +197,7 @@
     const { can, work } = ops;
     const riceLeft = () => Math.ceil((riceWanted - farmWork) * DAY_ENERGY - 1e-9);   // whole energy, so rice stays whole
     // Each grown-up's energy left, rate and clock, and milk and field work done
-    const pool = grownUps.map((h) => ({ h, e: en.get(h), r: rate.get(h), c: newClock(S), m: 0, f: 0, x: eff && clocks ? h.xp.fill(0) : null, b: undefined, fork: undefined }));   // b, fork: their blade and hayfork today (null: none)
+    const pool = grownUps.map((h) => ({ h, e: en.get(h), e0: en.get(h), r: rate.get(h), c: newClock(S), m: 0, f: 0, x: eff && clocks ? h.xp.fill(0) : null, b: undefined, fork: undefined }));   // b, fork: their blade and hayfork today (null: none)
     // In the weather, everyone wakes at an even spread over the wake-up window, in the order they come to work
     const woken = grownUps.length + kids.length, wakeAt = (k) => S.wake0 + ((S.wake1 - S.wake0) * (k + 0.5)) / woken;
     if (weather) pool.forEach((w, k) => { w.c.wx = weather.person(w.h, wakeAt(k)); });
@@ -256,7 +264,7 @@
     for (const w of pool) if (w.f > 0) { if (w.f >= w.m) farm++; else milkers++; } else if (w.m > 0) milkers++;
     let kidsWorked = 0;
     const kidsField = may(null, fieldJob, "child"), kidsMilk = may(null, "milk", "child");
-    const kidPool = kids.map((h) => ({ h, e: en.get(h), r: rate.get(h), c: newClock(S), x: eff && clocks ? h.xp.fill(0) : null, b: undefined, fork: undefined }));
+    const kidPool = kids.map((h) => ({ h, e: en.get(h), e0: en.get(h), r: rate.get(h), c: newClock(S), x: eff && clocks ? h.xp.fill(0) : null, b: undefined, fork: undefined }));
     if (weather) kidPool.forEach((w, k) => { w.c.wx = weather.person(w.h, wakeAt(grownUps.length + k)); });
     for (const w of kidPool) {
       let farmed = 0, milked = 0;
@@ -980,7 +988,7 @@
     const order = fullOrder(cfg.priority || DEFAULT_ORDER);
     const en = new Map(), rt = new Map();   // each person's energy for the day, and energy an hour
     // The Resources page's sheep, stores and crafts (and every page after it)
-    const res = energy ? cfg.resources || null : null;
+    const res = energy ? cfg.resources || null : null, perGood = perGoodOf(F, res);
     const econ = res ? makeEconomy(res, cfg.craft || null, cfg.sheepAdults, cfg.sheepTiers || null, may, HerdModel.rng((cfg.seed + HerdModel.TIER_SALT) >>> 0),
       { ...CREW, ...(res.crew || {}) }, !!cold, !!rain, cfg.kit || null) : null;
     // The Happiness page: each person's happiness sets their chance of a child
@@ -1260,7 +1268,7 @@
         if (waterSt) waterSt.farmed.fill(false);
         const dayRain = rain ? { hatStep: rain.hatStep, limit: rain.limit, at: memo2((h) => WeatherModel.rainAtHour(wd.rainAt, h)), fireOut: (t0, hours) => WeatherModel.fireOut(wd.rainAt, t0, hours) } : null;
         if (micro) {
-          const m = MicroModel.day({ S, rand: mrand, people: st.people, p, elderAttr, may, cows, fieldE, riceWanted, tending, order, trace,
+          const m = MicroModel.day({ S, rand: mrand, people: st.people, p, elderAttr, may, cows, fieldE, riceWanted, tending, order, trace, perGood,
             happyOf: joy ? (h) => happinessOf(h, joy) : null, eff, levelsOf: skills ? (h) => h.level : null,
             energyOf: (h) => (en.has(h) ? { e: en.get(h), r: rt.get(h) } : null),
             econ: econ ? econ.state() : null, cold: dayCold, rain: dayRain, water: dayWater,
@@ -1278,7 +1286,7 @@
           const grown = [...elders, ...adults];
           if (S) shuffle(grown, mrand);
           const weather = dayCold || dayRain || dayWater ? macroWeather(dayCold, dayRain, econ ? econ.state() : null, S, p, dayWater) : null;
-          w = assignEnergy(grown, cows, riceWanted, tending, helpers, en, fieldE, Sd, rt, may, order, extra, clocks, classToday, eff, weather);
+          w = assignEnergy(grown, cows, riceWanted, tending, helpers, en, fieldE, Sd, rt, may, order, extra, clocks, classToday, eff, weather, perGood);
           timelines = new Map();
           for (const [h, c] of clocks) {
             if (c.wx) c.wx.end(c);

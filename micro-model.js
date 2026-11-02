@@ -7,7 +7,8 @@
 //     hours after waking: anyone idle goes home at once, anyone working finishes the energy under way
 //     first; lunch is eaten by the house, then back to the board. At S.active hours: the same, for the
 //     night. Walking between places takes S.between hours. Collecting (milking, harvest, timber, wool,
-//     stone) is carried home (搬運) after every S.load energy and at the end of the job, then back out.
+//     stone) is carried home (搬運) once they hold all they can carry (DayModel.carryOf: ⌊their day's
+//     energy ÷ S.load⌋ goods) and at the end of the job, then back out.
 //     Anyone back at the house with no energy left may go in early once hungry (day-model.js's
 //     dayOut, worked out once the day's share is known: it changes nobody's work).
 //   The board: milking (pooled: one milker to each adult cow for the day, no limit on a cow), the fields
@@ -28,7 +29,7 @@
 //     knowledge from teaching and poetry are × it too. At the harvest it's speed (the standing rice is
 //     all there is): its need and what's reserved are work, energy × effectiveness.
 // x: { S, rand, people, p, may, energyOf(h) → { e, r } | null, cows, fieldE, riceWanted, tending,
-//   order, econ (makeEconomy's state()), school: { scholars: [{ h, day, reads }], classOf: Map(child h →
+//   perGood (goods an energy by skill, for carrying home), order, econ (makeEconomy's state()), school: { scholars: [{ h, day, reads }], classOf: Map(child h →
 //   their scholar's h; only children with a class today), params, learn, read } | null, trace: {} | null,
 //   happyOf: h → happiness | null, eff: (h, skill) → effectiveness | null, levelsOf: h → { skill: level } | null,
 //   cold: { tempAt(clock hour) → °C, limit, clothStep, fireStep, fireHours, fireReach, fireEnergy } | null (Clothing),
@@ -135,7 +136,7 @@
     // Pooled jobs: need, done and reserved work (energy × effectiveness). Slot jobs: one worker at a time;
     // more(a) is the energy the next unit may take (0 when there's nothing left), hasWork() whether it
     // has any. credit(work): work done.
-    // collect: carried home after every S.load energy
+    // collect: carried home once their hands are full (carryCap)
     // A yield job's need, done and reserved are energy, and `out` what it brought in; the harvest's are work.
     // places: how many may work it today, one to a place (a cow, a field, a sheep, a place at the mine or
     // the forest), each keeping theirs all day (a.held: their places, each with the most energy it takes,
@@ -172,26 +173,30 @@
     const schedule = (a, t, k) => { a.ver++; q.push({ t, s: seq++, a, v: a.ver, k }); };
     const rel = (a) => now - a.w;
     // A person's day so far as a clock (day-model.js), for working out what they could still do
-    const clockOf = (a) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, load: a.load, lunched: a.lunched, Lh: a.Lh || 0, walked: 0 });
+    const clockOf = (a, id) => ({ t: Math.max(rel(a), a.freeAt), at: a.loc, load: a.load, cap: carryCap(a, id), lunched: a.lunched, Lh: a.Lh || 0, walked: 0 });
     // A person's effectiveness at a job (a job id, or the jobs table's): the work each energy does there
     // plus the bonus of their tool for it (a 叉 hayfork tending, a 刀 blade at the harvest and collecting)
     const TOOL_OF = { field: tending ? "fork" : "blade", wool: "blade", wood: "blade", stone: "blade", weave: "blade", forge: "blade" };   // 紡織 and 鍛造 take a 刀 too
     const effAt = (a, id) => { const t = TOOL_OF[id] && a[TOOL_OF[id]]; return a.eff[id] + (t ? t.bonus : 0); };
     // What they could still do at a place: energy, and as work at a job
-    const est = (a, place, collect) => DayModel.canAt(clockOf(a), place, a.e, a.r, S, collect);
+    const est = (a, place, collect, id) => DayModel.canAt(clockOf(a, id), place, a.e, a.r, S, collect);
+    // What they can carry home in a trip from job id, as energy of it (x.perGood: goods an energy before
+    // effectiveness, by skill; the field's is the harvest's)
+    const GOOD_OF = { milk: "milk", field: "farm", wool: "wool", wood: "wood", stone: "stone" };
+    const carryCap = (a, id) => (GOOD_OF[id] ? DayModel.carryOf(a.e0, S, ((x.perGood && x.perGood[GOOD_OF[id]]) ?? 1) * effAt(a, id)) : Infinity);
     // Whether they could still do a unit there today (what est > 0 asks, worked out for one unit only):
     // plainly yes when, after lunch or starting before it, the walk there, the unit and the walk home fit
     // in the day; otherwise worked out
-    const canUnit = (a, place, collect) => {
+    const canUnit = (a, place, collect, id) => {
       const t = Math.max(rel(a), a.freeAt) + S.between(a.loc, place);
       if (a.e >= 1 && a.r > 0 && (a.lunched || t < S.lunch - EPS) && t + Math.min(a.e, UNIT) / a.r + S.between(place, "H") <= S.active - EPS) return true;
-      return DayModel.canAt(clockOf(a), place, Math.min(a.e, UNIT), a.r, S, collect) > EPS;
+      return DayModel.canAt(clockOf(a, id), place, Math.min(a.e, UNIT), a.r, S, collect) > EPS;
     };
     // Yield jobs (isYield): what a person can take of one is energy; elsewhere, work. capEff: the measure
     // of each energy against a job's need
     const isYield = (id) => id === "milk" || id === "wool" || (tending && (id === "field" || id === "tend"));
     const capEff = (a, id) => (isYield(id) ? 1 : effAt(a, id));
-    const estWork = (a, place, collect, id) => est(a, place, collect) * capEff(a, id);
+    const estWork = (a, place, collect, id) => est(a, place, collect, id) * capEff(a, id);
     const note = (a, s, more) => { a.st = s; if (a.tr) a.tr.push({ t: now, s, at: a.loc, e: a.e, ...more }); };
 
     // ---------- The weather (the Clothing page) ----------
@@ -253,7 +258,7 @@
     // Energy the next unit of a person's job may take (0: nothing left for them, or no time to do it and
     // be home by the end of the day)
     function unitOf(a) {
-      const amt = unitFor(a);
+      const j = a.job, amt = j.collect && j.place !== "H" ? Math.min(unitFor(a), carryCap(a, j.id) - a.load) : unitFor(a);   // a unit stops when their hands are full
       return amt > EPS && rel(a) + amt / a.r + S.between(a.job.place, "H") > S.active + EPS ? 0 : amt;
     }
     function unitFor(a) {
@@ -311,7 +316,7 @@
       return true;
     };
     const trySlot = (a, j) => {
-      if (!j || j.worker || (j.today && j.today !== a) || !j.hasWork() || !canUnit(a, j.place, j.collect)) return false;
+      if (!j || j.worker || (j.today && j.today !== a) || !j.hasWork() || !canUnit(a, j.place, j.collect, j.id)) return false;
       take(a, j, 0);
       return true;
     };
@@ -395,7 +400,7 @@
     // Whether a held job still has work for them (without starting it)
     function unitOrDrop(a) {
       const j = a.job;
-      if (!canUnit(a, j.place, j.collect)) return 0;   // no time left for a unit there today
+      if (!canUnit(a, j.place, j.collect, j.id)) return 0;   // no time left for a unit there today
       if (j.kind === "slot") return j.worker === a && j.hasWork() ? 1 : 0;
       if (j.kind === "pool") return a.res > EPS || Math.min(j.open(), estWork(a, j.place, j.collect, j.id), capFor(a, j)) > EPS ? 1 : 0;
       return 1;
@@ -534,10 +539,10 @@
             if (tooCold(a)) { walk(a, "H", "warm"); break; }
           }
           if (WT && j === field && tending && WT.dry(a.fieldIx)) { walk(a, WT.source(), "water"); break; }
-          // Collecting goes home after every S.load energy, and when there's no more of it for them
+          // Collecting goes home once their hands are full, and when there's no more of it for them
           if (j.collect && j.place !== "H") {
             a.load += a.unit;
-            if (a.load >= S.load - EPS || a.e <= EPS || unitOrDrop(a) <= EPS) { walk(a, "H", "carry"); break; }
+            if (a.load >= carryCap(a, j.id) - EPS || a.e <= EPS || unitOrDrop(a) <= EPS) { walk(a, "H", "carry"); break; }
           }
           decide(a);
           break;

@@ -504,7 +504,7 @@
         $("map-params").innerHTML = paramRows([
           ["", "Pasture (milking)", place("P")], ["", "Farm (rice)", place("F")],
           ["", "Mine (stone)", place("M")], ["", "Forest (timber)", place("T")],
-          ["", "Walking", `${fmt(M.minPerTile)} min a tile`, "sep"], ["", "Carried home (搬運)", `every ${fmt(tv.load)} Power of collecting`],
+          ["", "Walking", `${fmt(M.minPerTile)} min a tile`, "sep"], ["", "Carried home (搬運)", `⌊Power ÷ ${fmt(tv.load)}⌋ goods a trip`],
           ["", "Up", `between ${wake(tv.wake0)} and ${wake(tv.wake1)}, at random`],
           ["", "Out of the house", `${fmt(tv.active, 1)} h; home for lunch after ${fmt(tv.lunch, 1)} h`],
           ["", "Each meal", `${fmt(tv.meal * 60)} min by the house`],
@@ -513,11 +513,11 @@
         const sw = VM.workDay(100, 100);
         const std = (k, collect) => {
           if (!isFinite(d[k])) return "can't get there";
-          const cl = DM.newClock(tv), done = DM.workAt(cl, k, DM.canAt(cl, k, sw.energy, sw.rate, tv, collect), sw.rate, tv, collect), tl = DM.dayEnd(cl, tv, done >= DAY_ENERGY - 1e-9);
+          const cl = DM.newClock(tv, DM.carryOf(sw.energy, tv)), done = DM.workAt(cl, k, DM.canAt(cl, k, sw.energy, sw.rate, tv, collect), sw.rate, tv, collect), tl = DM.dayEnd(cl, tv, done >= DAY_ENERGY - 1e-9);
           const hungry = DM.hungryHours(1, tl, tv) > 1 / 60;
           return `${done >= sw.energy ? `all ${fmt(sw.energy)} Power` : `only <b>${fmt(done)}</b> of ${fmt(sw.energy)} Power`}, ${fmt(cl.walked, 1)} h walking${hungry ? ", home late and hungry" : ""}`;
         };
-        $("map-hint").innerHTML = `A standard worker (${fmt(sw.energy)} Power, ${fmt(sw.rate)} an hour) spending the day milking: ${std("P", true)}. Tending the fields: ${std("F", false)}. Everyone walks out, carries home what they collect every ${fmt(tv.load)} Power, comes home for lunch and goes back out, and works until their Power runs out or the day is over, finishing the Power they're on. A meal keeps someone full for half the day, so whoever is out longer goes hungry (it shows, but costs nothing: hunger's toll goes by the food they go without); anyone hungry with no Power left goes in early.`;
+        $("map-hint").innerHTML = `A standard worker (${fmt(sw.energy)} Power, ${fmt(sw.rate)} an hour) spending the day milking: ${std("P", true)}. Tending the fields: ${std("F", false)}. Everyone walks out, carries home what they collect each time their hands are full (⌊Power ÷ ${fmt(tv.load)}⌋ goods), comes home for lunch and goes back out, and works until their Power runs out or the day is over, finishing the Power they're on. A meal keeps someone full for half the day, so whoever is out longer goes hungry (it shows, but costs nothing: hunger's toll goes by the food they go without); anyone hungry with no Power left goes in early.`;
         source("map-source", c.saved.map);
       }
       if ($("res-params")) {

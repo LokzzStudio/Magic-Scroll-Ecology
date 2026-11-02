@@ -101,7 +101,7 @@ VillagePage.start({
     const { S, F, UP, $, fmt, VM } = c, elder = 1 - S.elderPenalty / 100;
     const w = VM.workDay(S.power, S.intel), we = VM.workDay(S.power * elder, S.intel * elder);
     // A day milking at the pasture, as the Map page's day allows: energy done, hours worked
-    const DM = DayModel, tv = c.travel, cl = DM.newClock(tv), done = DM.workAt(cl, "P", DM.canAt(cl, "P", w.energy, w.rate, tv, true), w.rate, tv, true);
+    const DM = DayModel, tv = c.travel, cl = DM.newClock(tv, DM.carryOf(w.energy, tv)), done = DM.workAt(cl, "P", DM.canAt(cl, "P", w.energy, w.rate, tv, true), w.rate, tv, true);
     const worked = w.rate > 0 ? done / w.rate : 0, left = w.energy - done;
     const attrText = (v) => fmt(v, Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1);
     const hoursText = (h) => `${fmt(h, Number.isInteger(h) ? 0 : 1)} h`;

@@ -61,7 +61,7 @@
 <div class="wrap">
   <header class="page-head">
     <h1>Map</h1>
-    <p class="lede">Where the village's places are, and the shape of everyone's day. People wake between <span data-n="map.wakeFrom">4</span> and <span data-n="map.wakeTo">8</span> o'clock and are out of the house for <span data-n="map.activeHours" data-f="half">12</span> hours. They eat breakfast by the house, walk out to work, and, from <span data-n="map.lunchAfter" data-f="half">5½</span> hours after waking, come home for lunch once the Power they're on is done. Whatever they collect they carry home (搬運) after every <span data-n="map.load">10</span> Power of it, then walk back out. Nobody starts work they couldn't finish and be home from by the end of the <span data-n="map.activeHours" data-f="half">12</span> hours. Walking eats into the working day, and a meal keeps them full for only so long, so a late walk home is a hungry one.</p>
+    <p class="lede">Where the village's places are, and the shape of everyone's day. People wake between <span data-n="map.wakeFrom">4</span> and <span data-n="map.wakeTo">8</span> o'clock and are out of the house for <span data-n="map.activeHours" data-f="half">12</span> hours. They eat breakfast by the house, walk out to work, and, from <span data-n="map.lunchAfter" data-f="half">5½</span> hours after waking, come home for lunch once the Power they're on is done. Whatever they collect they carry home (搬運) once their hands are full, then walk back out: a person carries their Power ÷ <span data-n="map.load">10</span> goods a trip (rounded down), so someone with 143 Power carries 14 milk, wool, timber or stone, or at the harvest 14 sheaves of 25 rice. Nobody starts work they couldn't finish and be home from by the end of the <span data-n="map.activeHours" data-f="half">12</span> hours. Walking eats into the working day, and a meal keeps them full for only so long, so a late walk home is a hungry one.</p>
     <aside class="head-card" aria-label="Where this page's settings come from">
       <dl>
         <dt>Set here</dt><dd>The map, walking speed, carrying, and the day: waking, hours out, lunch and meals</dd>
@@ -121,11 +121,11 @@
         </div>
         <div class="param">
           <div class="param-head">
-            <label for="load-num">Carried home every (搬運)</label>
+            <label for="load-num">Power per good carried (搬運)</label>
             <span class="num-wrap"><input id="load-num" type="number"><span class="unit">Power</span></span>
           </div>
-          <input id="load-range" type="range" aria-label="Power of collecting before carrying it home">
-          <p class="hint">After this much collecting (milking, harvest, timber, wool, stone), a worker walks home with it and back out; whatever's left at the end of the job goes home too. Tending, crafts and class carry nothing.</p>
+          <input id="load-range" type="range" aria-label="Power for each good a person can carry home in a trip">
+          <p class="hint">A person carries ⌊the Power they work with today ÷ this⌋ goods a trip, at least 1: milk, wool, timber or stone, or at the harvest sheaves of 25 rice (a sheaf is one Power of harvest work). With their hands full, they walk home with it and back out; whatever's left at the end of the job goes home too. The strong walk home less often, and the skilled, who bring in more for each Power, more often. Tending, crafts and class carry nothing.</p>
         </div>
         <div class="param">
           <div class="param-head">
@@ -208,7 +208,7 @@
   grid.addEventListener("pointercancel", stopPaint);
 
   // ---------- Sliders ----------
-  const INPUTS = [["mpt", "minPerTile", 1], ["act", "activeHours", 0.5], ["lunch", "lunchAfter", 0.5], ["meal", "mealMin", 1], ["load", "load", 10], ["wake0", "wakeFrom", 0.5], ["wake1", "wakeTo", 0.5]];
+  const INPUTS = [["mpt", "minPerTile", 1], ["act", "activeHours", 0.5], ["lunch", "lunchAfter", 0.5], ["meal", "mealMin", 1], ["load", "load", 1], ["wake0", "wakeFrom", 0.5], ["wake1", "wakeTo", 0.5]];
   function syncInputs() {
     for (const [id, key, step] of INPUTS) {
       const [lo, hi] = LIMITS[key];
@@ -231,7 +231,7 @@
   const hText = (h) => `${fmt(h, 1)} h`;
   // A worker's day at one place (energy e, r an hour), fully fed: work done, walking, timeline, hunger
   const dayAt = (place, e, r, collect) => {
-    const S = MapModel.travelOf(M), c = DM.newClock(S);
+    const S = MapModel.travelOf(M), c = DM.newClock(S, DM.carryOf(e, S));
     if (!isFinite(S.between("H", place))) return null;
     const done = DM.workAt(c, place, DM.canAt(c, place, e, r, S, collect), r, S, collect), tl = DM.dayEnd(c, S, done >= e - 1e-9);
     return { done, walk: c.walked, tl, hungry: DM.hungryHours(1, tl, S) > 1 / 60 };
@@ -248,7 +248,7 @@
     const S0 = MapModel.travelOf(M);
     let d = 0;
     while (d < 100) {
-      const S = { ...S0, between: (a, b) => (a === b ? 0 : ((d + 1) * M.minPerTile) / 60) }, c = DM.newClock(S);
+      const S = { ...S0, between: (a, b) => (a === b ? 0 : ((d + 1) * M.minPerTile) / 60) }, c = DM.newClock(S, DM.carryOf(e, S));
       if (DM.canAt(c, "P", e, r, S, true) < e) break;
       d++;
     }
@@ -285,7 +285,7 @@
     $("dist").innerHTML = `<thead><tr><th>Place</th><th>Distance</th><th>Walk one way</th><th>Standard worker (100/100: 100 Power to spend, 10 an hour)</th><th>Strong worker (160/160: 160 Power to spend, 16 an hour)</th></tr></thead><tbody>` +
       row("Pasture: milking, shearing", "P", true) + row("Farm: tending", "F", false) + row("Farm: harvest", "F", true) + row("Forest: timber", "T", true) + row("Mine: stone", "M", true) + `</tbody>`;
     const work = Math.max(0, M.activeHours - (2 * M.mealMin) / 60);
-    $("dist-hint").innerHTML = `A day out has <b>${hText(work)}</b> for work and walking once both meals are eaten. A worker walks out, carries home what they collect every ${fmt(M.load)} Power, comes home for lunch and goes back out, all within the day; the walk home at night comes after it. A standard worker milking still gets all 100 Power done up to <b>${fmt(freeUpTo(100, 10))}</b> tiles from a house. ` +
+    $("dist-hint").innerHTML = `A day out has <b>${hText(work)}</b> for work and walking once both meals are eaten. A worker walks out, carries home what they collect each time their hands are full (⌊Power ÷ ${fmt(M.load)}⌋ goods), comes home for lunch and goes back out, all within the day; the walk home at night comes after it. A standard worker milking still gets all 100 Power done up to <b>${fmt(freeUpTo(100, 10))}</b> tiles from a house. ` +
       `A meal keeps someone full for half the day's hours, so anyone still out after that (home late for lunch, or working on at night) goes hungry, even on a full ration. The table shows who comes home hungry; it costs no days of life (hunger's toll goes by the food people go without, on the Humans page).`;
     $("mpt-hint").innerHTML = `The pasture, ${fmt(isFinite(d.P) ? d.P : 0)} tiles from a house, is <b>${fmt(isFinite(d.P) ? oneWay("P") * 60 : 0)}</b> minutes' walk each way.`;
     $("act-hint").innerHTML = `Breakfast to bedtime. A full ration keeps someone full for exactly these hours, so one food lasts <b>${fmt((M.activeHours / HumanModel.DEFAULTS.c) * 60)}</b> minutes (${fmt(M.activeHours, 1)} h ÷ ${fmt(HumanModel.DEFAULTS.c)} food). Out longer, or eating less, and they go hungry, which shows but costs nothing in itself.`;

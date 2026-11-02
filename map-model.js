@@ -33,18 +33,18 @@
     activeHours: 12,   // hours a day everyone is out of the house, from waking
     lunchAfter: 5.5,   // hours after waking from which everyone heads home for lunch, once the energy they're on is done
     mealMin: 24,       // minutes to eat breakfast or lunch, by the house
-    load: 10,          // energy of collecting a worker does before carrying it home (搬運)
+    load: 10,          // carrying home (搬運): a person carries ⌊their day's Power ÷ this⌋ goods a trip (at least 1)
     wakeFrom: 4,       // everyone wakes between these hours (o'clock)
     wakeTo: 8,
   };
-  const LIMITS = { minPerTile: [0, 60], activeHours: [6, 18], lunchAfter: [1, 12], mealMin: [0, 120], load: [10, 200], wakeFrom: [0, 12], wakeTo: [0, 12] };
+  const LIMITS = { minPerTile: [0, 60], activeHours: [6, 18], lunchAfter: [1, 12], mealMin: [0, 120], load: [1, 100], wakeFrom: [0, 12], wakeTo: [0, 12] };
 
   // Real time in the game: 5 minutes is 2 hours of game time (for Micro mode's clock)
   const GAME_MIN_PER_REAL_SEC = 0.4;
 
-  // Older saves keep what the defaults since haven't changed: the map, the day's hours, meals, waking and
-  // carrying (at 10 energy a day before v6: carrying ×10)
-  const STORE_KEY = "map-v6", OLD_KEYS = [["map-v5", ["tiles", "minPerTile", "activeHours", "lunchAfter", "mealMin", "load", "wakeFrom", "wakeTo"]], ["map-v4", ["tiles", "activeHours", "mealMin", "load", "wakeFrom", "wakeTo"]], ["map-v3", ["tiles", "activeHours", "mealMin", "wakeFrom", "wakeTo"]], ["map-v2", ["tiles"]]];
+  // Older saves keep what the defaults since haven't changed: the map, the day's hours, meals and waking
+  // (v7: carrying became goods a trip, ⌊Power ÷ load⌋, so an older load starts again at the default)
+  const STORE_KEY = "map-v7", OLD_KEYS = [["map-v6", ["tiles", "minPerTile", "activeHours", "lunchAfter", "mealMin", "wakeFrom", "wakeTo"]], ["map-v5", ["tiles", "minPerTile", "activeHours", "lunchAfter", "mealMin", "wakeFrom", "wakeTo"]], ["map-v4", ["tiles", "activeHours", "mealMin", "wakeFrom", "wakeTo"]], ["map-v3", ["tiles", "activeHours", "mealMin", "wakeFrom", "wakeTo"]], ["map-v2", ["tiles"]]];
 
   // Steps (no diagonals) from each kind of place to the nearest house: the nearest such tile to any
   // house. Infinity if there's no house or none of that place. With spots: also where, as
@@ -105,7 +105,7 @@
       for (const [key, keep] of OLD_KEYS) {
         if (saved && typeof saved === "object") break;
         const old = JSON.parse(localStorage.getItem(key) || "null");
-        if (old && typeof old === "object") saved = Object.fromEntries(keep.filter((k) => k in old).map((k) => [k, k === "load" ? Number(old[k]) * 10 : old[k]]));
+        if (old && typeof old === "object") saved = Object.fromEntries(keep.filter((k) => k in old).map((k) => [k, old[k]]));
       }
       if (!saved || typeof saved !== "object") return null;
       const m = { ...DEFAULTS };

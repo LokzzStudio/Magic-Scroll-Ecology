@@ -12,11 +12,17 @@
   // by the house. Nobody starts a unit they couldn't finish and be home from by S.active hours.
   // Anyone with nothing left to do waits by the house. S.between(a, b): hours walking from a to b
   // ("H" the house, "F" farm, "P" pasture, "T" forest, "M" mine).
-  // Collecting (milking, harvest, timber, wool, stone) is carried home (搬運) after every S.load energy
-  // and at the end of the job; anything still in hand is dropped off when they go home for lunch.
-  // A person's clock: the time, where they are, what they're carrying, whether they've had lunch (and
-  // got home for it at Lh)
-  const newClock = (S) => ({ t: S.meal, at: "H", load: 0, lunched: false, Lh: 0, walked: 0 });
+  // Collecting (milking, harvest, timber, wool, stone) is carried home (搬運) once they hold all they can
+  // carry, and at the end of the job; anything still in hand is dropped off when they go home for lunch.
+  // What someone can carry: ⌊the energy they work with today (e0) ÷ S.load⌋ goods, at least 1 (carryGoods);
+  // at g goods an energy (their effectiveness × the job's goods an energy; the harvest counts sheaves of
+  // HARVEST_PER_HAND ÷ 100 rice, one an energy of work), that's carryOf(e0, S, g) energy of collecting
+  const carryGoods = (e0, S) => Math.max(1, Math.floor(e0 / S.load + 1e-9));
+  const carryOf = (e0, S, g = 1) => carryGoods(e0, S) / g;
+  // A person's clock: the time, where they are, what they're carrying (energy of collecting) and the most
+  // they can (cap: carryOf, for the job in hand; a standard worker's, 100 energy, unless given), whether
+  // they've had lunch (and got home for it at Lh)
+  const newClock = (S, cap = carryOf(100, S)) => ({ t: S.meal, at: "H", load: 0, cap, lunched: false, Lh: 0, walked: 0 });
   // Work is done UNIT energy at a time: an hour's work for a standard worker
   const UNIT = 10;
   // Work up to `want` energy at `place`, `rate` energy an hour, UNIT energy at a time (the last may be
@@ -32,7 +38,7 @@
     if (c.t !== S.meal || c.at !== "H" || c.load !== 0 || c.lunched || c.walked !== 0) return work1(c, place, want, rate, S, collect);
     let memo = freshDays.get(S);
     if (!memo) { memo = new Map(); freshDays.set(S, memo); }
-    const key = `${place}${collect ? "+" : ""}${want}|${rate}`;
+    const key = `${place}${collect ? `+${c.cap}` : ""}|${want}|${rate}`;
     let hit = memo.get(key);
     if (!hit) {
       const done = work1(c, place, want, rate, S, collect), clock = {};
@@ -55,14 +61,14 @@
         t += d; walked += d; at = "H"; load = 0; Lh = t; t += S.meal; lunched = true;
         continue;
       }
-      const a = Math.min(UNIT, want - done), go = at === place ? 0 : at === "H" ? back : S.between(at, place);
+      const a = Math.min(UNIT, want - done, carry ? c.cap - load : Infinity), go = at === place ? 0 : at === "H" ? back : S.between(at, place);   // a unit stops when their hands are full
       if (t + go + a / rate + back > S.active + 1e-9) break;   // they couldn't do it and be home by the end of the day
       if (at !== place) {   // walk there (home drops off the load)
         t += go; walked += go; at = place; if (place === "H") load = 0;
         continue;
       }
       t += a / rate; done += a;
-      if (carry) { load += a; if (load >= S.load - 1e-9 || want - done <= 1e-9) { t += back; walked += back; at = "H"; load = 0; } }
+      if (carry) { load += a; if (load >= c.cap - 1e-9 || want - done <= 1e-9) { t += back; walked += back; at = "H"; load = 0; } }
     }
     c.t = t; c.at = at; c.load = load; c.lunched = lunched; c.Lh = Lh; c.walked = walked;
     return done;
@@ -92,7 +98,7 @@
         c.Lh = c.t; c.t += S.meal; c.lunched = true;
         continue;
       }
-      const a = Math.min(UNIT, want - done), go = c.at === place ? 0 : c.at === "H" ? back : S.between(c.at, place);
+      const a = Math.min(UNIT, want - done, carry ? c.cap - c.load : Infinity), go = c.at === place ? 0 : c.at === "H" ? back : S.between(c.at, place);
       if (c.t + go + a / rate + back > S.active + 1e-9) break;
       if (c.at !== place) {
         if (c.at === "H" && out) { const until = wx.leave(c, place, want - done); if (until !== null) { c.t = until; continue; } }
@@ -110,7 +116,7 @@
         if (why) { walkTo("H", why); continue; }
         water();
       }
-      if (carry) { c.load += a; if (c.load >= S.load - 1e-9 || want - done <= 1e-9) walkTo("H", "carry"); }
+      if (carry) { c.load += a; if (c.load >= c.cap - 1e-9 || want - done <= 1e-9) walkTo("H", "carry"); }
     }
     return done;
   }
@@ -309,9 +315,9 @@
   }
 
   // A day with no walking, for a working page without a map
-  const NO_MAP = { active: 12, lunch: 5, meal: 0.4, wake0: 4, wake1: 8, between: () => 0 };
+  const NO_MAP = { active: 12, lunch: 5, meal: 0.4, load: 10, wake0: 4, wake1: 8, between: () => 0 };
 
   window.DayModel = {
-    NO_MAP, HUNGRY_AT, UNIT, newClock, workAt, canAt, dayEnd, dayOut, hungryHours, atHome, workSpans, classSpans, sharedHours, weatherOf, wateringOf,
+    NO_MAP, HUNGRY_AT, UNIT, carryGoods, carryOf, newClock, workAt, canAt, dayEnd, dayOut, hungryHours, atHome, workSpans, classSpans, sharedHours, weatherOf, wateringOf,
   };
 })();
